@@ -1,0 +1,602 @@
+Using backend: pytorch
+[2024-09-12 22:34:35][INFO][dataset_creation.py:43]:No of Plans: 19531
+[2024-09-12 22:34:40][INFO][dataset_creation.py:43]:No of Plans: 4883
+[2024-09-12 22:34:40][INFO][checkpoint.py:123]:No valid checkpoint found [Errno 2] No such file or directory: 'evaluation/tpch.pt'
+[2024-09-12 22:34:40][INFO][train.py:231]:Epoch 0
+source tpch_data/train_plans.json
+source tpch_data/val_plans.json
+[2024-09-12 22:35:47][INFO][train.py:121]:val_loss epoch 0: 1.4808287620544434
+[2024-09-12 22:35:47][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 22:35:47][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 22:35:47][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.094 secs
+[2024-09-12 22:35:47][INFO][train.py:231]:Epoch 1
+val_mse: 94814.6094 [best: inf]
+val_mape: 0.6505 [best: inf]
+val_median_q_error_50: 2.3311 [best: inf]
+val_median_q_error_95: 6.9271 [best: inf]
+val_median_q_error_100: 12.7015 [best: inf]
+[2024-09-12 22:36:54][INFO][train.py:121]:val_loss epoch 1: 1.3406932353973389
+[2024-09-12 22:36:54][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 22:36:54][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 22:36:54][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 22:36:54][INFO][train.py:231]:Epoch 2
+val_mse: 717750.9375 [best: 94814.6094]
+val_mape: 1.9830 [best: 0.6505]
+val_median_q_error_50: 2.2463 [best: 2.3311]
+val_median_q_error_95: 5.5030 [best: 6.9271]
+val_median_q_error_100: 130.3642 [best: 12.7015]
+[2024-09-12 22:38:01][INFO][train.py:121]:val_loss epoch 2: 1.2910397052764893
+[2024-09-12 22:38:01][INFO][train.py:267]:epochs_wo_improvement: 1
+[2024-09-12 22:38:01][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 22:38:01][INFO][train.py:231]:Epoch 3
+val_mse: 597581.1875 [best: 94814.6094]
+val_mape: 1.9171 [best: 0.6505]
+val_median_q_error_50: 2.4741 [best: 2.2463]
+val_median_q_error_95: 4.8563 [best: 5.5030]
+val_median_q_error_100: 111.2436 [best: 12.7015]
+[2024-09-12 22:39:11][INFO][train.py:121]:val_loss epoch 3: 1.2034696340560913
+[2024-09-12 22:39:11][INFO][train.py:267]:epochs_wo_improvement: 2
+[2024-09-12 22:39:11][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.098 secs
+[2024-09-12 22:39:11][INFO][train.py:231]:Epoch 4
+val_mse: 106000.9141 [best: 94814.6094]
+val_mape: 1.0727 [best: 0.6505]
+val_median_q_error_50: 2.4557 [best: 2.2463]
+val_median_q_error_95: 3.7241 [best: 4.8563]
+val_median_q_error_100: 19.3171 [best: 12.7015]
+[2024-09-12 22:40:19][INFO][train.py:121]:val_loss epoch 4: 1.191823959350586
+[2024-09-12 22:40:19][INFO][train.py:267]:epochs_wo_improvement: 3
+[2024-09-12 22:40:19][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.096 secs
+[2024-09-12 22:40:19][INFO][train.py:231]:Epoch 5
+val_mse: 69307.1797 [best: 94814.6094]
+val_mape: 1.1311 [best: 0.6505]
+val_median_q_error_50: 2.4025 [best: 2.2463]
+val_median_q_error_95: 4.0758 [best: 3.7241]
+val_median_q_error_100: 14.1218 [best: 12.7015]
+[2024-09-12 22:41:28][INFO][train.py:121]:val_loss epoch 5: 1.2031738758087158
+[2024-09-12 22:41:28][INFO][train.py:267]:epochs_wo_improvement: 4
+[2024-09-12 22:41:28][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 22:41:28][INFO][train.py:231]:Epoch 6
+val_mse: 74348.5312 [best: 69307.1797]
+val_mape: 1.3193 [best: 0.6505]
+val_median_q_error_50: 2.3588 [best: 2.2463]
+val_median_q_error_95: 4.5562 [best: 3.7241]
+val_median_q_error_100: 29.2172 [best: 12.7015]
+[2024-09-12 22:42:36][INFO][train.py:121]:val_loss epoch 6: 1.1940122842788696
+[2024-09-12 22:42:36][INFO][train.py:267]:epochs_wo_improvement: 5
+[2024-09-12 22:42:36][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.093 secs
+[2024-09-12 22:42:36][INFO][train.py:231]:Epoch 7
+val_mse: 59398.3516 [best: 69307.1797]
+val_mape: 1.1932 [best: 0.6505]
+val_median_q_error_50: 2.3337 [best: 2.2463]
+val_median_q_error_95: 4.3992 [best: 3.7241]
+val_median_q_error_100: 15.6302 [best: 12.7015]
+[2024-09-12 22:43:44][INFO][train.py:121]:val_loss epoch 7: 1.2099002599716187
+[2024-09-12 22:43:44][INFO][train.py:267]:epochs_wo_improvement: 6
+[2024-09-12 22:43:44][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.101 secs
+[2024-09-12 22:43:44][INFO][train.py:231]:Epoch 8
+val_mse: 59192.8125 [best: 59398.3516]
+val_mape: 1.1658 [best: 0.6505]
+val_median_q_error_50: 2.3362 [best: 2.2463]
+val_median_q_error_95: 4.3457 [best: 3.7241]
+val_median_q_error_100: 9.9710 [best: 12.7015]
+[2024-09-12 22:44:52][INFO][train.py:121]:val_loss epoch 8: 1.1893665790557861
+[2024-09-12 22:44:52][INFO][train.py:267]:epochs_wo_improvement: 7
+[2024-09-12 22:44:52][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.101 secs
+[2024-09-12 22:44:52][INFO][train.py:231]:Epoch 9
+val_mse: 59312.5234 [best: 59192.8125]
+val_mape: 1.1752 [best: 0.6505]
+val_median_q_error_50: 2.3363 [best: 2.2463]
+val_median_q_error_95: 4.3830 [best: 3.7241]
+val_median_q_error_100: 9.2341 [best: 9.9710]
+[2024-09-12 22:46:02][INFO][train.py:121]:val_loss epoch 9: 1.1934030055999756
+[2024-09-12 22:46:02][INFO][train.py:267]:epochs_wo_improvement: 8
+[2024-09-12 22:46:02][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 22:46:02][INFO][train.py:231]:Epoch 10
+val_mse: 62571.7109 [best: 59192.8125]
+val_mape: 1.1987 [best: 0.6505]
+val_median_q_error_50: 2.3205 [best: 2.2463]
+val_median_q_error_95: 4.4290 [best: 3.7241]
+val_median_q_error_100: 10.2036 [best: 9.2341]
+[2024-09-12 22:47:10][INFO][train.py:121]:val_loss epoch 10: 1.1928223371505737
+[2024-09-12 22:47:10][INFO][train.py:267]:epochs_wo_improvement: 9
+[2024-09-12 22:47:10][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 22:47:10][INFO][train.py:231]:Epoch 11
+val_mse: 60235.2344 [best: 59192.8125]
+val_mape: 1.1815 [best: 0.6505]
+val_median_q_error_50: 2.3230 [best: 2.2463]
+val_median_q_error_95: 4.3584 [best: 3.7241]
+val_median_q_error_100: 11.8424 [best: 9.2341]
+[2024-09-12 22:48:18][INFO][train.py:121]:val_loss epoch 11: 1.1785070896148682
+[2024-09-12 22:48:18][INFO][train.py:267]:epochs_wo_improvement: 10
+[2024-09-12 22:48:18][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 22:48:18][INFO][train.py:231]:Epoch 12
+val_mse: 58580.2812 [best: 59192.8125]
+val_mape: 1.1570 [best: 0.6505]
+val_median_q_error_50: 2.3303 [best: 2.2463]
+val_median_q_error_95: 4.2577 [best: 3.7241]
+val_median_q_error_100: 13.7746 [best: 9.2341]
+[2024-09-12 22:49:27][INFO][train.py:121]:val_loss epoch 12: 1.1609437465667725
+[2024-09-12 22:49:27][INFO][train.py:267]:epochs_wo_improvement: 11
+[2024-09-12 22:49:28][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.098 secs
+[2024-09-12 22:49:28][INFO][train.py:231]:Epoch 13
+val_mse: 58849.9648 [best: 58580.2812]
+val_mape: 1.1563 [best: 0.6505]
+val_median_q_error_50: 2.3067 [best: 2.2463]
+val_median_q_error_95: 4.2127 [best: 3.7241]
+val_median_q_error_100: 17.4150 [best: 9.2341]
+[2024-09-12 22:50:36][INFO][train.py:121]:val_loss epoch 13: 1.1574947834014893
+[2024-09-12 22:50:36][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 22:50:36][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 22:50:36][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 22:50:36][INFO][train.py:231]:Epoch 14
+val_mse: 57296.5859 [best: 58580.2812]
+val_mape: 1.1221 [best: 0.6505]
+val_median_q_error_50: 2.1969 [best: 2.2463]
+val_median_q_error_95: 4.0779 [best: 3.7241]
+val_median_q_error_100: 15.8900 [best: 9.2341]
+[2024-09-12 22:51:44][INFO][train.py:121]:val_loss epoch 14: 1.161767601966858
+[2024-09-12 22:51:44][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 22:51:44][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 22:51:44][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.093 secs
+[2024-09-12 22:51:44][INFO][train.py:231]:Epoch 15
+val_mse: 57110.7734 [best: 57296.5859]
+val_mape: 1.0771 [best: 0.6505]
+val_median_q_error_50: 2.1789 [best: 2.1969]
+val_median_q_error_95: 3.9417 [best: 3.7241]
+val_median_q_error_100: 12.4039 [best: 9.2341]
+[2024-09-12 22:52:52][INFO][train.py:121]:val_loss epoch 15: 1.295839786529541
+[2024-09-12 22:52:52][INFO][train.py:267]:epochs_wo_improvement: 1
+[2024-09-12 22:52:52][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.099 secs
+[2024-09-12 22:52:52][INFO][train.py:231]:Epoch 16
+val_mse: 641236.1875 [best: 57110.7734]
+val_mape: 2.5297 [best: 0.6505]
+val_median_q_error_50: 2.4027 [best: 2.1789]
+val_median_q_error_95: 8.7470 [best: 3.7241]
+val_median_q_error_100: 122.6275 [best: 9.2341]
+[2024-09-12 22:54:01][INFO][train.py:121]:val_loss epoch 16: 1.217837929725647
+[2024-09-12 22:54:01][INFO][train.py:267]:epochs_wo_improvement: 2
+[2024-09-12 22:54:01][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.100 secs
+[2024-09-12 22:54:01][INFO][train.py:231]:Epoch 17
+val_mse: 183271.4375 [best: 57110.7734]
+val_mape: 1.3744 [best: 0.6505]
+val_median_q_error_50: 2.3700 [best: 2.1789]
+val_median_q_error_95: 4.2020 [best: 3.7241]
+val_median_q_error_100: 36.1706 [best: 9.2341]
+[2024-09-12 22:55:09][INFO][train.py:121]:val_loss epoch 17: 1.2024990320205688
+[2024-09-12 22:55:09][INFO][train.py:267]:epochs_wo_improvement: 3
+[2024-09-12 22:55:09][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.099 secs
+[2024-09-12 22:55:09][INFO][train.py:231]:Epoch 18
+val_mse: 63803.9219 [best: 57110.7734]
+val_mape: 0.9881 [best: 0.6505]
+val_median_q_error_50: 2.4622 [best: 2.1789]
+val_median_q_error_95: 3.6702 [best: 3.7241]
+val_median_q_error_100: 9.7381 [best: 9.2341]
+[2024-09-12 22:56:17][INFO][train.py:121]:val_loss epoch 18: 1.2145010232925415
+[2024-09-12 22:56:17][INFO][train.py:267]:epochs_wo_improvement: 4
+[2024-09-12 22:56:17][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.105 secs
+[2024-09-12 22:56:17][INFO][train.py:231]:Epoch 19
+val_mse: 63627.8711 [best: 57110.7734]
+val_mape: 0.9514 [best: 0.6505]
+val_median_q_error_50: 2.4686 [best: 2.1789]
+val_median_q_error_95: 3.6490 [best: 3.6702]
+val_median_q_error_100: 8.5201 [best: 9.2341]
+[2024-09-12 22:57:26][INFO][train.py:121]:val_loss epoch 19: 1.1990270614624023
+[2024-09-12 22:57:26][INFO][train.py:267]:epochs_wo_improvement: 5
+[2024-09-12 22:57:26][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.100 secs
+[2024-09-12 22:57:26][INFO][train.py:231]:Epoch 20
+val_mse: 67336.1797 [best: 57110.7734]
+val_mape: 0.9775 [best: 0.6505]
+val_median_q_error_50: 2.4291 [best: 2.1789]
+val_median_q_error_95: 3.6822 [best: 3.6490]
+val_median_q_error_100: 10.0625 [best: 8.5201]
+[2024-09-12 22:58:33][INFO][train.py:121]:val_loss epoch 20: 1.1818938255310059
+[2024-09-12 22:58:33][INFO][train.py:267]:epochs_wo_improvement: 6
+[2024-09-12 22:58:33][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 22:58:33][INFO][train.py:231]:Epoch 21
+val_mse: 74077.6328 [best: 57110.7734]
+val_mape: 1.0305 [best: 0.6505]
+val_median_q_error_50: 2.3885 [best: 2.1789]
+val_median_q_error_95: 3.7294 [best: 3.6490]
+val_median_q_error_100: 14.2043 [best: 8.5201]
+[2024-09-12 22:59:42][INFO][train.py:121]:val_loss epoch 21: 1.1757420301437378
+[2024-09-12 22:59:42][INFO][train.py:267]:epochs_wo_improvement: 7
+[2024-09-12 22:59:42][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.098 secs
+[2024-09-12 22:59:42][INFO][train.py:231]:Epoch 22
+val_mse: 70593.8359 [best: 57110.7734]
+val_mape: 1.0653 [best: 0.6505]
+val_median_q_error_50: 2.3785 [best: 2.1789]
+val_median_q_error_95: 3.7318 [best: 3.6490]
+val_median_q_error_100: 21.0180 [best: 8.5201]
+[2024-09-12 23:00:50][INFO][train.py:121]:val_loss epoch 22: 1.1753953695297241
+[2024-09-12 23:00:50][INFO][train.py:267]:epochs_wo_improvement: 8
+[2024-09-12 23:00:50][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.096 secs
+[2024-09-12 23:00:50][INFO][train.py:231]:Epoch 23
+val_mse: 72778.5391 [best: 57110.7734]
+val_mape: 1.0829 [best: 0.6505]
+val_median_q_error_50: 2.3383 [best: 2.1789]
+val_median_q_error_95: 3.7346 [best: 3.6490]
+val_median_q_error_100: 24.0158 [best: 8.5201]
+[2024-09-12 23:01:58][INFO][train.py:121]:val_loss epoch 23: 1.1448981761932373
+[2024-09-12 23:01:58][INFO][train.py:267]:epochs_wo_improvement: 9
+[2024-09-12 23:01:58][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.137 secs
+[2024-09-12 23:01:58][INFO][train.py:231]:Epoch 24
+val_mse: 71645.4141 [best: 57110.7734]
+val_mape: 0.9983 [best: 0.6505]
+val_median_q_error_50: 2.2744 [best: 2.1789]
+val_median_q_error_95: 3.7212 [best: 3.6490]
+val_median_q_error_100: 18.9642 [best: 8.5201]
+[2024-09-12 23:03:08][INFO][train.py:121]:val_loss epoch 24: 1.0989155769348145
+[2024-09-12 23:03:08][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:03:08][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:03:08][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.109 secs
+[2024-09-12 23:03:08][INFO][train.py:231]:Epoch 25
+val_mse: 82883.1953 [best: 57110.7734]
+val_mape: 0.9356 [best: 0.6505]
+val_median_q_error_50: 2.1583 [best: 2.1789]
+val_median_q_error_95: 3.7276 [best: 3.6490]
+val_median_q_error_100: 15.0342 [best: 8.5201]
+[2024-09-12 23:04:16][INFO][train.py:121]:val_loss epoch 25: 1.0638068914413452
+[2024-09-12 23:04:16][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:04:16][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:04:16][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 23:04:16][INFO][train.py:231]:Epoch 26
+val_mse: 98675.0312 [best: 57110.7734]
+val_mape: 0.8903 [best: 0.6505]
+val_median_q_error_50: 1.9972 [best: 2.1583]
+val_median_q_error_95: 3.8679 [best: 3.6490]
+val_median_q_error_100: 19.2780 [best: 8.5201]
+[2024-09-12 23:05:25][INFO][train.py:121]:val_loss epoch 26: 0.9652175903320312
+[2024-09-12 23:05:25][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:05:25][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:05:25][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.092 secs
+[2024-09-12 23:05:25][INFO][train.py:231]:Epoch 27
+val_mse: 62500.1133 [best: 57110.7734]
+val_mape: 0.6830 [best: 0.6505]
+val_median_q_error_50: 1.7951 [best: 1.9972]
+val_median_q_error_95: 3.8045 [best: 3.6490]
+val_median_q_error_100: 9.7040 [best: 8.5201]
+[2024-09-12 23:06:32][INFO][train.py:121]:val_loss epoch 27: 0.8942731618881226
+[2024-09-12 23:06:32][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:06:32][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:06:33][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.108 secs
+[2024-09-12 23:06:33][INFO][train.py:231]:Epoch 28
+val_mse: 103053.7969 [best: 57110.7734]
+val_mape: 0.7342 [best: 0.6505]
+val_median_q_error_50: 1.6040 [best: 1.7951]
+val_median_q_error_95: 5.1694 [best: 3.6490]
+val_median_q_error_100: 20.6234 [best: 8.5201]
+[2024-09-12 23:07:41][INFO][train.py:121]:val_loss epoch 28: 0.8277235627174377
+[2024-09-12 23:07:41][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:07:41][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:07:41][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.099 secs
+[2024-09-12 23:07:41][INFO][train.py:231]:Epoch 29
+val_mse: 62667.5859 [best: 57110.7734]
+val_mape: 0.6977 [best: 0.6505]
+val_median_q_error_50: 1.5653 [best: 1.6040]
+val_median_q_error_95: 4.1526 [best: 3.6490]
+val_median_q_error_100: 13.9651 [best: 8.5201]
+[2024-09-12 23:08:51][INFO][train.py:121]:val_loss epoch 29: 0.8181395530700684
+[2024-09-12 23:08:51][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:08:51][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:08:51][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.092 secs
+[2024-09-12 23:08:51][INFO][train.py:231]:Epoch 30
+val_mse: 51300.0234 [best: 57110.7734]
+val_mape: 0.6010 [best: 0.6505]
+val_median_q_error_50: 1.5283 [best: 1.5653]
+val_median_q_error_95: 4.6740 [best: 3.6490]
+val_median_q_error_100: 11.7496 [best: 8.5201]
+[2024-09-12 23:09:58][INFO][train.py:121]:val_loss epoch 30: 0.7803092002868652
+[2024-09-12 23:09:59][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:09:59][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:09:59][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.107 secs
+[2024-09-12 23:09:59][INFO][train.py:231]:Epoch 31
+val_mse: 70432.9531 [best: 51300.0234]
+val_mape: 0.7858 [best: 0.6010]
+val_median_q_error_50: 1.4482 [best: 1.5283]
+val_median_q_error_95: 4.8126 [best: 3.6490]
+val_median_q_error_100: 14.5733 [best: 8.5201]
+[2024-09-12 23:11:07][INFO][train.py:121]:val_loss epoch 31: 0.7720576524734497
+[2024-09-12 23:11:07][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:11:07][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:11:07][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 23:11:07][INFO][train.py:231]:Epoch 32
+val_mse: 46726.8555 [best: 51300.0234]
+val_mape: 0.6847 [best: 0.6010]
+val_median_q_error_50: 1.4259 [best: 1.4482]
+val_median_q_error_95: 4.6584 [best: 3.6490]
+val_median_q_error_100: 12.3493 [best: 8.5201]
+[2024-09-12 23:12:15][INFO][train.py:121]:val_loss epoch 32: 0.7716125845909119
+[2024-09-12 23:12:15][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:12:15][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:12:15][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.102 secs
+[2024-09-12 23:12:15][INFO][train.py:231]:Epoch 33
+val_mse: 48434.3438 [best: 46726.8555]
+val_mape: 0.7085 [best: 0.6010]
+val_median_q_error_50: 1.3707 [best: 1.4259]
+val_median_q_error_95: 4.8892 [best: 3.6490]
+val_median_q_error_100: 12.5808 [best: 8.5201]
+[2024-09-12 23:13:24][INFO][train.py:121]:val_loss epoch 33: 0.7318360805511475
+[2024-09-12 23:13:24][INFO][train.py:267]:epochs_wo_improvement: 1
+[2024-09-12 23:13:25][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.103 secs
+[2024-09-12 23:13:25][INFO][train.py:231]:Epoch 34
+val_mse: 43392.9375 [best: 46726.8555]
+val_mape: 0.6534 [best: 0.6010]
+val_median_q_error_50: 1.3910 [best: 1.3707]
+val_median_q_error_95: 4.5641 [best: 3.6490]
+val_median_q_error_100: 8.3651 [best: 8.5201]
+[2024-09-12 23:14:33][INFO][train.py:121]:val_loss epoch 34: 0.7004098892211914
+[2024-09-12 23:14:33][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:14:33][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:14:33][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.103 secs
+[2024-09-12 23:14:33][INFO][train.py:231]:Epoch 35
+val_mse: 41679.8477 [best: 43392.9375]
+val_mape: 0.6502 [best: 0.6010]
+val_median_q_error_50: 1.3117 [best: 1.3707]
+val_median_q_error_95: 4.6163 [best: 3.6490]
+val_median_q_error_100: 8.3780 [best: 8.3651]
+[2024-09-12 23:15:43][INFO][train.py:121]:val_loss epoch 35: 0.7388064861297607
+[2024-09-12 23:15:43][INFO][train.py:267]:epochs_wo_improvement: 1
+[2024-09-12 23:15:43][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.098 secs
+[2024-09-12 23:15:43][INFO][train.py:231]:Epoch 36
+val_mse: 44727.7031 [best: 41679.8477]
+val_mape: 0.5433 [best: 0.6010]
+val_median_q_error_50: 1.4477 [best: 1.3117]
+val_median_q_error_95: 3.9955 [best: 3.6490]
+val_median_q_error_100: 8.9687 [best: 8.3651]
+[2024-09-12 23:16:51][INFO][train.py:121]:val_loss epoch 36: 0.7656123042106628
+[2024-09-12 23:16:51][INFO][train.py:267]:epochs_wo_improvement: 2
+[2024-09-12 23:16:51][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 23:16:51][INFO][train.py:231]:Epoch 37
+val_mse: 46639.1836 [best: 41679.8477]
+val_mape: 0.6999 [best: 0.5433]
+val_median_q_error_50: 1.5056 [best: 1.3117]
+val_median_q_error_95: 4.1955 [best: 3.6490]
+val_median_q_error_100: 8.0785 [best: 8.3651]
+[2024-09-12 23:18:01][INFO][train.py:121]:val_loss epoch 37: 0.8100073337554932
+[2024-09-12 23:18:01][INFO][train.py:267]:epochs_wo_improvement: 3
+[2024-09-12 23:18:01][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 23:18:01][INFO][train.py:231]:Epoch 38
+val_mse: 53196.9258 [best: 41679.8477]
+val_mape: 0.6091 [best: 0.5433]
+val_median_q_error_50: 1.5177 [best: 1.3117]
+val_median_q_error_95: 4.3158 [best: 3.6490]
+val_median_q_error_100: 8.1719 [best: 8.0785]
+[2024-09-12 23:19:10][INFO][train.py:121]:val_loss epoch 38: 0.8233259320259094
+[2024-09-12 23:19:10][INFO][train.py:267]:epochs_wo_improvement: 4
+[2024-09-12 23:19:10][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.096 secs
+[2024-09-12 23:19:10][INFO][train.py:231]:Epoch 39
+val_mse: 50873.4805 [best: 41679.8477]
+val_mape: 0.8270 [best: 0.5433]
+val_median_q_error_50: 1.4580 [best: 1.3117]
+val_median_q_error_95: 4.7702 [best: 3.6490]
+val_median_q_error_100: 10.2797 [best: 8.0785]
+[2024-09-12 23:20:19][INFO][train.py:121]:val_loss epoch 39: 0.7672734260559082
+[2024-09-12 23:20:19][INFO][train.py:267]:epochs_wo_improvement: 5
+[2024-09-12 23:20:19][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.101 secs
+[2024-09-12 23:20:19][INFO][train.py:231]:Epoch 40
+val_mse: 51173.7539 [best: 41679.8477]
+val_mape: 0.7303 [best: 0.5433]
+val_median_q_error_50: 1.3695 [best: 1.3117]
+val_median_q_error_95: 4.9728 [best: 3.6490]
+val_median_q_error_100: 11.0869 [best: 8.0785]
+[2024-09-12 23:21:27][INFO][train.py:121]:val_loss epoch 40: 0.8319597840309143
+[2024-09-12 23:21:27][INFO][train.py:267]:epochs_wo_improvement: 6
+[2024-09-12 23:21:28][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.100 secs
+[2024-09-12 23:21:28][INFO][train.py:231]:Epoch 41
+val_mse: 55379.8477 [best: 41679.8477]
+val_mape: 0.9905 [best: 0.5433]
+val_median_q_error_50: 1.3916 [best: 1.3117]
+val_median_q_error_95: 5.4822 [best: 3.6490]
+val_median_q_error_100: 11.8263 [best: 8.0785]
+[2024-09-12 23:22:37][INFO][train.py:121]:val_loss epoch 41: 0.7958420515060425
+[2024-09-12 23:22:37][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:22:37][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:22:37][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.096 secs
+[2024-09-12 23:22:37][INFO][train.py:231]:Epoch 42
+val_mse: 49648.3633 [best: 41679.8477]
+val_mape: 0.6402 [best: 0.5433]
+val_median_q_error_50: 1.3116 [best: 1.3117]
+val_median_q_error_95: 5.4295 [best: 3.6490]
+val_median_q_error_100: 10.4689 [best: 8.0785]
+[2024-09-12 23:23:45][INFO][train.py:121]:val_loss epoch 42: 0.7552733421325684
+[2024-09-12 23:23:45][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:23:45][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:23:45][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.110 secs
+[2024-09-12 23:23:45][INFO][train.py:231]:Epoch 43
+val_mse: 55845.8086 [best: 41679.8477]
+val_mape: 0.8395 [best: 0.5433]
+val_median_q_error_50: 1.2719 [best: 1.3116]
+val_median_q_error_95: 5.6598 [best: 3.6490]
+val_median_q_error_100: 11.0121 [best: 8.0785]
+[2024-09-12 23:24:54][INFO][train.py:121]:val_loss epoch 43: 0.7487223148345947
+[2024-09-12 23:24:54][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:24:54][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:24:55][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.100 secs
+[2024-09-12 23:24:55][INFO][train.py:231]:Epoch 44
+val_mse: 50694.9023 [best: 41679.8477]
+val_mape: 0.8014 [best: 0.5433]
+val_median_q_error_50: 1.2565 [best: 1.2719]
+val_median_q_error_95: 5.3969 [best: 3.6490]
+val_median_q_error_100: 10.8002 [best: 8.0785]
+[2024-09-12 23:26:02][INFO][train.py:121]:val_loss epoch 44: 0.7012816071510315
+[2024-09-12 23:26:02][INFO][train.py:267]:epochs_wo_improvement: 1
+[2024-09-12 23:26:02][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.099 secs
+[2024-09-12 23:26:02][INFO][train.py:231]:Epoch 45
+val_mse: 42457.1992 [best: 41679.8477]
+val_mape: 0.6116 [best: 0.5433]
+val_median_q_error_50: 1.3083 [best: 1.2565]
+val_median_q_error_95: 4.3710 [best: 3.6490]
+val_median_q_error_100: 9.9786 [best: 8.0785]
+[2024-09-12 23:27:11][INFO][train.py:121]:val_loss epoch 45: 0.7082122564315796
+[2024-09-12 23:27:11][INFO][train.py:267]:epochs_wo_improvement: 2
+[2024-09-12 23:27:11][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.099 secs
+[2024-09-12 23:27:11][INFO][train.py:231]:Epoch 46
+val_mse: 41688.0195 [best: 41679.8477]
+val_mape: 0.6132 [best: 0.5433]
+val_median_q_error_50: 1.3567 [best: 1.2565]
+val_median_q_error_95: 4.1161 [best: 3.6490]
+val_median_q_error_100: 9.5085 [best: 8.0785]
+[2024-09-12 23:28:19][INFO][train.py:121]:val_loss epoch 46: 0.7009623050689697
+[2024-09-12 23:28:19][INFO][train.py:267]:epochs_wo_improvement: 3
+[2024-09-12 23:28:19][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.105 secs
+[2024-09-12 23:28:19][INFO][train.py:231]:Epoch 47
+val_mse: 41976.7578 [best: 41679.8477]
+val_mape: 0.5467 [best: 0.5433]
+val_median_q_error_50: 1.3253 [best: 1.2565]
+val_median_q_error_95: 3.9695 [best: 3.6490]
+val_median_q_error_100: 9.6492 [best: 8.0785]
+[2024-09-12 23:29:29][INFO][train.py:121]:val_loss epoch 47: 0.6788877248764038
+[2024-09-12 23:29:29][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:29:29][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:29:29][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.095 secs
+[2024-09-12 23:29:29][INFO][train.py:231]:Epoch 48
+val_mse: 43200.5469 [best: 41679.8477]
+val_mape: 0.6554 [best: 0.5433]
+val_median_q_error_50: 1.2414 [best: 1.2565]
+val_median_q_error_95: 4.4541 [best: 3.6490]
+val_median_q_error_100: 10.7564 [best: 8.0785]
+[2024-09-12 23:30:38][INFO][train.py:121]:val_loss epoch 48: 0.6647104024887085
+[2024-09-12 23:30:38][INFO][train.py:143]:New best model for val_median_q_error_50
+[2024-09-12 23:30:38][INFO][train.py:267]:epochs_wo_improvement: 0
+[2024-09-12 23:30:38][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.105 secs
+[2024-09-12 23:30:38][INFO][train.py:231]:Epoch 49
+val_mse: 43369.0664 [best: 41679.8477]
+val_mape: 0.6205 [best: 0.5433]
+val_median_q_error_50: 1.2224 [best: 1.2414]
+val_median_q_error_95: 4.3605 [best: 3.6490]
+val_median_q_error_100: 10.6973 [best: 8.0785]
+[2024-09-12 23:31:48][INFO][train.py:121]:val_loss epoch 49: 0.6563707590103149
+[2024-09-12 23:31:48][INFO][train.py:267]:epochs_wo_improvement: 1
+[2024-09-12 23:31:48][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.114 secs
+[2024-09-12 23:31:48][INFO][train.py:231]:Epoch 50
+val_mse: 41216.5391 [best: 41679.8477]
+val_mape: 0.5648 [best: 0.5433]
+val_median_q_error_50: 1.2696 [best: 1.2224]
+val_median_q_error_95: 4.0192 [best: 3.6490]
+val_median_q_error_100: 9.9500 [best: 8.0785]
+[2024-09-12 23:32:59][INFO][train.py:121]:val_loss epoch 50: 0.6468294858932495
+[2024-09-12 23:32:59][INFO][train.py:267]:epochs_wo_improvement: 2
+[2024-09-12 23:32:59][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.092 secs
+[2024-09-12 23:32:59][INFO][train.py:231]:Epoch 51
+val_mse: 40425.5273 [best: 41216.5391]
+val_mape: 0.5325 [best: 0.5433]
+val_median_q_error_50: 1.2749 [best: 1.2224]
+val_median_q_error_95: 3.8634 [best: 3.6490]
+val_median_q_error_100: 9.0929 [best: 8.0785]
+[2024-09-12 23:34:10][INFO][train.py:121]:val_loss epoch 51: 0.6476060152053833
+[2024-09-12 23:34:10][INFO][train.py:267]:epochs_wo_improvement: 3
+[2024-09-12 23:34:10][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.102 secs
+[2024-09-12 23:34:10][INFO][train.py:231]:Epoch 52
+val_mse: 40572.4336 [best: 40425.5273]
+val_mape: 0.5932 [best: 0.5325]
+val_median_q_error_50: 1.2628 [best: 1.2224]
+val_median_q_error_95: 3.9767 [best: 3.6490]
+val_median_q_error_100: 9.3654 [best: 8.0785]
+[2024-09-12 23:35:20][INFO][train.py:121]:val_loss epoch 52: 0.6610352396965027
+[2024-09-12 23:35:20][INFO][train.py:267]:epochs_wo_improvement: 4
+[2024-09-12 23:35:21][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.114 secs
+[2024-09-12 23:35:21][INFO][train.py:231]:Epoch 53
+val_mse: 39733.6836 [best: 40425.5273]
+val_mape: 0.4902 [best: 0.5325]
+val_median_q_error_50: 1.2724 [best: 1.2224]
+val_median_q_error_95: 3.7864 [best: 3.6490]
+val_median_q_error_100: 9.3589 [best: 8.0785]
+[2024-09-12 23:36:31][INFO][train.py:121]:val_loss epoch 53: 0.6216672658920288
+[2024-09-12 23:36:31][INFO][train.py:267]:epochs_wo_improvement: 5
+[2024-09-12 23:36:31][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 23:36:31][INFO][train.py:231]:Epoch 54
+val_mse: 39733.0508 [best: 39733.6836]
+val_mape: 0.4813 [best: 0.4902]
+val_median_q_error_50: 1.2798 [best: 1.2224]
+val_median_q_error_95: 3.4557 [best: 3.6490]
+val_median_q_error_100: 9.0191 [best: 8.0785]
+[2024-09-12 23:37:42][INFO][train.py:121]:val_loss epoch 54: 0.6479526162147522
+[2024-09-12 23:37:42][INFO][train.py:267]:epochs_wo_improvement: 6
+[2024-09-12 23:37:42][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 23:37:42][INFO][train.py:231]:Epoch 55
+val_mse: 40406.6719 [best: 39733.0508]
+val_mape: 0.5978 [best: 0.4813]
+val_median_q_error_50: 1.2819 [best: 1.2224]
+val_median_q_error_95: 3.9990 [best: 3.4557]
+val_median_q_error_100: 9.3619 [best: 8.0785]
+[2024-09-12 23:38:52][INFO][train.py:121]:val_loss epoch 55: 0.6753392219543457
+[2024-09-12 23:38:52][INFO][train.py:267]:epochs_wo_improvement: 7
+[2024-09-12 23:38:53][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.097 secs
+[2024-09-12 23:38:53][INFO][train.py:231]:Epoch 56
+val_mse: 40843.4258 [best: 39733.0508]
+val_mape: 0.4427 [best: 0.4813]
+val_median_q_error_50: 1.3093 [best: 1.2224]
+val_median_q_error_95: 3.5146 [best: 3.4557]
+val_median_q_error_100: 9.7090 [best: 8.0785]
+[2024-09-12 23:40:03][INFO][train.py:121]:val_loss epoch 56: 0.6460025310516357
+[2024-09-12 23:40:03][INFO][train.py:267]:epochs_wo_improvement: 8
+[2024-09-12 23:40:03][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.099 secs
+[2024-09-12 23:40:03][INFO][train.py:231]:Epoch 57
+val_mse: 38702.8008 [best: 39733.0508]
+val_mape: 0.5943 [best: 0.4427]
+val_median_q_error_50: 1.3116 [best: 1.2224]
+val_median_q_error_95: 3.6646 [best: 3.4557]
+val_median_q_error_100: 9.0471 [best: 8.0785]
+[2024-09-12 23:41:16][INFO][train.py:121]:val_loss epoch 57: 0.6371926069259644
+[2024-09-12 23:41:16][INFO][train.py:267]:epochs_wo_improvement: 9
+[2024-09-12 23:41:16][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.100 secs
+[2024-09-12 23:41:16][INFO][train.py:231]:Epoch 58
+val_mse: 40610.8477 [best: 38702.8008]
+val_mape: 0.4519 [best: 0.4427]
+val_median_q_error_50: 1.2660 [best: 1.2224]
+val_median_q_error_95: 3.5836 [best: 3.4557]
+val_median_q_error_100: 8.9553 [best: 8.0785]
+[2024-09-12 23:42:26][INFO][train.py:121]:val_loss epoch 58: 0.6444905996322632
+[2024-09-12 23:42:26][INFO][train.py:267]:epochs_wo_improvement: 10
+[2024-09-12 23:42:26][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.104 secs
+[2024-09-12 23:42:26][INFO][train.py:231]:Epoch 59
+val_mse: 41595.2656 [best: 38702.8008]
+val_mape: 0.6435 [best: 0.4427]
+val_median_q_error_50: 1.2589 [best: 1.2224]
+val_median_q_error_95: 4.1327 [best: 3.4557]
+val_median_q_error_100: 9.5652 [best: 8.0785]
+[2024-09-12 23:43:38][INFO][train.py:121]:val_loss epoch 59: 0.6346427202224731
+[2024-09-12 23:43:38][INFO][train.py:267]:epochs_wo_improvement: 11
+[2024-09-12 23:43:38][INFO][checkpoint.py:21]:Saved checkpoint to evaluation/tpch.pt in 0.110 secs
+[2024-09-12 23:43:38][INFO][train.py:231]:Epoch 60
+val_mse: 39603.0625 [best: 38702.8008]
+val_mape: 0.4524 [best: 0.4427]
+val_median_q_error_50: 1.2484 [best: 1.2224]
+val_median_q_error_95: 3.6707 [best: 3.4557]
+val_median_q_error_100: 9.4605 [best: 8.0785]
+ERROR: Unexpected bus error encountered in worker. This might be caused by insufficient shared memory (shm).
+ Traceback (most recent call last):
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1134, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/multiprocessing/queues.py", line 107, in get
+    if not self._poll(timeout):
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/multiprocessing/connection.py", line 257, in poll
+    return self._poll(timeout)
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/multiprocessing/connection.py", line 424, in _poll
+    r = wait([self], timeout)
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/multiprocessing/connection.py", line 931, in wait
+    ready = selector.select(timeout)
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/torch/utils/data/_utils/signal_handling.py", line 66, in handler
+    _error_if_any_worker_fails()
+RuntimeError: DataLoader worker (pid 11251) is killed by signal: Bus error. It is possible that dataloader's workers are out of shared memory. Please try to raise your shared memory limit.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "train.py", line 393, in <module>
+    train_model(logger, workload_runs, test_workload_runs, statistics_file, target_dir, filename_model,
+  File "train.py", line 237, in train_model
+    train_epoch(logger, epoch_stats, train_loader, model, optimizer, max_epoch_tuples)
+  File "train.py", line 47, in train_epoch
+    for batch_idx, batch in enumerate(train_loader):
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 652, in __next__
+    data = self._next_data()
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1330, in _next_data
+    idx, data = self._get_data()
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1296, in _get_data
+    success, data = self._try_get_data()
+  File "/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1147, in _try_get_data
+    raise RuntimeError('DataLoader worker (pid(s) {}) exited unexpectedly'.format(pids_str)) from e
+RuntimeError: DataLoader worker (pid(s) 11251) exited unexpectedly

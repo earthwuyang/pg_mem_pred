@@ -1,0 +1,473 @@
+nohup: ignoring input
+Using backend: pytorch
+[2024-09-17 08:17:46][INFO][train.py:118]:train_dataset len 53607
+[2024-09-17 08:17:46][INFO][train.py:119]:test_dataset len 13402
+[2024-09-17 08:17:48][INFO][train.py:145]:training begins...
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:23<00:00, 23.53s/it]100%|██████████| 1/1 [00:23<00:00, 23.53s/it]
+[2024-09-17 08:18:11][INFO][train.py:161]:Epoch 0:
+[2024-09-17 08:18:16][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 428.35044860839844, 'qerror_95': 1806.464367675781, 'qerror_max': 7516.1103515625, 'mean_qerror': 639.86115, 'mre': 0.99719113, 'rmse': 57866.98}
+[2024-09-17 08:18:16][INFO][train.py:163]:Epoch 0 Train Loss: 118.66077423095703 Validation Loss: 38.09777069091797
+[2024-09-17 08:18:16][INFO][train.py:168]:Epoch 0 Best Qerror: 428.35044860839844
+[2024-09-17 08:18:16][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:18:16][INFO][train.py:172]:Epoch 0 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.12s/it]100%|██████████| 1/1 [00:22<00:00, 22.13s/it]
+[2024-09-17 08:18:38][INFO][train.py:161]:Epoch 1:
+[2024-09-17 08:18:44][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 101.97348022460938, 'qerror_95': 418.7139801025389, 'qerror_max': 678.3355102539062, 'mean_qerror': 140.49147, 'mre': 139.48982, 'rmse': 4893668.0}
+[2024-09-17 08:18:44][INFO][train.py:163]:Epoch 1 Train Loss: 38.29885482788086 Validation Loss: 19.3775577545166
+[2024-09-17 08:18:44][INFO][train.py:168]:Epoch 1 Best Qerror: 101.97348022460938
+[2024-09-17 08:18:44][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:18:44][INFO][train.py:172]:Epoch 1 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.09s/it]100%|██████████| 1/1 [00:21<00:00, 21.09s/it]
+[2024-09-17 08:19:05][INFO][train.py:161]:Epoch 2:
+[2024-09-17 08:19:11][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8438764810562134, 'qerror_95': 4.339325857162474, 'qerror_max': 33.19727325439453, 'mean_qerror': 2.1931245, 'mre': 0.675941, 'rmse': 39041.664}
+[2024-09-17 08:19:11][INFO][train.py:163]:Epoch 2 Train Loss: 70.03350830078125 Validation Loss: 0.6512956023216248
+[2024-09-17 08:19:11][INFO][train.py:168]:Epoch 2 Best Qerror: 1.8438764810562134
+[2024-09-17 08:19:11][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:19:11][INFO][train.py:172]:Epoch 2 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.25s/it]100%|██████████| 1/1 [00:21<00:00, 21.26s/it]
+[2024-09-17 08:19:32][INFO][train.py:161]:Epoch 3:
+[2024-09-17 08:19:38][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 10.223169326782227, 'qerror_95': 40.57670593261716, 'qerror_max': 145.9838104248047, 'mean_qerror': 14.993091, 'mre': 0.888384, 'rmse': 55435.61}
+[2024-09-17 08:19:38][INFO][train.py:163]:Epoch 3 Train Loss: 13.771926879882812 Validation Loss: 6.391995429992676
+[2024-09-17 08:19:38][INFO][train.py:175]:epochs_no_improve is 1
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.67s/it]100%|██████████| 1/1 [00:21<00:00, 21.67s/it]
+[2024-09-17 08:19:59][INFO][train.py:161]:Epoch 4:
+[2024-09-17 08:20:04][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 31.118627548217773, 'qerror_95': 126.5187740325927, 'qerror_max': 458.996337890625, 'mean_qerror': 44.977295, 'mre': 0.96438235, 'rmse': 57120.117}
+[2024-09-17 08:20:04][INFO][train.py:163]:Epoch 4 Train Loss: 6.103821754455566 Validation Loss: 13.047555923461914
+[2024-09-17 08:20:04][INFO][train.py:175]:epochs_no_improve is 2
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.52s/it]100%|██████████| 1/1 [00:21<00:00, 21.52s/it]
+[2024-09-17 08:20:26][INFO][train.py:161]:Epoch 5:
+[2024-09-17 08:20:31][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 28.737202644348145, 'qerror_95': 118.62607192993164, 'qerror_max': 437.5774230957031, 'mean_qerror': 41.633358, 'mre': 0.96181524, 'rmse': 57063.625}
+[2024-09-17 08:20:31][INFO][train.py:163]:Epoch 5 Train Loss: 13.642082214355469 Validation Loss: 12.527510643005371
+[2024-09-17 08:20:31][INFO][train.py:175]:epochs_no_improve is 3
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.16s/it]100%|██████████| 1/1 [00:21<00:00, 21.16s/it]
+[2024-09-17 08:20:52][INFO][train.py:161]:Epoch 6:
+[2024-09-17 08:20:57][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 13.561299800872803, 'qerror_95': 55.4825500488281, 'qerror_max': 201.6363983154297, 'mean_qerror': 19.61776, 'mre': 0.91902363, 'rmse': 56097.72}
+[2024-09-17 08:20:57][INFO][train.py:163]:Epoch 6 Train Loss: 18.105968475341797 Validation Loss: 7.874518871307373
+[2024-09-17 08:20:57][INFO][train.py:175]:epochs_no_improve is 4
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.76s/it]100%|██████████| 1/1 [00:21<00:00, 21.76s/it]
+[2024-09-17 08:21:19][INFO][train.py:161]:Epoch 7:
+[2024-09-17 08:21:24][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 3.495574951171875, 'qerror_95': 14.315314340591426, 'qerror_max': 52.38804626464844, 'mean_qerror': 5.065527, 'mre': 0.68488497, 'rmse': 51065.484}
+[2024-09-17 08:21:24][INFO][train.py:163]:Epoch 7 Train Loss: 7.6643195152282715 Validation Loss: 2.3380813598632812
+[2024-09-17 08:21:24][INFO][train.py:175]:epochs_no_improve is 5
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.38s/it]100%|██████████| 1/1 [00:21<00:00, 21.39s/it]
+[2024-09-17 08:21:45][INFO][train.py:161]:Epoch 8:
+[2024-09-17 08:21:50][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8019030690193176, 'qerror_95': 3.421883308887479, 'qerror_max': 11.676420211791992, 'mean_qerror': 1.970929, 'mre': 0.7407414, 'rmse': 36651.87}
+[2024-09-17 08:21:50][INFO][train.py:163]:Epoch 8 Train Loss: 3.5660958290100098 Validation Loss: 0.508025050163269
+[2024-09-17 08:21:50][INFO][train.py:168]:Epoch 8 Best Qerror: 1.8019030690193176
+[2024-09-17 08:21:50][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:21:50][INFO][train.py:172]:Epoch 8 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.68s/it]100%|██████████| 1/1 [00:21<00:00, 21.68s/it]
+[2024-09-17 08:22:12][INFO][train.py:161]:Epoch 9:
+[2024-09-17 08:22:17][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 4.474717378616333, 'qerror_95': 10.355108404159543, 'qerror_max': 14.139431953430176, 'mean_qerror': 4.9660625, 'mre': 3.9643831, 'rmse': 106961.414}
+[2024-09-17 08:22:17][INFO][train.py:163]:Epoch 9 Train Loss: 1.5438615083694458 Validation Loss: 2.4143717288970947
+[2024-09-17 08:22:17][INFO][train.py:175]:epochs_no_improve is 1
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.41s/it]100%|██████████| 1/1 [00:21<00:00, 21.41s/it]
+[2024-09-17 08:22:39][INFO][train.py:161]:Epoch 10:
+[2024-09-17 08:22:45][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 7.491621017456055, 'qerror_95': 16.94090547561645, 'qerror_max': 23.21273422241211, 'mean_qerror': 8.222711, 'mre': 7.222619, 'rmse': 199424.64}
+[2024-09-17 08:22:45][INFO][train.py:163]:Epoch 10 Train Loss: 3.4370481967926025 Validation Loss: 4.084383964538574
+[2024-09-17 08:22:45][INFO][train.py:175]:epochs_no_improve is 2
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.05s/it]100%|██████████| 1/1 [00:21<00:00, 21.05s/it]
+[2024-09-17 08:23:06][INFO][train.py:161]:Epoch 11:
+[2024-09-17 08:23:11][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 5.545964241027832, 'qerror_95': 12.229080486297603, 'qerror_max': 16.716991424560547, 'mean_qerror': 6.0555735, 'mre': 5.0553613, 'rmse': 136351.7}
+[2024-09-17 08:23:11][INFO][train.py:163]:Epoch 11 Train Loss: 4.963350296020508 Validation Loss: 3.0202949047088623
+[2024-09-17 08:23:11][INFO][train.py:175]:epochs_no_improve is 3
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.12s/it]100%|██████████| 1/1 [00:21<00:00, 21.12s/it]
+[2024-09-17 08:23:32][INFO][train.py:161]:Epoch 12:
+[2024-09-17 08:23:38][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.2713429927825928, 'qerror_95': 4.921582794189452, 'qerror_max': 7.181823253631592, 'mean_qerror': 2.6122973, 'mre': 1.5685046, 'rmse': 44237.5}
+[2024-09-17 08:23:38][INFO][train.py:163]:Epoch 12 Train Loss: 4.762193202972412 Validation Loss: 0.9466199278831482
+[2024-09-17 08:23:38][INFO][train.py:175]:epochs_no_improve is 4
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.65s/it]100%|██████████| 1/1 [00:21<00:00, 21.66s/it]
+[2024-09-17 08:23:59][INFO][train.py:161]:Epoch 13:
+[2024-09-17 08:24:04][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6220795512199402, 'qerror_95': 4.428559446334838, 'qerror_max': 17.925884246826172, 'mean_qerror': 1.9452378, 'mre': 0.491615, 'rmse': 39285.45}
+[2024-09-17 08:24:04][INFO][train.py:163]:Epoch 13 Train Loss: 1.1407475471496582 Validation Loss: 0.49517273902893066
+[2024-09-17 08:24:04][INFO][train.py:168]:Epoch 13 Best Qerror: 1.6220795512199402
+[2024-09-17 08:24:04][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:24:04][INFO][train.py:172]:Epoch 13 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.55s/it]100%|██████████| 1/1 [00:21<00:00, 21.55s/it]
+[2024-09-17 08:24:26][INFO][train.py:161]:Epoch 14:
+[2024-09-17 08:24:31][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.051254987716675, 'qerror_95': 8.417546510696406, 'qerror_max': 34.74257278442383, 'mean_qerror': 2.9659665, 'mre': 0.4876278, 'rmse': 46776.438}
+[2024-09-17 08:24:31][INFO][train.py:163]:Epoch 14 Train Loss: 0.7550860047340393 Validation Loss: 1.154472827911377
+[2024-09-17 08:24:31][INFO][train.py:175]:epochs_no_improve is 1
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.47s/it]100%|██████████| 1/1 [00:21<00:00, 21.47s/it]
+[2024-09-17 08:24:53][INFO][train.py:161]:Epoch 15:
+[2024-09-17 08:24:58][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.9499157667160034, 'qerror_95': 12.163467645645142, 'qerror_max': 43.45363235473633, 'mean_qerror': 4.254352, 'mre': 0.6308508, 'rmse': 49948.04}
+[2024-09-17 08:24:58][INFO][train.py:163]:Epoch 15 Train Loss: 1.4571725130081177 Validation Loss: 1.8985931873321533
+[2024-09-17 08:24:58][INFO][train.py:175]:epochs_no_improve is 2
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.69s/it]100%|██████████| 1/1 [00:21<00:00, 21.70s/it]
+[2024-09-17 08:25:20][INFO][train.py:161]:Epoch 16:
+[2024-09-17 08:25:24][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 3.26740300655365, 'qerror_95': 13.502250146865844, 'qerror_max': 58.68574523925781, 'mean_qerror': 4.732859, 'mre': 0.667055, 'rmse': 50684.516}
+[2024-09-17 08:25:24][INFO][train.py:163]:Epoch 16 Train Loss: 1.730774164199829 Validation Loss: 2.164269208908081
+[2024-09-17 08:25:24][INFO][train.py:175]:epochs_no_improve is 3
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.44s/it]100%|██████████| 1/1 [00:21<00:00, 21.44s/it]
+[2024-09-17 08:25:46][INFO][train.py:161]:Epoch 17:
+[2024-09-17 08:25:51][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 3.1089603900909424, 'qerror_95': 12.743763303756714, 'qerror_max': 55.463043212890625, 'mean_qerror': 4.514815, 'mre': 0.6511111, 'rmse': 50353.09}
+[2024-09-17 08:25:51][INFO][train.py:163]:Epoch 17 Train Loss: 2.384551763534546 Validation Loss: 2.044408082962036
+[2024-09-17 08:25:51][INFO][train.py:175]:epochs_no_improve is 4
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.22s/it]100%|██████████| 1/1 [00:21<00:00, 21.22s/it]
+[2024-09-17 08:26:12][INFO][train.py:161]:Epoch 18:
+[2024-09-17 08:26:17][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.534145951271057, 'qerror_95': 10.4177273273468, 'qerror_max': 44.26808547973633, 'mean_qerror': 3.6662288, 'mre': 0.57196385, 'rmse': 48733.68}
+[2024-09-17 08:26:17][INFO][train.py:163]:Epoch 18 Train Loss: 2.5688042640686035 Validation Loss: 1.5625516176223755
+[2024-09-17 08:26:17][INFO][train.py:175]:epochs_no_improve is 5
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.23s/it]100%|██████████| 1/1 [00:21<00:00, 21.23s/it]
+[2024-09-17 08:26:39][INFO][train.py:161]:Epoch 19:
+[2024-09-17 08:26:44][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8018478751182556, 'qerror_95': 7.400086784362791, 'qerror_max': 31.05183219909668, 'mean_qerror': 2.6690772, 'mre': 0.4551932, 'rmse': 45503.266}
+[2024-09-17 08:26:44][INFO][train.py:163]:Epoch 19 Train Loss: 1.6088550090789795 Validation Loss: 0.9723410606384277
+[2024-09-17 08:26:44][INFO][train.py:175]:epochs_no_improve is 6
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.06s/it]100%|██████████| 1/1 [00:21<00:00, 21.07s/it]
+[2024-09-17 08:27:05][INFO][train.py:161]:Epoch 20:
+[2024-09-17 08:27:11][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.580397367477417, 'qerror_95': 4.900847172737119, 'qerror_max': 20.920778274536133, 'mean_qerror': 2.0293965, 'mre': 0.45893767, 'rmse': 40649.33}
+[2024-09-17 08:27:11][INFO][train.py:163]:Epoch 20 Train Loss: 1.8080811500549316 Validation Loss: 0.5556167960166931
+[2024-09-17 08:27:11][INFO][train.py:168]:Epoch 20 Best Qerror: 1.580397367477417
+[2024-09-17 08:27:11][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:27:11][INFO][train.py:172]:Epoch 20 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.34s/it]100%|██████████| 1/1 [00:21<00:00, 21.34s/it]
+[2024-09-17 08:27:32][INFO][train.py:161]:Epoch 21:
+[2024-09-17 08:27:38][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8196784257888794, 'qerror_95': 3.336292850971221, 'qerror_max': 12.904376029968262, 'mean_qerror': 1.954712, 'mre': 0.7471759, 'rmse': 36195.324}
+[2024-09-17 08:27:38][INFO][train.py:163]:Epoch 21 Train Loss: 1.3812806606292725 Validation Loss: 0.4960930645465851
+[2024-09-17 08:27:38][INFO][train.py:175]:epochs_no_improve is 1
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.35s/it]100%|██████████| 1/1 [00:21<00:00, 21.35s/it]
+[2024-09-17 08:27:59][INFO][train.py:161]:Epoch 22:
+[2024-09-17 08:28:04][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.1841408014297485, 'qerror_95': 4.477394437789916, 'qerror_max': 8.646077156066895, 'mean_qerror': 2.413216, 'mre': 1.3480448, 'rmse': 40723.76}
+[2024-09-17 08:28:04][INFO][train.py:163]:Epoch 22 Train Loss: 1.2199218273162842 Validation Loss: 0.8106155395507812
+[2024-09-17 08:28:04][INFO][train.py:175]:epochs_no_improve is 2
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.44s/it]100%|██████████| 1/1 [00:21<00:00, 21.44s/it]
+[2024-09-17 08:28:25][INFO][train.py:161]:Epoch 23:
+[2024-09-17 08:28:31][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.4922008514404297, 'qerror_95': 5.484807443618774, 'qerror_max': 7.664534091949463, 'mean_qerror': 2.832275, 'mre': 1.8014717, 'rmse': 49230.18}
+[2024-09-17 08:28:31][INFO][train.py:163]:Epoch 23 Train Loss: 1.3636294603347778 Validation Loss: 1.095288872718811
+[2024-09-17 08:28:31][INFO][train.py:175]:epochs_no_improve is 3
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.14s/it]100%|██████████| 1/1 [00:21<00:00, 21.14s/it]
+[2024-09-17 08:28:52][INFO][train.py:161]:Epoch 24:
+[2024-09-17 08:28:57][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.498581051826477, 'qerror_95': 5.492955684661865, 'qerror_max': 7.710710525512695, 'mean_qerror': 2.840657, 'mre': 1.8109099, 'rmse': 49364.88}
+[2024-09-17 08:28:57][INFO][train.py:163]:Epoch 24 Train Loss: 1.6041524410247803 Validation Loss: 1.1013644933700562
+[2024-09-17 08:28:57][INFO][train.py:175]:epochs_no_improve is 4
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.82s/it]100%|██████████| 1/1 [00:21<00:00, 21.82s/it]
+[2024-09-17 08:29:19][INFO][train.py:161]:Epoch 25:
+[2024-09-17 08:29:24][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.1991841793060303, 'qerror_95': 4.547670531272887, 'qerror_max': 7.248139381408691, 'mean_qerror': 2.447685, 'mre': 1.3883973, 'rmse': 41156.508}
+[2024-09-17 08:29:24][INFO][train.py:163]:Epoch 25 Train Loss: 1.5898709297180176 Validation Loss: 0.8343157172203064
+[2024-09-17 08:29:24][INFO][train.py:175]:epochs_no_improve is 5
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.58s/it]100%|██████████| 1/1 [00:21<00:00, 21.58s/it]
+[2024-09-17 08:29:46][INFO][train.py:161]:Epoch 26:
+[2024-09-17 08:29:51][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.955191195011139, 'qerror_95': 3.419178009033203, 'qerror_max': 11.222221374511719, 'mean_qerror': 2.057681, 'mre': 0.9186798, 'rmse': 36124.465}
+[2024-09-17 08:29:51][INFO][train.py:163]:Epoch 26 Train Loss: 0.9831008315086365 Validation Loss: 0.566864013671875
+[2024-09-17 08:29:51][INFO][train.py:175]:epochs_no_improve is 6
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.47s/it]100%|██████████| 1/1 [00:21<00:00, 21.47s/it]
+[2024-09-17 08:30:12][INFO][train.py:161]:Epoch 27:
+[2024-09-17 08:30:17][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6624468564987183, 'qerror_95': 3.9295521378517146, 'qerror_max': 14.671723365783691, 'mean_qerror': 1.9057397, 'mre': 0.5584147, 'rmse': 37837.914}
+[2024-09-17 08:30:17][INFO][train.py:163]:Epoch 27 Train Loss: 0.748031735420227 Validation Loss: 0.4650413691997528
+[2024-09-17 08:30:17][INFO][train.py:175]:epochs_no_improve is 7
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.27s/it]100%|██████████| 1/1 [00:21<00:00, 21.27s/it]
+[2024-09-17 08:30:38][INFO][train.py:161]:Epoch 28:
+[2024-09-17 08:30:44][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.560864269733429, 'qerror_95': 5.4553390741348196, 'qerror_max': 22.272680282592773, 'mean_qerror': 2.1161392, 'mre': 0.4321692, 'rmse': 41843.324}
+[2024-09-17 08:30:44][INFO][train.py:163]:Epoch 28 Train Loss: 0.48499810695648193 Validation Loss: 0.6168209910392761
+[2024-09-17 08:30:44][INFO][train.py:168]:Epoch 28 Best Qerror: 1.560864269733429
+[2024-09-17 08:30:44][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:30:44][INFO][train.py:172]:Epoch 28 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:20<00:00, 20.92s/it]100%|██████████| 1/1 [00:20<00:00, 20.92s/it]
+[2024-09-17 08:31:05][INFO][train.py:161]:Epoch 29:
+[2024-09-17 08:31:11][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.712440848350525, 'qerror_95': 7.037927103042598, 'qerror_max': 28.60017967224121, 'mean_qerror': 2.525085, 'mre': 0.4379876, 'rmse': 44873.844}
+[2024-09-17 08:31:11][INFO][train.py:163]:Epoch 29 Train Loss: 0.5851836204528809 Validation Loss: 0.8845699429512024
+[2024-09-17 08:31:11][INFO][train.py:175]:epochs_no_improve is 1
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:20<00:00, 20.92s/it]100%|██████████| 1/1 [00:20<00:00, 20.92s/it]
+[2024-09-17 08:31:32][INFO][train.py:161]:Epoch 30:
+[2024-09-17 08:31:37][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.9419186115264893, 'qerror_95': 7.997271871566772, 'qerror_max': 32.53279495239258, 'mean_qerror': 2.8221154, 'mre': 0.46931148, 'rmse': 46251.56}
+[2024-09-17 08:31:37][INFO][train.py:163]:Epoch 30 Train Loss: 0.9198637008666992 Validation Loss: 1.0681713819503784
+[2024-09-17 08:31:37][INFO][train.py:175]:epochs_no_improve is 2
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.37s/it]100%|██████████| 1/1 [00:21<00:00, 21.37s/it]
+[2024-09-17 08:31:58][INFO][train.py:161]:Epoch 31:
+[2024-09-17 08:32:03][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.903072714805603, 'qerror_95': 7.837917041778562, 'qerror_max': 30.4156436920166, 'mean_qerror': 2.7684755, 'mre': 0.46290892, 'rmse': 46032.492}
+[2024-09-17 08:32:03][INFO][train.py:163]:Epoch 31 Train Loss: 1.116024374961853 Validation Loss: 1.0357468128204346
+[2024-09-17 08:32:03][INFO][train.py:175]:epochs_no_improve is 3
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.68s/it]100%|██████████| 1/1 [00:21<00:00, 21.68s/it]
+[2024-09-17 08:32:25][INFO][train.py:161]:Epoch 32:
+[2024-09-17 08:32:30][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6294992566108704, 'qerror_95': 6.693751001358032, 'qerror_max': 27.149423599243164, 'mean_qerror': 2.4206202, 'mre': 0.4302279, 'rmse': 44275.44}
+[2024-09-17 08:32:30][INFO][train.py:163]:Epoch 32 Train Loss: 0.9990822672843933 Validation Loss: 0.8181243538856506
+[2024-09-17 08:32:30][INFO][train.py:175]:epochs_no_improve is 4
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.54s/it]100%|██████████| 1/1 [00:21<00:00, 21.54s/it]
+[2024-09-17 08:32:52][INFO][train.py:161]:Epoch 33:
+[2024-09-17 08:32:57][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.5697380900382996, 'qerror_95': 5.120285606384272, 'qerror_max': 20.953365325927734, 'mean_qerror': 2.0509958, 'mre': 0.44291368, 'rmse': 41092.33}
+[2024-09-17 08:32:57][INFO][train.py:163]:Epoch 33 Train Loss: 0.8573854565620422 Validation Loss: 0.5717899799346924
+[2024-09-17 08:32:57][INFO][train.py:175]:epochs_no_improve is 5
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.02s/it]100%|██████████| 1/1 [00:22<00:00, 22.03s/it]
+[2024-09-17 08:33:19][INFO][train.py:161]:Epoch 34:
+[2024-09-17 08:33:24][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6681841611862183, 'qerror_95': 3.841898608207702, 'qerror_max': 14.751669883728027, 'mean_qerror': 1.9007109, 'mre': 0.5678041, 'rmse': 37626.55}
+[2024-09-17 08:33:24][INFO][train.py:163]:Epoch 34 Train Loss: 0.5563068985939026 Validation Loss: 0.4612407386302948
+[2024-09-17 08:33:24][INFO][train.py:175]:epochs_no_improve is 6
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.81s/it]100%|██████████| 1/1 [00:21<00:00, 21.81s/it]
+[2024-09-17 08:33:46][INFO][train.py:161]:Epoch 35:
+[2024-09-17 08:33:51][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.873957097530365, 'qerror_95': 3.2834641456603997, 'qerror_max': 11.174066543579102, 'mean_qerror': 1.9855697, 'mre': 0.8126798, 'rmse': 35873.68}
+[2024-09-17 08:33:51][INFO][train.py:163]:Epoch 35 Train Loss: 0.48433706164360046 Validation Loss: 0.5167848467826843
+[2024-09-17 08:33:51][INFO][train.py:175]:epochs_no_improve is 7
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.62s/it]100%|██████████| 1/1 [00:21<00:00, 21.62s/it]
+[2024-09-17 08:34:13][INFO][train.py:161]:Epoch 36:
+[2024-09-17 08:34:18][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.0893001556396484, 'qerror_95': 3.8760428428649902, 'qerror_max': 9.014656066894531, 'mean_qerror': 2.2092125, 'mre': 1.1144142, 'rmse': 37447.297}
+[2024-09-17 08:34:18][INFO][train.py:163]:Epoch 36 Train Loss: 0.5160925984382629 Validation Loss: 0.6712020635604858
+[2024-09-17 08:34:18][INFO][train.py:175]:epochs_no_improve is 8
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.50s/it]100%|██████████| 1/1 [00:21<00:00, 21.50s/it]
+[2024-09-17 08:34:39][INFO][train.py:161]:Epoch 37:
+[2024-09-17 08:34:45][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.17085063457489, 'qerror_95': 4.311276507377624, 'qerror_max': 8.575479507446289, 'mean_qerror': 2.3702362, 'mre': 1.3020488, 'rmse': 39748.973}
+[2024-09-17 08:34:45][INFO][train.py:163]:Epoch 37 Train Loss: 0.613257110118866 Validation Loss: 0.7813409566879272
+[2024-09-17 08:34:45][INFO][train.py:175]:epochs_no_improve is 9
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.31s/it]100%|██████████| 1/1 [00:21<00:00, 21.31s/it]
+[2024-09-17 08:35:06][INFO][train.py:161]:Epoch 38:
+[2024-09-17 08:35:12][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.1653289794921875, 'qerror_95': 4.267802357673644, 'qerror_max': 8.685159683227539, 'mean_qerror': 2.350647, 'mre': 1.2796621, 'rmse': 39433.723}
+[2024-09-17 08:35:12][INFO][train.py:163]:Epoch 38 Train Loss: 0.7097023129463196 Validation Loss: 0.7678050398826599
+[2024-09-17 08:35:12][INFO][train.py:175]:epochs_no_improve is 10
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.20s/it]100%|██████████| 1/1 [00:21<00:00, 21.20s/it]
+[2024-09-17 08:35:33][INFO][train.py:161]:Epoch 39:
+[2024-09-17 08:35:39][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 2.0288251638412476, 'qerror_95': 3.6523828506469727, 'qerror_max': 9.59962272644043, 'mean_qerror': 2.1351175, 'mre': 1.022984, 'rmse': 36642.88}
+[2024-09-17 08:35:39][INFO][train.py:163]:Epoch 39 Train Loss: 0.7900533676147461 Validation Loss: 0.6202912926673889
+[2024-09-17 08:35:39][INFO][train.py:175]:epochs_no_improve is 11
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.49s/it]100%|██████████| 1/1 [00:21<00:00, 21.50s/it]
+[2024-09-17 08:36:00][INFO][train.py:161]:Epoch 40:
+[2024-09-17 08:36:05][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8113993406295776, 'qerror_95': 3.2917367577552787, 'qerror_max': 12.62948226928711, 'mean_qerror': 1.9402808, 'mre': 0.73149914, 'rmse': 36057.66}
+[2024-09-17 08:36:05][INFO][train.py:163]:Epoch 40 Train Loss: 0.6262381672859192 Validation Loss: 0.48581862449645996
+[2024-09-17 08:36:05][INFO][train.py:175]:epochs_no_improve is 12
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.41s/it]100%|██████████| 1/1 [00:21<00:00, 21.41s/it]
+[2024-09-17 08:36:26][INFO][train.py:161]:Epoch 41:
+[2024-09-17 08:36:32][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6539433002471924, 'qerror_95': 4.019926810264587, 'qerror_max': 15.721651077270508, 'mean_qerror': 1.9095498, 'mre': 0.54040366, 'rmse': 38150.098}
+[2024-09-17 08:36:32][INFO][train.py:163]:Epoch 41 Train Loss: 0.48877015709877014 Validation Loss: 0.4682670533657074
+[2024-09-17 08:36:32][INFO][train.py:175]:epochs_no_improve is 13
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.17s/it]100%|██████████| 1/1 [00:21<00:00, 21.17s/it]
+[2024-09-17 08:36:53][INFO][train.py:161]:Epoch 42:
+[2024-09-17 08:36:58][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.5808815360069275, 'qerror_95': 4.9640075683593725, 'qerror_max': 20.056676864624023, 'mean_qerror': 2.0205417, 'mre': 0.45164528, 'rmse': 40671.043}
+[2024-09-17 08:36:58][INFO][train.py:163]:Epoch 42 Train Loss: 0.458805650472641 Validation Loss: 0.5500438809394836
+[2024-09-17 08:36:58][INFO][train.py:175]:epochs_no_improve is 14
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.79s/it]100%|██████████| 1/1 [00:21<00:00, 21.80s/it]
+[2024-09-17 08:37:20][INFO][train.py:161]:Epoch 43:
+[2024-09-17 08:37:25][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.5542520880699158, 'qerror_95': 5.648818278312683, 'qerror_max': 22.730731964111328, 'mean_qerror': 2.1569238, 'mre': 0.42759892, 'rmse': 42276.4}
+[2024-09-17 08:37:25][INFO][train.py:163]:Epoch 43 Train Loss: 0.5381442904472351 Validation Loss: 0.6447478532791138
+[2024-09-17 08:37:25][INFO][train.py:168]:Epoch 43 Best Qerror: 1.5542520880699158
+[2024-09-17 08:37:25][INFO][train.py:170]:epochs_no_improve is 0
+[2024-09-17 08:37:25][INFO][train.py:172]:Epoch 43 state dict saved to best_plan_net_tpcds.pth
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.42s/it]100%|██████████| 1/1 [00:21<00:00, 21.42s/it]
+[2024-09-17 08:37:46][INFO][train.py:161]:Epoch 44:
+[2024-09-17 08:37:51][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.5558610558509827, 'qerror_95': 5.766428899765012, 'qerror_max': 23.11481475830078, 'mean_qerror': 2.1814628, 'mre': 0.4261536, 'rmse': 42505.758}
+[2024-09-17 08:37:51][INFO][train.py:163]:Epoch 44 Train Loss: 0.6078919768333435 Validation Loss: 0.6612662672996521
+[2024-09-17 08:37:51][INFO][train.py:175]:epochs_no_improve is 1
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.19s/it]100%|██████████| 1/1 [00:21<00:00, 21.19s/it]
+[2024-09-17 08:38:12][INFO][train.py:161]:Epoch 45:
+[2024-09-17 08:38:17][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.5642372965812683, 'qerror_95': 5.302176022529596, 'qerror_max': 21.304407119750977, 'mean_qerror': 2.079728, 'mre': 0.4368753, 'rmse': 41453.945}
+[2024-09-17 08:38:17][INFO][train.py:163]:Epoch 45 Train Loss: 0.653807520866394 Validation Loss: 0.5918234586715698
+[2024-09-17 08:38:17][INFO][train.py:175]:epochs_no_improve is 2
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.11s/it]100%|██████████| 1/1 [00:21<00:00, 21.12s/it]
+[2024-09-17 08:38:38][INFO][train.py:161]:Epoch 46:
+[2024-09-17 08:38:44][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6173959970474243, 'qerror_95': 4.513380861282348, 'qerror_max': 17.756345748901367, 'mean_qerror': 1.9539787, 'mre': 0.48409072, 'rmse': 39493.414}
+[2024-09-17 08:38:44][INFO][train.py:163]:Epoch 46 Train Loss: 0.5743733644485474 Validation Loss: 0.5017314553260803
+[2024-09-17 08:38:44][INFO][train.py:175]:epochs_no_improve is 3
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.32s/it]100%|██████████| 1/1 [00:21<00:00, 21.33s/it]
+[2024-09-17 08:39:05][INFO][train.py:161]:Epoch 47:
+[2024-09-17 08:39:11][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6805029511451721, 'qerror_95': 3.7422899961471554, 'qerror_max': 15.069177627563477, 'mean_qerror': 1.9001576, 'mre': 0.58386326, 'rmse': 37403.785}
+[2024-09-17 08:39:11][INFO][train.py:163]:Epoch 47 Train Loss: 0.4881075620651245 Validation Loss: 0.46040937304496765
+[2024-09-17 08:39:11][INFO][train.py:175]:epochs_no_improve is 4
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.57s/it]100%|██████████| 1/1 [00:21<00:00, 21.57s/it]
+[2024-09-17 08:39:32][INFO][train.py:161]:Epoch 48:
+[2024-09-17 08:39:38][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.7985213994979858, 'qerror_95': 3.2858018040657018, 'qerror_max': 12.733237266540527, 'mean_qerror': 1.9367272, 'mre': 0.72410077, 'rmse': 36089.973}
+[2024-09-17 08:39:38][INFO][train.py:163]:Epoch 48 Train Loss: 0.45884761214256287 Validation Loss: 0.4833403527736664
+[2024-09-17 08:39:38][INFO][train.py:175]:epochs_no_improve is 5
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.21s/it]100%|██████████| 1/1 [00:22<00:00, 22.21s/it]
+[2024-09-17 08:40:00][INFO][train.py:161]:Epoch 49:
+[2024-09-17 08:40:05][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.9051888585090637, 'qerror_95': 3.282394647598266, 'qerror_max': 11.364419937133789, 'mean_qerror': 2.008668, 'mre': 0.8494938, 'rmse': 35880.188}
+[2024-09-17 08:40:05][INFO][train.py:163]:Epoch 49 Train Loss: 0.4883483946323395 Validation Loss: 0.5328220129013062
+[2024-09-17 08:40:05][INFO][train.py:175]:epochs_no_improve is 6
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.36s/it]100%|██████████| 1/1 [00:22<00:00, 22.36s/it]
+[2024-09-17 08:40:28][INFO][train.py:161]:Epoch 50:
+[2024-09-17 08:40:33][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.927894115447998, 'qerror_95': 3.3171564698219296, 'qerror_max': 11.16675853729248, 'mean_qerror': 2.0268576, 'mre': 0.87728155, 'rmse': 35909.777}
+[2024-09-17 08:40:33][INFO][train.py:163]:Epoch 50 Train Loss: 0.5633488893508911 Validation Loss: 0.5454332828521729
+[2024-09-17 08:40:33][INFO][train.py:175]:epochs_no_improve is 7
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.10s/it]100%|██████████| 1/1 [00:22<00:00, 22.10s/it]
+[2024-09-17 08:40:55][INFO][train.py:161]:Epoch 51:
+[2024-09-17 08:41:01][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8530700206756592, 'qerror_95': 3.2723418354988096, 'qerror_max': 12.001059532165527, 'mean_qerror': 1.9673548, 'mre': 0.7831056, 'rmse': 35886.74}
+[2024-09-17 08:41:01][INFO][train.py:163]:Epoch 51 Train Loss: 0.5686241388320923 Validation Loss: 0.5043019652366638
+[2024-09-17 08:41:01][INFO][train.py:175]:epochs_no_improve is 8
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.78s/it]100%|██████████| 1/1 [00:22<00:00, 22.78s/it]
+[2024-09-17 08:41:23][INFO][train.py:161]:Epoch 52:
+[2024-09-17 08:41:28][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.743916094303131, 'qerror_95': 3.39376950263977, 'qerror_max': 13.280853271484375, 'mean_qerror': 1.9114627, 'mre': 0.6599056, 'rmse': 36521.76}
+[2024-09-17 08:41:28][INFO][train.py:163]:Epoch 52 Train Loss: 0.5172568559646606 Validation Loss: 0.46669068932533264
+[2024-09-17 08:41:28][INFO][train.py:175]:epochs_no_improve is 9
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.34s/it]100%|██████████| 1/1 [00:22<00:00, 22.34s/it]
+[2024-09-17 08:41:51][INFO][train.py:161]:Epoch 53:
+[2024-09-17 08:41:56][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.664415180683136, 'qerror_95': 3.8952316045761104, 'qerror_max': 15.317442893981934, 'mean_qerror': 1.9029632, 'mre': 0.5583605, 'rmse': 37799.027}
+[2024-09-17 08:41:56][INFO][train.py:163]:Epoch 53 Train Loss: 0.46249184012413025 Validation Loss: 0.4630657434463501
+[2024-09-17 08:41:56][INFO][train.py:175]:epochs_no_improve is 10
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.12s/it]100%|██████████| 1/1 [00:22<00:00, 22.12s/it]
+[2024-09-17 08:42:18][INFO][train.py:161]:Epoch 54:
+[2024-09-17 08:42:23][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6276319026947021, 'qerror_95': 4.387026143074035, 'qerror_max': 17.5948543548584, 'mean_qerror': 1.9395738, 'mre': 0.49639586, 'rmse': 39152.36}
+[2024-09-17 08:42:23][INFO][train.py:163]:Epoch 54 Train Loss: 0.4548364281654358 Validation Loss: 0.4909747838973999
+[2024-09-17 08:42:23][INFO][train.py:175]:epochs_no_improve is 11
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.16s/it]100%|██████████| 1/1 [00:22<00:00, 22.16s/it]
+[2024-09-17 08:42:45][INFO][train.py:161]:Epoch 55:
+[2024-09-17 08:42:51][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6029082536697388, 'qerror_95': 4.698607301712034, 'qerror_max': 18.848325729370117, 'mean_qerror': 1.9776701, 'mre': 0.46937418, 'rmse': 39969.223}
+[2024-09-17 08:42:51][INFO][train.py:163]:Epoch 55 Train Loss: 0.4831807017326355 Validation Loss: 0.5191312432289124
+[2024-09-17 08:42:51][INFO][train.py:175]:epochs_no_improve is 12
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.79s/it]100%|██████████| 1/1 [00:21<00:00, 21.79s/it]
+[2024-09-17 08:43:13][INFO][train.py:161]:Epoch 56:
+[2024-09-17 08:43:19][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.601557195186615, 'qerror_95': 4.707910323143002, 'qerror_max': 18.881898880004883, 'mean_qerror': 1.9793165, 'mre': 0.4686059, 'rmse': 39998.734}
+[2024-09-17 08:43:19][INFO][train.py:163]:Epoch 56 Train Loss: 0.5047502517700195 Validation Loss: 0.5203157663345337
+[2024-09-17 08:43:19][INFO][train.py:175]:epochs_no_improve is 13
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:21<00:00, 21.76s/it]100%|██████████| 1/1 [00:21<00:00, 21.76s/it]
+[2024-09-17 08:43:40][INFO][train.py:161]:Epoch 57:
+[2024-09-17 08:43:46][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6231213808059692, 'qerror_95': 4.426327323913574, 'qerror_max': 17.801923751831055, 'mean_qerror': 1.9437515, 'mre': 0.49231863, 'rmse': 39258.406}
+[2024-09-17 08:43:46][INFO][train.py:163]:Epoch 57 Train Loss: 0.5083101391792297 Validation Loss: 0.4941515326499939
+[2024-09-17 08:43:46][INFO][train.py:175]:epochs_no_improve is 14
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.44s/it]100%|██████████| 1/1 [00:22<00:00, 22.44s/it]
+[2024-09-17 08:44:09][INFO][train.py:161]:Epoch 58:
+[2024-09-17 08:44:14][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.6550267338752747, 'qerror_95': 4.012796616554257, 'qerror_max': 16.122480392456055, 'mean_qerror': 1.9080501, 'mre': 0.5418097, 'rmse': 38106.04}
+[2024-09-17 08:44:14][INFO][train.py:163]:Epoch 58 Train Loss: 0.4856162965297699 Validation Loss: 0.4671630561351776
+[2024-09-17 08:44:14][INFO][train.py:175]:epochs_no_improve is 15
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.11s/it]100%|██████████| 1/1 [00:22<00:00, 22.11s/it]
+[2024-09-17 08:44:36][INFO][train.py:161]:Epoch 59:
+[2024-09-17 08:44:41][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.7018409967422485, 'qerror_95': 3.5969738245010365, 'qerror_max': 14.478693008422852, 'mean_qerror': 1.9009544, 'mre': 0.61225283, 'rmse': 37013.3}
+[2024-09-17 08:44:41][INFO][train.py:163]:Epoch 59 Train Loss: 0.4580155611038208 Validation Loss: 0.4602833092212677
+[2024-09-17 08:44:41][INFO][train.py:175]:epochs_no_improve is 16
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.10s/it]100%|██████████| 1/1 [00:22<00:00, 22.11s/it]
+[2024-09-17 08:45:03][INFO][train.py:161]:Epoch 60:
+[2024-09-17 08:45:09][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.7694647908210754, 'qerror_95': 3.3120682597160336, 'qerror_max': 13.161510467529297, 'mean_qerror': 1.9214678, 'mre': 0.68902576, 'rmse': 36292.965}
+[2024-09-17 08:45:09][INFO][train.py:163]:Epoch 60 Train Loss: 0.4562501609325409 Validation Loss: 0.47323498129844666
+[2024-09-17 08:45:09][INFO][train.py:175]:epochs_no_improve is 17
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.65s/it]100%|██████████| 1/1 [00:22<00:00, 22.65s/it]
+[2024-09-17 08:45:31][INFO][train.py:161]:Epoch 61:
+[2024-09-17 08:45:36][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.8251709938049316, 'qerror_95': 3.281435143947601, 'qerror_max': 12.07671070098877, 'mean_qerror': 1.9489955, 'mre': 0.74942225, 'rmse': 35977.7}
+[2024-09-17 08:45:36][INFO][train.py:163]:Epoch 61 Train Loss: 0.4671863317489624 Validation Loss: 0.4917263686656952
+[2024-09-17 08:45:36][INFO][train.py:175]:epochs_no_improve is 18
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.33s/it]100%|██████████| 1/1 [00:22<00:00, 22.33s/it]
+[2024-09-17 08:45:59][INFO][train.py:161]:Epoch 62:
+[2024-09-17 08:46:04][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.829074740409851, 'qerror_95': 3.282856321334839, 'qerror_max': 12.007230758666992, 'mean_qerror': 1.9525937, 'mre': 0.75637686, 'rmse': 35953.24}
+[2024-09-17 08:46:04][INFO][train.py:163]:Epoch 62 Train Loss: 0.48485586047172546 Validation Loss: 0.4941839277744293
+[2024-09-17 08:46:04][INFO][train.py:175]:epochs_no_improve is 19
+  0%|          | 0/1 [00:00<?, ?it/s]/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+100%|██████████| 1/1 [00:22<00:00, 22.14s/it]100%|██████████| 1/1 [00:22<00:00, 22.14s/it]
+[2024-09-17 08:46:26][INFO][train.py:161]:Epoch 63:
+[2024-09-17 08:46:31][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.7873254418373108, 'qerror_95': 3.300299274921417, 'qerror_max': 12.914114952087402, 'mean_qerror': 1.9299324, 'mre': 0.70923257, 'rmse': 36169.594}
+[2024-09-17 08:46:31][INFO][train.py:163]:Epoch 63 Train Loss: 0.4908002018928528 Validation Loss: 0.47884464263916016
+[2024-09-17 08:46:31][INFO][train.py:175]:epochs_no_improve is 20
+[2024-09-17 08:46:31][INFO][train.py:178]:Early stopping at epoch 63
+/home/wuy/software/anaconda3/envs/zsce/lib/python3.8/site-packages/dgl/base.py:45: DGLWarning: The input graph for the user-defined edge function does not contain valid edges
+  return warnings.warn(message, category=category, stacklevel=1)
+[2024-09-17 08:46:37][INFO][train.py:74]:Metrics: {'qerror_50 (Median)': 1.5528590679168701, 'qerror_95': 5.644261217117306, 'qerror_max': 22.280879974365234, 'mean_qerror': 2.1558728, 'mre': 0.42777905, 'rmse': 42266.152}
