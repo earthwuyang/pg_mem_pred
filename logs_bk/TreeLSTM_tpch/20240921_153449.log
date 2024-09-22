@@ -1,1 +1,0 @@
-[2024-09-21 15:34:49][INFO][train.py:80]:args: Namespace(batch_size=10240, dataset_dir='/home/wuy/DB/pg_mem_data', epochs=1000, hidden_channels=64, model_name='TreeLSTM', num_workers=10, skip_train=False, test_dataset='tpch', train_dataset='tpch')

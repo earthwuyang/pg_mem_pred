@@ -1,2 +1,0 @@
-[2024-09-22 07:27:55][INFO][checkpoint.py:123]:No valid checkpoint found [Errno 2] No such file or directory: 'evaluation_train_tpch_test_tpch/tpch.pt'
-[2024-09-22 07:27:55][INFO][train.py:232]:Epoch 0
