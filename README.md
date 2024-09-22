@@ -1,5 +1,11 @@
-pg_mem_data/pg_log are the logs of PostgreSQL memory usage for each query. 
+## Usage
+
+run `python src/datasets/prepare_data/execute_*_workload.py` execute worklods and get mem info.
 You need to `SET log_statement_stats = on` to enable logging memory usage.
+
+copy those logs to pg_mem_data/pg_log, e.g. from /usr/local/pgsql/data/log.
+chmod +rw of these logs.
+
 
 First run src/preprocessing/extract_mem_info.py to extract the memory usage information from the logs. 
 You need to modify the data_dir to where you put the pg_log.
@@ -22,3 +28,8 @@ run `python src/preprocessing/get_explain_json_plans.py` to aggregate the explai
 run `python src/preprocessing/split_json_plans.py` to split the giant json object 'total_json_plans.json' into train, val, test splits
 
 run `python src/preprocessing/gather_feature_statistics.py` to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values.
+
+
+## Code Structure
+
+`src` contains the code for GIN, GAT, GraphTransformer, TreeTransformer, `zsce` contains the code for zero-shot cost estimation method, `xgboost` contains the code for XGBoost method, `treelstm` contains the code for TreeLSTM method, `heterogeneous_graph` contains the code for heterogeneous graph method.
