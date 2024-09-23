@@ -46,8 +46,8 @@ if __name__ == "__main__":# Set random seed for reproducibility
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
-    parser.add_argument('--train_dataset', type=str, default='tpch', help='dataset name. train and validation will use the same dataset')
-    parser.add_argument('--test_dataset', type=str, default='tpch', help='dataset name')
+    parser.add_argument('--train_dataset', type=str, default='tpch_sf1', help='dataset name. train and validation will use the same dataset')
+    parser.add_argument('--test_dataset', type=str, default='tpch_sf1', help='dataset name')
     parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
     parser.add_argument('--epochs', type=int, default=10000, help='number of epochs')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stopping')
@@ -56,7 +56,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--weight_decay', type=float, default=0.0, help='weight decay')
     parser.add_argument('--hidden_dim', type=int, default=128, help='hidden dimension')
     parser.add_argument('--dropout', type=float, default=0.5, help='dropout rate')
-    parser.add_argument('--num_workers', type=int, default=10, help='number of workers for data loading')
+    parser.add_argument('--num_workers', type=int, default=0, help='number of workers for data loading')
     args = parser.parse_args()
 
     log_dir = 'logs/'

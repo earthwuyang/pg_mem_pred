@@ -31,5 +31,5 @@ def parse_raw(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    dataset = 'tpch'
+    dataset = 'tpch_sf1'
     parse_raw(data_dir, dataset)

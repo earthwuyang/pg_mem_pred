@@ -1,8 +1,9 @@
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import HeteroConv, GraphConv, Linear, global_mean_pool
+from torch_geometric.nn import HeteroConv, GraphConv, global_mean_pool
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
+from torch.nn import Linear
 # ---------------------- GNN Model Definition ---------------------- #
 
 class HeteroGraph(torch.nn.Module):
@@ -21,6 +22,8 @@ class HeteroGraph(torch.nn.Module):
             ('column', 'outputby', 'operator'): GraphConv(hidden_channels, hidden_channels),
             ('column', 'connects', 'predicate'): GraphConv(hidden_channels, hidden_channels),
             ('operator', 'calledby', 'operator'): GraphConv(hidden_channels, hidden_channels),
+            ('table', 'selfloop', 'table'): GraphConv(hidden_channels, hidden_channels),
+            ('column', 'selfloop', 'column'): GraphConv(hidden_channels, hidden_channels),
         }, aggr='sum')
         
         self.conv2 = HeteroConv({
@@ -29,31 +32,42 @@ class HeteroGraph(torch.nn.Module):
             ('column', 'outputby', 'operator'): GraphConv(hidden_channels, hidden_channels),
             ('column', 'connects', 'predicate'): GraphConv(hidden_channels, hidden_channels),
             ('operator', 'calledby', 'operator'): GraphConv(hidden_channels, hidden_channels),
+            ('table', 'selfloop', 'table'): GraphConv(hidden_channels, hidden_channels),
+            ('column', 'selfloop', 'column'): GraphConv(hidden_channels, hidden_channels),
         }, aggr='sum')
         
         # Final linear layer to produce the output
         self.lin = Linear(hidden_channels, out_channels)
 
+    
     def forward(self, x_dict, edge_index_dict, batch_operator):
-        # Project node features
-        x_dict = {
-            'operator': self.lin_operator(x_dict['operator']),
-            'table': self.lin_table(x_dict['table']),
-            'column': self.lin_column(x_dict['column']),
-            'predicate': self.lin_predicate(x_dict['predicate'])
-        }
-        
-        # First HeteroConv layer
-        x_dict = self.conv1(x_dict, edge_index_dict)
+        # Initialize projected_x
+        projected_x = {}
+
+        # Conditionally project node features
+        if 'operator' in x_dict and x_dict['operator'].shape[0] > 0:
+            projected_x['operator'] = self.lin_operator(x_dict['operator'])
+        if 'table' in x_dict and x_dict['table'].shape[0] > 0:
+            projected_x['table'] = self.lin_table(x_dict['table'])
+        if 'column' in x_dict and x_dict['column'].shape[0] > 0:
+            projected_x['column'] = self.lin_column(x_dict['column'])
+        if 'predicate' in x_dict and x_dict['predicate'].shape[0] > 0:
+            projected_x['predicate'] = self.lin_predicate(x_dict['predicate'])
+
+        # Apply HeteroConv layers
+        x_dict = self.conv1(projected_x, edge_index_dict)
         x_dict = {key: F.relu(x) for key, x in x_dict.items()}
         
-        # Second HeteroConv layer
         x_dict = self.conv2(x_dict, edge_index_dict)
         x_dict = {key: F.relu(x) for key, x in x_dict.items()}
         
         # Aggregate operator node features per graph
-        operator_features = x_dict['operator']
-        # Global mean pooling over operator nodes per graph
-        operator_embedding = global_mean_pool(operator_features, batch_operator)
-        out = self.lin(operator_embedding)
-        return out.squeeze()  # Shape: [batch_size]
+        if 'operator' in x_dict and x_dict['operator'].shape[0] > 0:
+            operator_features = x_dict['operator']
+            operator_embedding = global_mean_pool(operator_features, batch_operator)
+            out = self.lin(operator_embedding)
+        else:
+            # Handle cases with no operator nodes, e.g., assign a default value or skip
+            out = torch.zeros(batch_operator.max().item() + 1, self.lin.out_features, device=x_dict[next(iter(x_dict))].device)
+
+        return out.squeeze()

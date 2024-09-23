@@ -11,7 +11,6 @@ conn_params = {
 }
  
 
-
 with open('/home/wuy/DB/pg_mem_data/workloads/tpc_h/workload_100k_s1.sql') as f:
     queries = f.read().split('\n')
     for query in tqdm(queries[30000:]):

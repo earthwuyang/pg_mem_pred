@@ -61,6 +61,7 @@ def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, e
             # Ensure that 'operator' node type exists in the batch
             if 'operator' not in batch.x_dict:
                 continue  # Skip batches without 'operator' nodes
+            # print(f"Epoch {epoch+1}, Batch 'table' features shape: {batch.x_dict['table'].shape}")
             # Pass 'batch_operator' to the model
             out = model(batch.x_dict, batch.edge_index_dict, batch['operator'].batch)
             loss = criterion(out, batch.y.squeeze())

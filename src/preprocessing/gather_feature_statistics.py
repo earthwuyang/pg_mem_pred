@@ -38,8 +38,8 @@ class FeatureType(Enum):
 
 def gather_statistics(data_dir, dataset):
     run_stats = []
-    total_json_file = os.path.join(data_dir, dataset, 'total_json_plans.json')
-    with open(total_json_file, 'r') as f:
+    train_json_file = os.path.join(data_dir, dataset, 'train_plans.json')
+    with open(train_json_file, 'r') as f:
         run_stats.append(json.load(f))
     value_dict = gather_values_recursively(run_stats)
 
@@ -74,5 +74,5 @@ def gather_statistics(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch', 'tpcds']:   
+    for dataset in ['tpch_sf1']:   
         gather_statistics(data_dir, dataset)

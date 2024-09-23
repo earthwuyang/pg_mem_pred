@@ -74,6 +74,7 @@ def one_hot_encode_data_type(data_type, data_type_mapping):
     else:
         # Assign 'unknown' category
         one_hot[-1] = 1
+    assert len(one_hot) == 6, "One-hot encoding should have 6 dimensions"
     return one_hot
 
 # Fetch all unique data types from the database to create a mapping
@@ -105,11 +106,11 @@ def extract_columns(string):
 def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operator_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      operator_id_counter, global_node_id_counter, parent_operator_id=None):
-    current_global_id = global_node_id_counter[0]
-    current_operator_id = global_node_id_counter[0]
+                      operator_id_counter, parent_operator_id=None):
+    current_operator_id = operator_id_counter[0]
     operator_id_counter[0] += 1  # Increment the operator ID counter
 
+    expected_column_feature_len = 10  # avg_width, correlation, n_distinct, null_frac, data_type_one_hot_0, data_type_one_hot_1, data_type_one_hot_2, data_type_one_hot_3, data_type_one_hot_4, data_type_one_hot_5
     if 'Plan' in plan:
         plan_parameters = plan.get('Plan', {})
     else:
@@ -124,11 +125,9 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
     ]
     operator_nodes.append({
         'id': current_operator_id,
-        'global_id': global_node_id_counter[0],
         'type': plan_parameters.get('Node Type', 'Unknown'),
         'features': operator_features
     })
-    global_node_id_counter[0] += 1
     # If there is a parent operator, add an edge (operator calls operator)
     if parent_operator_id is not None:
         operator_calledby_operator_edges.append((current_operator_id, parent_operator_id))
@@ -139,11 +138,9 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
         if table_name not in table_nodes:
             table_nodes[table_name] = {
                 'id': len(table_nodes),
-                'global_id': global_node_id_counter[0],
                 'features': [0, 0]  # Placeholder, will be updated later
             }
-            global_node_id_counter[0] += 1
-        table_id = table_nodes[table_name]['global_id']
+        table_id = table_nodes[table_name]['id']
         # Add edge: operator involves table
         table_scannedby_operator_edges.append((table_id, current_operator_id))
     else:
@@ -161,12 +158,10 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
             if predicate not in predicate_nodes:
                 predicate_nodes[predicate] = {
                     'id': len(predicate_nodes),
-                    'global_id': global_node_id_counter[0],
                     'features': [0]  # Placeholder, will be updated later
                 }
-                global_node_id_counter[0] += 1
 
-            predicate_id = predicate_nodes[predicate]['global_id']
+            predicate_id = predicate_nodes[predicate]['id']
 
             # Add edge: predicate filters operator
             predicate_filters_operator_edges.append((predicate_id, current_operator_id))
@@ -175,11 +170,9 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
                 if col not in column_nodes:
                     column_nodes[col] = {
                         'id': len(column_nodes),
-                        'global_id': global_node_id_counter[0],
-                        'features': [0, 0]  # Placeholder, will be updated later
+                        'features': [0] * expected_column_feature_len  # Placeholder, will be updated later
                     }
-                    global_node_id_counter[0] += 1
-                column_id = column_nodes[col]['global_id']
+                column_id = column_nodes[col]['id']
                 # Add edge: predicate connects column
                 column_connects_predicate_edges.append((column_id, predicate_id))
 
@@ -190,11 +183,9 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
             if col not in column_nodes:
                 column_nodes[col] = {
                     'id': len(column_nodes),
-                    'global_id': global_node_id_counter[0],
-                    'features': [0] * 9  # Placeholder, will be updated later
+                    'features': [0] * expected_column_feature_len  # Placeholder, will be updated later
                 }
-                global_node_id_counter[0] += 1
-            column_id = column_nodes[col]['global_id']
+            column_id = column_nodes[col]['id']
             # Add edge: column is output by operator
             column_outputby_operator_edges.append((column_id, current_operator_id))
 
@@ -204,11 +195,12 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
             traverse_operators(sub_plan, table_nodes, column_nodes, predicate_nodes, operator_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      operator_id_counter, global_node_id_counter, current_operator_id)
+                      operator_id_counter, current_operator_id)
 
 
 # Function to parse the query plan and extract the tables, columns, and predicates
-def parse_query_plan(plan, conn, data_type_mapping):
+def parse_query_plan(logger, plan, conn, data_type_mapping):
+
     table_nodes = {}       # table_name -> {'id': int, 'features': [...]}
     column_nodes = {}      # column_name -> {'id': int, 'features': [...]}
     predicate_nodes = {}   # predicate_str -> {'id': int, 'features': [...]}
@@ -220,35 +212,31 @@ def parse_query_plan(plan, conn, data_type_mapping):
     column_outputby_operator_edges = []    
     column_connects_predicate_edges = [] 
     operator_calledby_operator_edges = []    
+    table_selfloop_table_edges = []
+    column_selfloop_column_edges = []
 
     
 
     operator_id_counter = [0]  # Using a list to make it mutable in recursion
-    global_node_id_counter = [0]
+
 
     traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operator_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      operator_id_counter, global_node_id_counter)
+                      column_connects_predicate_edges, operator_calledby_operator_edges,
+                      operator_id_counter)
     
-    # Debug: Print extracted components
-    # print(f"table_nodes: {table_nodes}")
-    # print(f"column_nodes: {column_nodes}")
-    # print(f"predicate_nodes: {predicate_nodes}")
-    # print(f"operator_nodes: {operator_nodes}")
-
-    # print(f"table_scannedby_operator_edges: {table_scannedby_operator_edges}")
-    # print(f"predicate_filters_operator_edges: {predicate_filters_operator_edges}")
-    # print(f"column_outputby_operator_edges: {column_outputby_operator_edges}")
-    # print(f"column_connects_predicate_edges: {column_connects_predicate_edges}")
-    # print(f"operator_calledby_operator_edges: {operator_calledby_operator_edges}")
-    # exit()
+    # add self-loop edges for tables and columns
+    for table_name, table_info in table_nodes.items():
+        table_id = table_info['id']
+        table_selfloop_table_edges.append((table_id, table_id))
+    for column_name, column_info in column_nodes.items():
+        column_id = column_info['id']
+        column_selfloop_column_edges.append((column_id, column_id))
 
 
     # Now, fetch actual features for tables and columns
     for table_name, table_info in table_nodes.items():
         relpages, reltuples = get_relpages_reltuples(conn, table_name)
-        print(f"relpages: {relpages}, reltuples: {reltuples}")
         table_nodes[table_name]['features'] = [relpages, reltuples]
         
         # Update column features
@@ -262,20 +250,21 @@ def parse_query_plan(plan, conn, data_type_mapping):
 
     # Update predicate features: [predicate_length]
     for pred, pred_info in predicate_nodes.items():
-        # print(f"pred: {pred}, pred_info: {pred_info}")
         predicate_length = len(pred)
         predicate_nodes[pred]['features'] = [predicate_length]
-    # exit()
+
     return table_nodes, column_nodes, predicate_nodes, operator_nodes, \
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
-                      column_connects_predicate_edges, operator_calledby_operator_edges
+                      column_connects_predicate_edges, operator_calledby_operator_edges, \
+                      table_selfloop_table_edges, column_selfloop_column_edges
 
 # Function to create the heterogeneous graph from parsed components
-def create_hetero_graph(table_nodes, column_nodes, predicate_nodes, operator_nodes,
+def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, operator_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_predicate_edges, operator_calledby_operator_edges, peakmem):
+                      column_connects_predicate_edges, operator_calledby_operator_edges, 
+                      table_selfloop_table_edges, column_selfloop_column_edges, peakmem):
     data = HeteroData()
-    
+
     # Assign operator features
     operator_features = [op['features'] for op in operator_nodes]
     data['operator'].x = torch.tensor(operator_features, dtype=torch.float)
@@ -285,32 +274,20 @@ def create_hetero_graph(table_nodes, column_nodes, predicate_nodes, operator_nod
     table_features = [table[1]['features'] for table in sorted_tables]
     data['table'].x = torch.tensor(table_features, dtype=torch.float)
     
+    
+
     # Assign column features
     sorted_columns = sorted(column_nodes.items(), key=lambda x: x[1]['id'])
     column_features = [column[1]['features'] for column in sorted_columns]
     
-    # Validate column_features length
-    expected_column_features_length = len(column_features[0]) if column_features else 0
-    for idx, features in enumerate(column_features):
-        if len(features) != expected_column_features_length:
-            print(f"Warning: Column {sorted_columns[idx][0]} has incorrect feature length {len(features)} (expected {expected_column_features_length}).")
-            # Pad with zeros if necessary
-            if len(features) < expected_column_features_length:
-                padded_features = features + [0] * (expected_column_features_length - len(features))
-                column_features[idx] = padded_features
-            else:
-                # Truncate if necessary
-                column_features[idx] = features[:expected_column_features_length]
-    
     data['column'].x = torch.tensor(column_features, dtype=torch.float)
+
     
     # Assign predicate features
     sorted_predicates = sorted(predicate_nodes.items(), key=lambda x: x[1]['id'])
     predicate_features = [predicate[1]['features'] for predicate in sorted_predicates]
     data['predicate'].x = torch.tensor(predicate_features, dtype=torch.float)
     
-    # table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-    # column_connects_predicate_edges, operator_calledby_operator_edges
     
     # Create edge index dictionaries
     # table_scannedby_operator_edges
@@ -337,11 +314,22 @@ def create_hetero_graph(table_nodes, column_nodes, predicate_nodes, operator_nod
     if operator_calledby_operator_edges:
         src, dst = zip(*operator_calledby_operator_edges)
         data['operator', 'calledby', 'operator'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+
+    # table_selfloop_table_edges
+    if table_selfloop_table_edges:
+        src, dst = zip(*table_selfloop_table_edges)
+        data['table', 'selfloop', 'table'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # column_selfloop_column_edges
+    if column_selfloop_column_edges:
+        src, dst = zip(*column_selfloop_column_edges)
+        data['column', 'selfloop', 'column'].edge_index = torch.tensor([src, dst], dtype=torch.long)
     
     # Assign the target
     data.y = torch.tensor([peakmem], dtype=torch.float)
-    
+  
     return data
+
 
 # Establish a connection to the PostgreSQL database
 def connect_to_db(DB_CONFIG):

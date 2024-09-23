@@ -6,16 +6,10 @@ from .dataset import QueryPlanDataset
 
     
 def get_data_type_mapping(logger, dataset):
-    if dataset == 'tpch':
-        database = 'tpc_h'
-    elif dataset == 'tpcds':
-        database = 'tpc_ds'
-    else:
-        raise ValueError(f'Invalid dataset name {dataset}')
 
     # Database connection details
     DB_CONFIG = {
-        'dbname': database,
+        'dbname': dataset,
         'user': 'wuy',
         'password': '',
         'host': 'localhost',  # e.g., 'localhost'
@@ -34,11 +28,10 @@ def get_data_type_mapping(logger, dataset):
     unique_data_types = sorted(unique_data_types)  # ['character', 'date', 'character varying', 'integer', 'numeric']
     # Add 'unknown' category at the end
     data_type_mapping = {dtype: idx for idx, dtype in enumerate(unique_data_types)}
-    logger.info(f"Unique data types: {data_type_mapping}")
+    # logger.info(f"Unique data types: {data_type_mapping}")
     return data_type_mapping
     
-def get_loaders(logger, dataset_dir, train_dataset, test_dataset, batch_size, num_workers):
-    
+def get_loaders(logger, dataset_dir, train_dataset, test_dataset, batch_size=1, num_workers=0):
 
     data_type_mapping = get_data_type_mapping(logger, train_dataset)
 
@@ -50,18 +43,25 @@ def get_loaders(logger, dataset_dir, train_dataset, test_dataset, batch_size, nu
     logger.info('Val dataset size: {}'.format(len(valdataset)))
     logger.info('Test dataset size: {}'.format(len(testdataset)))
 
-    train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_loader = DataLoader(testdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = None
+    test_loader = None
 
     return train_loader, val_loader, test_loader
 
 if __name__ == '__main__':
     import logging
-    train_loader, val_loader, test_loader = get_loaders(logging, '/home/wuy/DB/pg_mem_data', 'tpch', 'tpch', 1, 0)
-    print(len(train_loader))
-    print(len(val_loader))
-    print(len(test_loader))
-    print(train_loader.dataset[0])
-    print(val_loader.dataset[0])
-    print(test_loader.dataset[0])
+    # define a logger that outputs to stdout
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    # create a logger object
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    train_loader, val_loader, test_loader = get_loaders(logger, '/home/wuy/DB/pg_mem_data', 'tpch', 'tpch', 1, 0)
+ 
+    for i,batch in enumerate(train_loader):
+        print(batch['column'].x.shape)
+        assert batch['column'].x.shape[1] == 10

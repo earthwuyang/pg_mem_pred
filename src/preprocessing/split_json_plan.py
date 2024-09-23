@@ -7,8 +7,8 @@ def split(data_dir, dataset):
     with open(json_file, 'r') as f:
         plans = json.load(f)
 
-    if dataset == 'tpcds':
-        plans = plans[:round(len(plans)*0.711)]
+    # if dataset == 'tpcds':
+    #     plans = plans[:round(len(plans)*0.711)]
     # split data into train, validation, and test sets
     train_size = int(0.8 * len(plans))
     val_size = int(0.1 * len(plans))
@@ -33,7 +33,6 @@ def split(data_dir, dataset):
 
 
 data_dir = '/home/wuy/DB/pg_mem_data'
-# for dataset in ['tpch', 'tpcds']:
-for dataset in ['tpcds']:
+for dataset in ['tpch_sf1']:
     print('Splitting', dataset)
     split(data_dir, dataset)

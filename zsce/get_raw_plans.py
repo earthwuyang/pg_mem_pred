@@ -7,13 +7,7 @@ import json
 import pandas as pd
 
 def get_raw_plans(data_dir, dataset):
-    if dataset == 'tpch':
-        database = 'tpc_h'
-    elif dataset == 'tpcds':
-        database = 'tpc_ds'
-    else:
-        print("Dataset not supported")
-        sys.exit(1)
+    database = dataset
     conn_params = {
         "dbname": database,
         "user": "wuy",
@@ -29,6 +23,7 @@ def get_raw_plans(data_dir, dataset):
     def get_result_analyze(query):
         conn = psycopg2.connect(**conn_params)
         cur = conn.cursor()
+        cur.execute('set statement_timeout = 0;')
         cur.execute(query)
         rows = cur.fetchall()
         cur.close()
@@ -50,15 +45,15 @@ def get_raw_plans(data_dir, dataset):
             result.append([row[0]])
         return result
 
-    new_mem_csv = os.path.join(data_dir, dataset, 'raw_data', 'new_mem_info.csv')
-    csv_header = 'queryid,peakmem'
-    with open(new_mem_csv, 'w') as f:
-        f.write(csv_header+'\n')
+    # new_mem_csv = os.path.join(data_dir, dataset, 'raw_data', 'new_mem_info.csv')
+    # csv_header = 'queryid,peakmem,time'
+    # with open(new_mem_csv, 'w') as f:
+    #     f.write(csv_header+'\n')
 
     df=pd.read_csv(os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv'))
     number=df.shape[0]
-    if dataset == 'tpcds':
-        number = round(number *0.711) # to make the number of queries roughly equal to TPC-H
+    # if dataset == 'tpcds':
+    #     number = round(number *0.711) # to make the number of queries roughly equal to TPC-H
 
     dir = os.path.join(data_dir, dataset, 'raw_data', 'query_dir')
     for i in tqdm(range(1, number+1)):
@@ -76,8 +71,8 @@ def get_raw_plans(data_dir, dataset):
             plan_tuple['queryid'] = int(df.loc[i-1, 'queryid'])
             plan['query_list'].append(plan_tuple)
             assert i == df.loc[i-1, 'queryid'], f"queryid {i} does not match with the index in mem_info.csv"
-            with open(new_mem_csv, 'a') as f:
-                f.write(f"{i},{df.loc[i-1, 'peakmem']}\n")
+            # with open(new_mem_csv, 'a') as f:
+            #     f.write(f"{i},{df.loc[i-1, 'peakmem']}\n")
         except Exception as e:
             print(f"Error in query {i}: {e}")
 
@@ -90,5 +85,5 @@ def get_raw_plans(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch', 'tpcds']:
+    for dataset in ['tpch_sf1']:
         get_raw_plans(data_dir, dataset)

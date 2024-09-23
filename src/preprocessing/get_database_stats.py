@@ -3,12 +3,7 @@ import json
 import os
 
 def get_database_stats(dataset):
-    if dataset == 'tpch':
-        database = 'tpc_h'
-    elif dataset == 'tpcds':
-        database = 'tpc_ds'
-    else:
-        raise ValueError('unsupported dataset name')
+    database = dataset
     
     # Connect to PostgreSQL
     conn = psycopg2.connect(
@@ -108,7 +103,7 @@ def get_database_stats(dataset):
 
 data_dir = '/home/wuy/DB/pg_mem_data'
 
-dataset_list = ['tpch', 'tpcds']
+dataset_list = ['tpch_sf1']
 for dataset in dataset_list:
     database_stats = get_database_stats(dataset)
     # print(json.dumps(database_stats))

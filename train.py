@@ -24,7 +24,7 @@ MODELS = {
     'GCN': GCN,
     'GraphTransformer': GraphTransformer,
     'TreeTransformer': TreeTransformer,
-    'TreeLSTM': TreeLSTM
+    'TreeLSTM': TreeLSTM  # currently not supported
 }
 
 def get_logger(logfile):
@@ -49,17 +49,18 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory (default: ./)')
+    parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory ')
     parser.add_argument('--train_dataset', type=str, default='tpch', help='dataset name (default: tpch). train and validation will use the same dataset')
     parser.add_argument('--test_dataset', type=str, default='tpch', help='dataset name (default: tpch)')
-    parser.add_argument('--skip_train', action='store_true', default=False, help='skip training (default: False)')
+    parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
     
-    parser.add_argument('--model_name', type=str, default='GIN', help='model name (default: GIN)')
-    parser.add_argument('--hidden_channels', type=int, default=64, help='number of hidden channels (default: 64)')
+    parser.add_argument('--model_name', type=str, default='GIN', help='model name')
+    parser.add_argument('--hidden_channels', type=int, default=64, help='number of hidden channels')
     
-    parser.add_argument('--batch_size', type=int, default=10240, help='batch size (default: 10240)')
-    parser.add_argument('--num_workers', type=int, default=10, help='number of workers (default: 10)')
-    parser.add_argument('--epochs', type=int, default=10000, help='number of epochs (default: 10000)')
+    parser.add_argument('--batch_size', type=int, default=10240, help='batch size')
+    parser.add_argument('--num_workers', type=int, default=10, help='number of workers')
+    parser.add_argument('--epochs', type=int, default=10000, help='number of epochs')
+    parser.add_argument('--device', type=str, default='cuda:0', help='device')
     
     seed = 1
     torch.manual_seed(seed)
@@ -86,7 +87,10 @@ if __name__ == '__main__':
     model = MODELS[args.model_name](num_node_features, args.hidden_channels)
         
     # Use GPU if available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.is_available():
+        device = torch.device(args.device)
+    else:
+        device = torch.device('cpu')
     model = model.to(device)
 
     # Define optimizer and loss

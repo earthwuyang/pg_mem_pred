@@ -18,12 +18,7 @@ def extract_mem_info(data_dir, dataset):
     os.makedirs(query_dir, exist_ok=True)
     os.makedirs(plan_dir, exist_ok=True)
 
-    if dataset == 'tpcds':
-        database_name = 'tpc_ds'
-    elif dataset == 'tpch':
-        database_name = 'tpc_h'
-    else:
-        print('unsupported dataset name')
+    database_name = dataset
 
     conn_params = {
         "dbname": database_name,
@@ -58,7 +53,8 @@ def extract_mem_info(data_dir, dataset):
                     if 'STATEMENT:' in line:
                         statement = line.split('STATEMENT:')[1].strip()
                         start = False
-                        if statement.startswith('commit') or statement.startswith('set') or statement.startswith('explain') or statement.startswith('analyze'):
+                        if statement.startswith('commit') or statement.startswith('set') or statement.startswith('explain') or statement.startswith('analyze') \
+                            or statement.startswith('COMMIT') or statement.startswith('SET') or statement.startswith('EXPLAIN') or statement.startswith('ANALYZE'):
                             continue
                         
                         cur = conn.cursor()
@@ -87,5 +83,5 @@ def extract_mem_info(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir='/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch', 'tpcds']:
+    for dataset in ['tpch_sf1']:
         extract_mem_info(data_dir, dataset)

@@ -8,6 +8,7 @@ import pickle
 from .plan_to_graph import parse_query_plan, create_hetero_graph, connect_to_db
 
 def load_json(json_file):
+    # json_file = '/home/wuy/DB/pg_mem_data/tpch/tiny_plans.json' # for debug
     with open(json_file, 'r') as f:
         query_plans = json.load(f)
     return query_plans
@@ -26,25 +27,19 @@ class QueryPlanDataset(Dataset):
             with open(dataset_pickle_path, 'rb') as f:
                 self.dataset = pickle.load(f)
         else:
-            self.logger.info(f"Creating dataset from {json_file_path}")
+            # self.logger.info(f"Creating dataset from {json_file_path}")
             self.dataset = self.get_dataset(logger, json_file_path, dataset, data_type_mapping)
             with open(dataset_pickle_path, 'wb') as f:
                 pickle.dump(self.dataset, f)
 
+
     def get_dataset(self, logger, json_file_path, dataset, data_type_mapping):
         # logger.info(f"Processing query plans from {json_file_path}")
         plans = load_json(json_file_path)
-
-        if dataset == 'tpch':
-            database = 'tpc_h'
-        elif dataset == 'tpcds':
-            database = 'tpc_ds'
-        else:
-            raise ValueError(f'Invalid dataset name {dataset}')
     
         # Database connection details
         DB_CONFIG = {
-            'dbname': database,
+            'dbname': dataset,
             'user': 'wuy',
             'password': '',
             'host': 'localhost',  # e.g., 'localhost'
@@ -54,25 +49,24 @@ class QueryPlanDataset(Dataset):
         if not conn:
             raise Exception("Failed to connect to the database")
             exit(1)  # Exit if connection failed
-
         # Parse all query plans and create graphs
         self.dataset = []
         for idx, plan in tqdm(enumerate(plans), total=len(plans)):
+            # for idx, plan in enumerate(plans):
             table_nodes, column_nodes, predicate_nodes, operator_nodes, \
             table_scannedby_operator_edges, predicate_filters_operator_edges, \
             column_outputby_operator_edges, column_connects_predicate_edges, \
-            operator_calledby_operator_edges = parse_query_plan(plan['Plan'], conn, data_type_mapping)
+            operator_calledby_operator_edges, table_selfloop_table_edges, \
+            column_selfloop_column_edges = parse_query_plan(logger, plan, conn, data_type_mapping)
 
-            
-            graph = create_hetero_graph(
+            graph = create_hetero_graph(logger, 
                 table_nodes, column_nodes, predicate_nodes, operator_nodes,
                 table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                column_connects_predicate_edges, operator_calledby_operator_edges, 
-                plan['peakmem']
+                column_connects_predicate_edges, operator_calledby_operator_edges, table_selfloop_table_edges, 
+                column_selfloop_column_edges, plan['peakmem']
             )
+            # logger.info(graph)
             self.dataset.append(graph)
-
-        # print(f"Number of query plans: {len(self.dataset)}")
 
         # Close the database connection
         conn.close()
@@ -94,7 +88,8 @@ class QueryPlanDataset(Dataset):
 if __name__ == '__main__':
     import logging
     logger = logging
-    json_file_path = '/home/wuy/DB/pg_mem_data/tpch/val_plans.json'
+    json_file_path = '/home/wuy/DB/pg_mem_data/tpch/tiny_plans.json'
     dataset = 'tpch'
-    dataset = QueryPlanDataset(logger, json_file_path, dataset)
-    print(dataset[0])
+    dataset = QueryPlanDataset(logger, '/home/wuy/DB/pg_mem_data', dataset, 'train')
+    for graph in dataset:
+        print(graph)
