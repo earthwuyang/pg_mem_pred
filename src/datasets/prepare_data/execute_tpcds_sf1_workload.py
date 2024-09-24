@@ -11,10 +11,12 @@ conn_params = {
 }
  
 
-
+counter = 0
 with open('/home/wuy/DB/pg_mem_data/workloads/tpc_ds/workload_100k_s1.sql') as f:
     queries = f.read().split('\n')
-    for query in tqdm(queries[30000:]):
+    for query in tqdm(queries):
+        if counter >= 70000:
+            break
         if query.strip():
             try:
                 conn = psycopg2.connect(**conn_params)
@@ -26,6 +28,7 @@ with open('/home/wuy/DB/pg_mem_data/workloads/tpc_ds/workload_100k_s1.sql') as f
                 cur.execute(query)
                 cur.close()     
                 conn.close()
+                counter += 1
             except Exception as e:
                 print(e)
                 continue

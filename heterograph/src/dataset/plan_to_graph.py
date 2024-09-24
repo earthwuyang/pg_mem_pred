@@ -27,9 +27,36 @@ def extract_columns(string):
 
     return columns
 
+def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
+                        predicate_filters_operator_edges, column_connects_predicate_edges,
+                        literal_connects_predicate_edges, numeral_connects_predicate_edges, 
+                        parent_id):
+
+    sql_query = f"select * from dummy_table where"
+    parsed = parse(sql_query)
+    where_clause = parsed.get('where', {})
+
+    def traverse(parsed_dict, parent_id = None):
+        if 'and' in parsed_dict:
+            operation = 'AND'
+            if operation not in predicate_nodes:
+                predicate_nodes[operation] = {
+                    'id': len(predicate_nodes),
+                    'features': [0] * expected_operation_feature_len  # Placeholder, will be updated later
+                }
+            predicate_id = predicate_nodes[operation]['id']
+            predicate_filters_operator_edges.append((predicate_id, parent_id))
+            for condition in parsed_dict['and']:
+                traverse(condition, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
+                        predicate_filters_operator_edges, column_connects_predicate_edges,
+                        literal_connects_predicate_edges, numeral_connects_predicate_edges, predicate_id)
+
+
+    traverse(where_clause)
 
 # Helper function to traverse operators and extract tables, columns, and predicates
-def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operator_nodes, literal_nodes, numeral_nodes,
+def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
+                      operator_nodes, literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_predicate_edges, operator_calledby_operator_edges, 
                       literal_connects_predicate_edges, numeral_connects_predicate_edges,
@@ -80,6 +107,10 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
         if key in plan_parameters:
             condition_str = plan_parameters[key]
             predicate = condition_str.strip()
+            parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
+                            predicate_filters_operator_edges, column_connects_predicate_edges,
+                            literal_connects_predicate_edges, numeral_connects_predicate_edges, 
+                            parent_id=current_operator_id)
 
             cols = extract_columns(condition_str)
             involved_columns.update(cols)
@@ -121,7 +152,8 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
     # Recurse into sub-plans
     if 'Plans' in plan_parameters:
         for sub_plan in plan_parameters['Plans']:
-            traverse_operators(sub_plan, table_nodes, column_nodes, predicate_nodes, operator_nodes,literal_nodes, numeral_nodes,
+            traverse_operators(sub_plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
+                        operator_nodes,literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_predicate_edges, operator_calledby_operator_edges, 
                       literal_connects_predicate_edges, numeral_connects_predicate_edges,
@@ -137,6 +169,7 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
     predicate_nodes = {}   # predicate_str -> {'id': int, 'features': [...]}
     operator_nodes = []    # List of operators with features
 
+    operation_nodes = {}   # operation_str -> {'id': int, 'features': [...]}
     literal_nodes = {}     # literal_str -> {'id': int, 'features': [...]}
     numeral_nodes = {}     # numeral_str -> {'id': int, 'features': [...]}
     
@@ -144,13 +177,15 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
     table_scannedby_operator_edges = []    
     predicate_filters_operator_edges = []  
     column_outputby_operator_edges = []    
-    column_connects_predicate_edges = [] 
+    column_connects_operation_edges = [] 
     operator_calledby_operator_edges = []    
     table_selfloop_table_edges = []
     column_selfloop_column_edges = []
 
-    literal_connects_predicate_edges = []
-    numeral_connects_predicate_edges = []
+    operation_filters_operator_edges = []
+    operation_connects_predicate_edges = []
+    literal_connects_operation_edges = []
+    numeral_connects_operation_edges = []
     literal_selfloop_literal_edges = []
     numeral_selfloop_numeral_edges = []
 
@@ -159,9 +194,9 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
     operator_id_counter = [0]  # Using a list to make it mutable in recursion
 
 
-    traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operator_nodes,literal_nodes, numeral_nodes,
+    traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_predicate_edges, operator_calledby_operator_edges,
+                      column_connects_operation_edges, operator_calledby_operator_edges,
                       literal_connects_predicate_edges, numeral_connects_predicate_edges,
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,
                       operator_id_counter)

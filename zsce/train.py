@@ -201,7 +201,7 @@ def train_model(logger, train_workload_runs, val_workload_runs, test_workload_ru
     loss_class_name = final_mlp_kwargs['loss_class_name']
     label_norm, feature_statistics, train_loader, val_loader, test_loaders = \
         create_dataloader(logger, train_workload_runs, val_workload_runs, test_workload_runs, statistics_file, plan_featurization_name, database,
-                          val_ratio=0.15, batch_size=batch_size, shuffle=True, num_workers=num_workers,
+                          val_ratio=0, batch_size=batch_size, shuffle=True, num_workers=num_workers,
                           pin_memory=False, limit_queries=limit_queries,
                           limit_queries_affected_wl=limit_queries_affected_wl, loss_class_name=loss_class_name)
     if loss_class_name == 'QLoss':
@@ -209,7 +209,7 @@ def train_model(logger, train_workload_runs, val_workload_runs, test_workload_ru
                    QError(percentile=100), MeanQError()]
     elif loss_class_name == 'MSELoss':
         metrics = [RMSE(early_stopping_metric=True), MRE(), QError(percentile=50), QError(percentile=95),
-                   QError(percentile=100)]
+                   QError(percentile=100), MeanQError()]
 
     # create zero shot model dependent on database
     model = zero_shot_models[database](device=device, hidden_dim=hidden_dim, final_mlp_kwargs=final_mlp_kwargs,
@@ -319,16 +319,16 @@ if __name__ == '__main__':
 
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_dataset", type=str, help="Dataset to use for training", default='tpch')
-    parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default='tpch')
+    parser.add_argument("--train_dataset", type=str, help="Dataset to use for training", default='tpch_sf1')
+    parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default='tpch_sf1')
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
     args = parser.parse_args()
 
     hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
     hyperparams = load_json(hyperparameter_path, namespace=False)
 
-    loss_class_name='QLoss'
-    # loss_class_name='MSELoss'
+    # loss_class_name='QLoss'
+    loss_class_name='MSELoss'
     max_epoch_tuples=100000
     seed = 0
     device = 'cpu'
@@ -391,21 +391,21 @@ if __name__ == '__main__':
                                     f"and reading does not seem to fit"
 
     data_dir = '/home/wuy/DB/pg_mem_data/'
-    statistics_file = os.path.join(data_dir, args.train_dataset, 'statistics_workload_combined.json')
-    statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
+    statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
+    # statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
     target_dir = f'evaluation_train_{args.train_dataset}_test_{args.test_dataset}'
     filename_model = f'{args.train_dataset}'
     database = DatabaseSystem.POSTGRES
 
     param_dict = flatten_dict(train_kwargs)  # https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
-    train_workload_runs = os.path.join(data_dir, args.train_dataset, 'train_plans.json')
-    val_workload_runs = os.path.join(data_dir, args.train_dataset, 'val_plans.json')
-    test_workload_runs = os.path.join(data_dir, args.test_dataset, 'test_plans.json')
+    train_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'train_plans.json')
+    val_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'val_plans.json')
+    test_workload_runs = os.path.join(data_dir, args.test_dataset, 'zsce', 'test_plans.json')
     # train_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # val_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # test_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
 
-    logfilepath = os.path.join(f'./logs_train_{args.train_dataset}_test_{args.test_dataset}')
+    logfilepath = os.path.join('logs', f'train_{args.train_dataset}_test_{args.test_dataset}')
     if not os.path.exists(logfilepath):
         os.system(f"mkdir -p {logfilepath}")
     logfile = os.path.join(logfilepath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log")

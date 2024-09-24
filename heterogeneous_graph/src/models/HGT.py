@@ -26,7 +26,7 @@ metadata = (
 
 
 class HeteroGraph(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels, num_column_features, num_heads=4, dropout=0.2):
+    def __init__(self, hidden_channels, out_channels, num_column_features, metadata, num_heads=4, dropout=0.2):
         """
         Args:
             hidden_channels (int): Number of hidden units.
@@ -50,24 +50,26 @@ class HeteroGraph(torch.nn.Module):
             in_channels=hidden_channels,
             out_channels=hidden_channels,
             metadata=metadata,
-            heads=num_heads,
+            num_heads=num_heads,
+            dropout=dropout
         )
         
         self.conv2 = HGTConv(
             in_channels=hidden_channels,
             out_channels=hidden_channels,
             metadata=metadata,
-            heads=num_heads,
+            num_heads=num_heads,
+            dropout=dropout
         )
         
         # Final linear layer to produce the output
-        self.lin = Linear(hidden_channels * num_heads, out_channels)
+        self.lin = Linear(hidden_channels, out_channels)
         
         # Optional: Layer normalization
         self.norm1 = nn.LayerNorm(hidden_channels)
         self.norm2 = nn.LayerNorm(hidden_channels)
 
-    def forward(self, x_dict, edge_index_dict, batch_operator):
+    def forward(self, data, batch_operator):
         """
         Args:
             data (HeteroData): The input heterogeneous graph.
@@ -77,8 +79,8 @@ class HeteroGraph(torch.nn.Module):
             Tensor: Output predictions of shape [batch_size].
         """
         # Extract x_dict and edge_index_dict from HeteroData
-        # x_dict = data.x_dict
-        # edge_index_dict = data.edge_index_dict
+        x_dict = data.x_dict
+        edge_index_dict = data.edge_index_dict
 
         # Project node features with checks
         projected_x = {}
@@ -113,12 +115,12 @@ class HeteroGraph(torch.nn.Module):
             edge_type = torch.empty((0,), dtype=torch.long, device=x_dict[next(iter(x_dict))].device)
 
         # First HGTConv layer
-        x_dict = self.conv1(x_dict, edge_index_dict)
+        x_dict = self.conv1(x_dict, edge_index, edge_type)
         # Apply activation and normalization
         x_dict = {key: self.norm1(F.elu(x)) for key, x in x_dict.items()}
 
         # Second HGTConv layer
-        x_dict = self.conv2(x_dict, edge_index_dict)
+        x_dict = self.conv2(x_dict, edge_index, edge_type)
         # Apply activation and normalization
         x_dict = {key: self.norm2(F.elu(x)) for key, x in x_dict.items()}
 

@@ -25,6 +25,10 @@ run `python zsce/parse_plans.py` to parse 'raw_plans.json' into 'parsed_plans.js
 
 run `python zsce/split_parsed_plans.py` to split 'parsed_plans.json' into train, val, test splits. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
+run `python zsce/gather_feature_statistics.py` for zsce method to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1'
+
+run `python zsce/train.py` to train the zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'
+
 run `python src/preprocessing/get_database_stats.py` to get database statistics (column_stats, and table_stats). Output is 'database_stats.json'. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
 run `python src/preprocessing/get_explain_json_plans.py` to aggregate the explain json plans and peakmem and time into a giant json object. Need to modify the name of the dataset, e.g 'tpch_sf1'

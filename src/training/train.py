@@ -44,10 +44,12 @@ def train_model(logger, model, train_loader, val_loader, optimizer, criterion, d
             best_val_loss = val_loss
             best_model = model
             no_improvement = 0
+            logger.debug(f"no_improvement: {no_improvement}")
             #save model
             torch.save(best_model.state_dict(), checkpoint_path)
         else:
             no_improvement += 1
+            logger.debug(f"no_improvement: {no_improvement}")
         if no_improvement == patience:
             logger.info(f'Early stopping at epoch {epoch}')
             break

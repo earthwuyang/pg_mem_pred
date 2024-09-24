@@ -104,3 +104,138 @@ def extract_features(plan_node):
         feature_vector.append(categorical_dict[list(categorical_dict.keys())[i]][cat])
     
     return feature_vector
+
+
+if __name__ == '__main__':
+    plan={
+    "Plan": {
+        "Node Type": "Aggregate",
+        "Strategy": "Plain",
+        "Partial Mode": "Finalize",
+        "Parallel Aware": False,
+        "Async Capable": False,
+        "Startup Cost": 37988.88,
+        "Total Cost": 37988.89,
+        "Plan Rows": 1,
+        "Plan Width": 8,
+        "Output": [
+        "count(*)"
+        ],
+        "Plans": [
+        {
+            "Node Type": "Gather",
+            "Parent Relationship": "Outer",
+            "Parallel Aware": False,
+            "Async Capable": False,
+            "Startup Cost": 37988.67,
+            "Total Cost": 37988.88,
+            "Plan Rows": 2,
+            "Plan Width": 8,
+            "Output": [
+            "(PARTIAL count(*))"
+            ],
+            "Workers Planned": 2,
+            "Single Copy": False,
+            "Plans": [
+            {
+                "Node Type": "Aggregate",
+                "Strategy": "Plain",
+                "Partial Mode": "Partial",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": False,
+                "Async Capable": False,
+                "Startup Cost": 36988.67,
+                "Total Cost": 36988.68,
+                "Plan Rows": 1,
+                "Plan Width": 8,
+                "Output": [
+                "PARTIAL count(*)"
+                ],
+                "Plans": [
+                {
+                    "Node Type": "Hash Join",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": False,
+                    "Async Capable": False,
+                    "Join Type": "Inner",
+                    "Startup Cost": 992.68,
+                    "Total Cost": 36987.24,
+                    "Plan Rows": 572,
+                    "Plan Width": 0,
+                    "Inner Unique": True,
+                    "Hash Cond": "(orders.o_custkey = customer.c_custkey)",
+                    "Plans": [
+                    {
+                        "Node Type": "Seq Scan",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": True,
+                        "Async Capable": False,
+                        "Relation Name": "orders",
+                        "Schema": "public",
+                        "Alias": "orders",
+                        "Startup Cost": 0.0,
+                        "Total Cost": 35470.0,
+                        "Plan Rows": 199826,
+                        "Plan Width": 4,
+                        "Output": [
+                        "orders.o_orderkey",
+                        "orders.o_custkey",
+                        "orders.o_orderstatus",
+                        "orders.o_totalprice",
+                        "orders.o_orderdate",
+                        "orders.o_orderpriority",
+                        "orders.o_clerk",
+                        "orders.o_shippriority",
+                        "orders.o_comment"
+                        ],
+                        "Filter": "((orders.o_totalprice >= 171954.30918958847) AND (orders.o_orderpriority <> '4-NOT SPECIFIED'::bpchar))"
+                    },
+                    {
+                        "Node Type": "Hash",
+                        "Parent Relationship": "Inner",
+                        "Parallel Aware": False,
+                        "Async Capable": False,
+                        "Startup Cost": 987.32,
+                        "Total Cost": 987.32,
+                        "Plan Rows": 429,
+                        "Plan Width": 4,
+                        "Output": [
+                        "customer.c_custkey"
+                        ],
+                        "Plans": [
+                        {
+                            "Node Type": "Index Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": False,
+                            "Async Capable": False,
+                            "Scan Direction": "Forward",
+                            "Index Name": "customer_pkey",
+                            "Relation Name": "customer",
+                            "Schema": "public",
+                            "Alias": "customer",
+                            "Startup Cost": 0.42,
+                            "Total Cost": 987.32,
+                            "Plan Rows": 429,
+                            "Plan Width": 4,
+                            "Output": [
+                            "customer.c_custkey"
+                            ],
+                            "Index Cond": "(customer.c_custkey >= 133044)",
+                            "Filter": "((customer.c_nationkey <= 3) AND (customer.c_acctbal <= 748.9779954851595))"
+                        }
+                        ]
+                    }
+                    ]
+                }
+                ]
+            }
+            ]
+        }
+        ]
+    },
+    "peakmem": 134636,
+    "time": 0.156626
+    }
+
+    nodes, edges = [], []
+    parse_plan(plan)

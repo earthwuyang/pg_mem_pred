@@ -50,8 +50,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory ')
-    parser.add_argument('--train_dataset', type=str, default='tpch', help='dataset name (default: tpch). train and validation will use the same dataset')
-    parser.add_argument('--test_dataset', type=str, default='tpch', help='dataset name (default: tpch)')
+    parser.add_argument('--train_dataset', type=str, default='tpch_sf1', help='dataset name (default: tpch). train and validation will use the same dataset')
+    parser.add_argument('--test_dataset', type=str, default='tpch_sf1', help='dataset name (default: tpch)')
     parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
     
     parser.add_argument('--model_name', type=str, default='GIN', help='model name')
@@ -106,11 +106,10 @@ if __name__ == '__main__':
 
     if not args.skip_train:
         train_model(logger, model, train_loader, val_loader, optimizer, criterion, device, args.epochs, checkpoint_path)
-    else:
-        logger.info(f"reload best model from '{checkpoint_path}' and evaluate on test set")
-        best_model = torch.load(checkpoint_path)
-        evaluate_model(best_model, test_loader, device)
-        metrics = compute_metrics(best_model, test_loader, device)
-        logger.info(f'Test mettics on {args.test_dataset}, trained on {args.train_dataset}: {metrics}')
+
+    logger.info(f"reload best model from '{checkpoint_path}' and evaluate on test set")
+    model.load_state_dict(torch.load(checkpoint_path))
+    test_loss, metrics = evaluate_model(model, test_loader, criterion, device)
+    logger.info(f'Test mettics on {args.test_dataset}, trained on {args.train_dataset}: {metrics}')
         
 

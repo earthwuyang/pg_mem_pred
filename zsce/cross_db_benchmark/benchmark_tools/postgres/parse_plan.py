@@ -104,7 +104,7 @@ def parse_plan(analyze_plan_tuples, analyze=True, parse=True):
     return root_operator, ex_time, planning_time
 
 
-def parse_plans(run_stats, min_runtime=100, max_runtime=30000, parse_baseline=False, cap_queries=None,
+def parse_plans(run_stats, min_runtime=0, max_runtime=30000, parse_baseline=False, cap_queries=None,
                 parse_join_conds=False, include_zero_card=False, explain_only=False):
     # keep track of column statistics
     column_id_mapping = dict() # map (table, column) to a number
@@ -140,26 +140,26 @@ def parse_plans(run_stats, min_runtime=100, max_runtime=30000, parse_baseline=Fa
         # either only parse explain part of query or skip entirely
         curr_explain_only = explain_only
         # do not parse timeout queries
-        if hasattr(q, 'timeout') and q.timeout:
-            continue
+        # if hasattr(q, 'timeout') and q.timeout:
+        #     continue
 
         alias_dict = dict()
         if not curr_explain_only:
-            if q.analyze_plans is None:
-                continue
+            # if q.analyze_plans is None:
+            #     continue
 
-            if len(q.analyze_plans) == 0:
-                continue
+            # if len(q.analyze_plans) == 0:
+            #     continue
 
             # subqueries are currently not supported
             analyze_str = ''.join([l[0] for l in q.verbose_plan])  # make verbose_plan from [[],[],...] into a str
             # print(f"analyze_str: \n{analyze_str}")
-            if 'SubPlan' in analyze_str or 'InitPlan' in analyze_str:
-                continue
+            # if 'SubPlan' in analyze_str or 'InitPlan' in analyze_str:
+            #     continue
 
             # subquery is empty due to logical constraints
-            if '->  Result  (cost=0.00..0.00 rows=0' in analyze_str:
-                continue
+            # if '->  Result  (cost=0.00..0.00 rows=0' in analyze_str:
+            #     continue
 
             # check if it just initializes a plan
             if isinstance(q.analyze_plans[0][0], list):
@@ -167,8 +167,8 @@ def parse_plans(run_stats, min_runtime=100, max_runtime=30000, parse_baseline=Fa
             else:
                 analyze_plan_string = ''.join(q.analyze_plans)
             
-            if init_plan_regex.search(analyze_plan_string) is not None:
-                continue
+            # if init_plan_regex.search(analyze_plan_string) is not None:
+            #     continue
 
             # compute average execution and planning times
             ex_times = []
@@ -224,16 +224,16 @@ def parse_plans(run_stats, min_runtime=100, max_runtime=30000, parse_baseline=Fa
 
         augment_no_workers(analyze_plan)
 
-        if not curr_explain_only:
-            # check if result is None
-            if analyze_plan.min_card() == 0 and not include_zero_card:
-                continue
+        # if not curr_explain_only:
+        #     # check if result is None
+        #     if analyze_plan.min_card() == 0 and not include_zero_card:
+        #         continue
 
-            if min_runtime is not None and avg_runtime < min_runtime:
-                continue
+        #     if min_runtime is not None and avg_runtime < min_runtime:
+        #         continue
 
-            if avg_runtime > max_runtime:
-                continue
+        #     if avg_runtime > max_runtime:
+        #         continue
 
         # add joins for MSCN baseline
         if parse_baseline:
