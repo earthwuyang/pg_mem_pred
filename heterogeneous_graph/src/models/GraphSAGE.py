@@ -21,7 +21,7 @@ metadata = (
 )
 
 
-class HeteroGraph(nn.Module):
+class HeteroGraphSAGE(nn.Module):
     def __init__(self, hidden_channels, out_channels, num_column_features, dropout=0.2):
         """
         Args:
@@ -50,44 +50,26 @@ class HeteroGraph(nn.Module):
         self.lin_table = Linear(2, hidden_channels)       # Tables have 2 features
         self.lin_column = Linear(num_column_features, hidden_channels)  # Column size + one-hot data types
         self.lin_predicate = Linear(4, hidden_channels)   # Predicates have 4 features
-        self.lin_operation = Linear(8, hidden_channels)   # 
-        self.lin_literal = Linear(1, hidden_channels)    
-        self.lin_numeral = Linear(1, hidden_channels)    
-
 
         # Define HeteroConv layers with SAGEConv for each relation
         self.conv1 = HeteroConv({
             ('table', 'scannedby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
             ('predicate', 'filters', 'operator'): SAGEConv(hidden_channels, hidden_channels),
             ('column', 'outputby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
-            ('column', 'connects', 'operation'): SAGEConv(hidden_channels, hidden_channels),
+            ('column', 'connects', 'predicate'): SAGEConv(hidden_channels, hidden_channels),
             ('operator', 'calledby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
-            ('operation', 'filters', 'operation'): SAGEConv(hidden_channels, hidden_channels),
-            ('operation', 'connects', 'predicate'): SAGEConv(hidden_channels, hidden_channels),
-            ('literal', 'connects', 'operation'): SAGEConv(hidden_channels, hidden_channels),
-            ('numeral', 'connects', 'operation'): SAGEConv(hidden_channels, hidden_channels),
-            ('literal', 'selfloop', 'literal'): SAGEConv(hidden_channels, hidden_channels),
-            ('numeral', 'selfloop', 'numeral'): SAGEConv(hidden_channels, hidden_channels),
             ('table', 'selfloop', 'table'): SAGEConv(hidden_channels, hidden_channels),
             ('column', 'selfloop', 'column'): SAGEConv(hidden_channels, hidden_channels),
-            ('predicate', 'selfloop', 'predicate'): SAGEConv(hidden_channels, hidden_channels)
         }, aggr='mean')  # Aggregation method can be 'mean', 'sum', or 'max'
 
         self.conv2 = HeteroConv({
-                       ('table', 'scannedby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
+            ('table', 'scannedby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
             ('predicate', 'filters', 'operator'): SAGEConv(hidden_channels, hidden_channels),
             ('column', 'outputby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
-            ('column', 'connects', 'operation'): SAGEConv(hidden_channels, hidden_channels),
+            ('column', 'connects', 'predicate'): SAGEConv(hidden_channels, hidden_channels),
             ('operator', 'calledby', 'operator'): SAGEConv(hidden_channels, hidden_channels),
-            ('operation', 'filters', 'operation'): SAGEConv(hidden_channels, hidden_channels),
-            ('operation', 'connects', 'predicate'): SAGEConv(hidden_channels, hidden_channels),
-            ('literal', 'connects', 'operation'): SAGEConv(hidden_channels, hidden_channels),
-            ('numeral', 'connects', 'operation'): SAGEConv(hidden_channels, hidden_channels),
-            ('literal', 'selfloop', 'literal'): SAGEConv(hidden_channels, hidden_channels),
-            ('numeral', 'selfloop', 'numeral'): SAGEConv(hidden_channels, hidden_channels),
             ('table', 'selfloop', 'table'): SAGEConv(hidden_channels, hidden_channels),
             ('column', 'selfloop', 'column'): SAGEConv(hidden_channels, hidden_channels),
-            ('predicate', 'selfloop', 'predicate'): SAGEConv(hidden_channels, hidden_channels)
         }, aggr='mean')
 
         # Final linear layer to produce the output
@@ -100,7 +82,7 @@ class HeteroGraph(nn.Module):
         # Dropout layer
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, x_dict, edge_index_dict, batch_operator):
+    def forward(self, data, batch_operator):
         """
         Args:
             data (HeteroData): The input heterogeneous graph.
@@ -109,19 +91,16 @@ class HeteroGraph(nn.Module):
         Returns:
             Tensor: Output predictions of shape [batch_size].
         """
-        # # Extract x_dict and edge_index_dict from HeteroData
-        # x_dict = data.x_dict
-        # edge_index_dict = data.edge_index_dict
+        # Extract x_dict and edge_index_dict from HeteroData
+        x_dict = data.x_dict
+        edge_index_dict = data.edge_index_dict
 
         # Project node features
         projected_x = {}
         for node_type, lin_layer in [('operator', self.lin_operator),
                                      ('table', self.lin_table),
                                      ('column', self.lin_column),
-                                     ('predicate', self.lin_predicate),
-                                     ('operation', self.lin_operation),
-                                     ('literal', self.lin_literal),
-                                     ('numeral', self.lin_numeral)]:
+                                     ('predicate', self.lin_predicate)]:
             if node_type in x_dict and x_dict[node_type].shape[0] > 0:
                 projected_x[node_type] = lin_layer(x_dict[node_type])
             else:

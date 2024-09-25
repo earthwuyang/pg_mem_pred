@@ -4,7 +4,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-from torch_geometric.nn import HGTConv, global_mean_pool
+from torch_geometric.nn import HANConv, global_mean_pool
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from torch.nn import Linear
@@ -25,28 +25,29 @@ metadata = (
 )
 
 
-class HeteroGraph(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels, num_column_features, metadata, num_heads=4, dropout=0.2):
+
+class HeteroGraphHAN(nn.Module):
+    def __init__(self, hidden_channels, out_channels, num_column_features, metadata, num_heads=1, dropout=0.6):
         """
         Args:
             hidden_channels (int): Number of hidden units.
             out_channels (int): Number of output units.
             num_column_features (int): Number of features for 'column' nodes.
-            metadata (tuple): A tuple containing node types and edge types.
-            num_heads (int): Number of attention heads in HGTConv.
-            dropout (float): Dropout rate.
+            metadata (tuple): Tuple containing node types and edge types.
+            num_heads (int): Number of attention heads in GATConv.
+            dropout (float): Dropout rate for attention.
         """
-        super().__init__()
-        self.metadata = metadata  # (node_types, edge_types)
-
+        super(HeteroGraphHAN, self).__init__()
+        self.metadata = metadata
+        
         # Project node features to hidden_channels
-        self.lin_operator = Linear(4, hidden_channels)    # Operators have 4 features
-        self.lin_table = Linear(2, hidden_channels)       # Tables have 2 features
-        self.lin_column = Linear(num_column_features, hidden_channels)  # Column size + one-hot data types
-        self.lin_predicate = Linear(1, hidden_channels)   # Predicates have 1 feature
-
-        # Define HGTConv layers
-        self.conv1 = HGTConv(
+        self.lin_operator = nn.Linear(4, hidden_channels)    # Operators have 4 features
+        self.lin_table = nn.Linear(2, hidden_channels)       # Tables have 2 features
+        self.lin_column = nn.Linear(num_column_features, hidden_channels)  # Column size + one-hot data types
+        self.lin_predicate = nn.Linear(1, hidden_channels)   # Predicates have 1 feature
+        
+        # Define HANConv layers
+        self.conv1 = HANConv(
             in_channels=hidden_channels,
             out_channels=hidden_channels,
             metadata=metadata,
@@ -54,7 +55,7 @@ class HeteroGraph(torch.nn.Module):
             dropout=dropout
         )
         
-        self.conv2 = HGTConv(
+        self.conv2 = HANConv(
             in_channels=hidden_channels,
             out_channels=hidden_channels,
             metadata=metadata,
@@ -63,12 +64,12 @@ class HeteroGraph(torch.nn.Module):
         )
         
         # Final linear layer to produce the output
-        self.lin = Linear(hidden_channels, out_channels)
+        self.lin = nn.Linear(hidden_channels, out_channels)
         
         # Optional: Layer normalization
         self.norm1 = nn.LayerNorm(hidden_channels)
         self.norm2 = nn.LayerNorm(hidden_channels)
-
+        
     def forward(self, data, batch_operator):
         """
         Args:
@@ -81,7 +82,7 @@ class HeteroGraph(torch.nn.Module):
         # Extract x_dict and edge_index_dict from HeteroData
         x_dict = data.x_dict
         edge_index_dict = data.edge_index_dict
-
+        
         # Project node features with checks
         projected_x = {}
         for node_type, lin_layer in [('operator', self.lin_operator),
@@ -98,32 +99,17 @@ class HeteroGraph(torch.nn.Module):
                 )
         
         x_dict = projected_x
-
-        # Combine all edge indices and assign edge type indices
-        edge_index = []
-        edge_type = []
-        edge_type_mapping = {etype: idx for idx, etype in enumerate(self.metadata[1])}
-        for etype, eindex in edge_index_dict.items():
-            edge_index.append(eindex)
-            edge_type += [edge_type_mapping[etype]] * eindex.size(1)
         
-        if edge_index:
-            edge_index = torch.cat(edge_index, dim=1)
-            edge_type = torch.tensor(edge_type, dtype=torch.long, device=edge_index.device)
-        else:
-            edge_index = torch.empty((2, 0), dtype=torch.long, device=x_dict[next(iter(x_dict))].device)
-            edge_type = torch.empty((0,), dtype=torch.long, device=x_dict[next(iter(x_dict))].device)
-
-        # First HGTConv layer
-        x_dict = self.conv1(x_dict, edge_index, edge_type)
-        # Apply activation and normalization
-        x_dict = {key: self.norm1(F.elu(x)) for key, x in x_dict.items()}
-
-        # Second HGTConv layer
-        x_dict = self.conv2(x_dict, edge_index, edge_type)
-        # Apply activation and normalization
-        x_dict = {key: self.norm2(F.elu(x)) for key, x in x_dict.items()}
-
+        # First HANConv layer
+        x_dict = self.conv1(x_dict, edge_index_dict)
+        x_dict = {key: F.elu(x) for key, x in x_dict.items()}
+        x_dict = {key: self.norm1(x) for key, x in x_dict.items()}
+        
+        # Second HANConv layer
+        x_dict = self.conv2(x_dict, edge_index_dict)
+        x_dict = {key: F.elu(x) for key, x in x_dict.items()}
+        x_dict = {key: self.norm2(x) for key, x in x_dict.items()}
+        
         # Aggregate operator node features per graph
         operator_features = x_dict['operator']
         # Global mean pooling over operator nodes per graph

@@ -3,9 +3,14 @@ import re
 import psycopg2
 from torch_geometric.data import HeteroData
 from moz_sql_parser import parse
-from ..utils.database import get_relpages_reltuples, get_table_size, get_columns_info, get_column_features, get_unique_data_types
+from sklearn.preprocessing import RobustScaler
+import numpy as np
+import json
+import os
+from ..utils.database import get_relpages_reltuples, get_table_size, get_columns_info, get_column_features, get_unique_data_types, get_tables
 
 
+    
 # ---------------------- Helper Functions ---------------------- #
 # One-hot encode data types with an 'unknown' category
 def one_hot_encode_data_type(data_type, data_type_mapping):
@@ -19,6 +24,44 @@ def one_hot_encode_data_type(data_type, data_type_mapping):
     assert len(one_hot) == 6, "One-hot encoding should have 6 dimensions"
     return one_hot
 
+def one_hot_encode_andornot_type(predicate_type):
+    andornot_type_mapping = {
+        'AND': 0,
+        'OR': 1,
+        'NOT': 2,
+    }
+    one_hot = [0] * 4  # 4 types: AND, OR, NOT, unknown
+    if predicate_type in andornot_type_mapping:
+        index = andornot_type_mapping[predicate_type]
+        one_hot[index] = 1
+    else:
+        # Assign 'unknown' category
+        one_hot[-1] = 1
+    assert len(one_hot) == 4, "One-hot encoding should have 4 dimensions"
+    return one_hot
+
+def one_hot_encode_operation_type(operation_type):
+    operation_type_mapping = {
+        '=': 0,
+        '<>': 1,
+        '>': 2,
+        '>=': 3,
+        '<': 4,
+        '<=': 5,
+        'LIKE': 6,
+        'UNKNOWN': 7,
+    }
+    one_hot = [0] * 8  # 8 types: =, <>, >, >=, <, <=, LIKE, UNKNOWN
+    if operation_type in operation_type_mapping:
+        index = operation_type_mapping[operation_type]
+        one_hot[index] = 1
+    else:
+        # Assign 'unknown' category
+        one_hot[-1] = 1
+    assert len(one_hot) == 8, "One-hot encoding should have 8 dimensions"
+    return one_hot
+
+
 def extract_columns(string):
     # Regex to extract column names with at least one letter in the table/alias part
     # column_pattern = re.compile(r'\b([A-Za-z]+\.\w+)\b')
@@ -28,39 +71,127 @@ def extract_columns(string):
     return columns
 
 def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
-                        predicate_filters_operator_edges, column_connects_predicate_edges,
-                        literal_connects_predicate_edges, numeral_connects_predicate_edges, 
-                        parent_id):
+                    predicate_filters_operator_edges, operation_connects_predicate_edges, 
+                    operation_filters_operator_edges, column_connects_operation_edges,
+                    literal_connects_operation_edges, numeral_connects_operation_edges, 
+                    predicate_connects_predicate_edges,
+                    parent_id):
 
-    sql_query = f"select * from dummy_table where"
+    def traverse(parsed_dict, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
+                    predicate_filters_operator_edges, operation_connects_predicate_edges, 
+                    operation_filters_operator_edges, column_connects_operation_edges,
+                    literal_connects_operation_edges, numeral_connects_operation_edges, predicate_connects_predicate_edges,
+                    parent_id = None, parent_is_operator:bool=False):
+        
+        if 'and' in parsed_dict or 'or' in parsed_dict or 'not' in parsed_dict:
+            if 'and' in parsed_dict:
+                predicate = 'and'
+            elif 'or' in parsed_dict:
+                predicate = 'or'
+            elif 'not' in parsed_dict:
+                predicate = 'not'
+            if predicate not in predicate_nodes:  # CAUTION: PITFALL: If the same predicate appears multiple times, it should be added multiple times to the graph
+                predicate_nodes[predicate] = {
+                    'id': len(predicate_nodes),
+                    'features': one_hot_encode_andornot_type(predicate)  # Placeholder, will be updated later
+                }
+
+            predicate_id = predicate_nodes[predicate]['id']
+            if parent_is_operator:
+                predicate_filters_operator_edges.append((predicate_id, parent_id))
+            else:
+                predicate_connects_predicate_edges.append((predicate_id, parent_id))
+            for condition in parsed_dict[predicate]:
+                traverse(condition, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
+                        predicate_filters_operator_edges, operation_connects_predicate_edges, 
+                        operation_filters_operator_edges, column_connects_operation_edges, 
+                        literal_connects_operation_edges, numeral_connects_operation_edges,  predicate_connects_predicate_edges, predicate_id)
+        else:
+            # It's a comparison operation
+            # Identify the operation type
+            if 'eq' in parsed_dict:
+                op = '='
+                left, right = parsed_dict['eq']
+            elif 'neq' in parsed_dict:
+                op = '<>'
+                left, right = parsed_dict['neq']
+            elif 'gt' in parsed_dict:
+                op = '>'
+                left, right = parsed_dict['gt']
+            elif 'gte' in parsed_dict:
+                op = '>='
+                left, right = parsed_dict['gte']
+            elif 'lt' in parsed_dict:
+                op = '<'
+                left, right = parsed_dict['lt']
+            elif 'lte' in parsed_dict:
+                op = '<='
+                left, right = parsed_dict['lte']
+            elif 'like' in parsed_dict:
+                op = 'LIKE'
+                left, right = parsed_dict['like']
+            else:
+                op = 'UNKNOWN'
+
+            if op not in operation_nodes:
+                operation_nodes[op] = {
+                    'id': len(operation_nodes),
+                    'features': one_hot_encode_operation_type(op)  # Placeholder, will be updated later
+                }
+            operation_id = operation_nodes[op]['id']
+            if parent_is_operator:
+                operation_filters_operator_edges.append((operation_id, parent_id))
+            else:
+                operation_connects_predicate_edges.append((operation_id, parent_id))
+            
+            if isinstance(left, str):
+                if left not in column_nodes:
+                    column_nodes[left] = {
+                        'id': len(column_nodes),
+                        'features': [0] * 10  # Placeholder, will be updated later
+                    }
+                column_id = column_nodes[left]['id']
+                column_connects_operation_edges.append((column_id, operation_id))
+
+            if isinstance(right, str):
+                if right not in literal_nodes:
+                    literal_nodes[right] = {
+                        'id': len(literal_nodes),
+                        'features': [0] * 1  # Placeholder, will be updated later
+                    }
+                literal_id = literal_nodes[right]['id']
+                literal_connects_operation_edges.append((literal_id, operation_id))
+            elif isinstance(right, int):
+                if right not in numeral_nodes:
+                    numeral_nodes[right] = {
+                        'id': len(numeral_nodes),
+                        'features': [right]   # Placeholder, will be updated later
+                    }
+                numeral_id = numeral_nodes[right]['id']
+                numeral_connects_operation_edges.append((numeral_id, operation_id))
+            # else:    # just ignore other types of right operands for now
+            #     print(f"parsed_dict     {parsed_dict}, right {right}")
+            #     raise ValueError("Invalid right operand type")
+
+
+            
+    sql_query = f"select * from dummy_table where {predicate}"
     parsed = parse(sql_query)
     where_clause = parsed.get('where', {})
-
-    def traverse(parsed_dict, parent_id = None):
-        if 'and' in parsed_dict:
-            operation = 'AND'
-            if operation not in predicate_nodes:
-                predicate_nodes[operation] = {
-                    'id': len(predicate_nodes),
-                    'features': [0] * expected_operation_feature_len  # Placeholder, will be updated later
-                }
-            predicate_id = predicate_nodes[operation]['id']
-            predicate_filters_operator_edges.append((predicate_id, parent_id))
-            for condition in parsed_dict['and']:
-                traverse(condition, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
-                        predicate_filters_operator_edges, column_connects_predicate_edges,
-                        literal_connects_predicate_edges, numeral_connects_predicate_edges, predicate_id)
-
-
-    traverse(where_clause)
+    traverse(where_clause, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
+                    predicate_filters_operator_edges, operation_connects_predicate_edges, 
+                    operation_filters_operator_edges, column_connects_operation_edges,
+                    literal_connects_operation_edges, numeral_connects_operation_edges, predicate_connects_predicate_edges, parent_id = parent_id, parent_is_operator=True)
 
 # Helper function to traverse operators and extract tables, columns, and predicates
 def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
                       operator_nodes, literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      literal_connects_predicate_edges, numeral_connects_predicate_edges,
-                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,
+                      column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, 
+                      operation_connects_predicate_edges,
+                      literal_connects_operation_edges, numeral_connects_operation_edges,
+                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges, 
+                      table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges,
                       operator_id_counter, parent_operator_id=None):
     current_operator_id = operator_id_counter[0]
     operator_id_counter[0] += 1  # Increment the operator ID counter
@@ -108,33 +239,12 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operati
             condition_str = plan_parameters[key]
             predicate = condition_str.strip()
             parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
-                            predicate_filters_operator_edges, column_connects_predicate_edges,
-                            literal_connects_predicate_edges, numeral_connects_predicate_edges, 
+                            predicate_filters_operator_edges, operation_connects_predicate_edges, 
+                            operation_filters_operator_edges, column_connects_operation_edges,
+                            literal_connects_operation_edges, numeral_connects_operation_edges, 
+                            predicate_connects_predicate_edges,
                             parent_id=current_operator_id)
 
-            cols = extract_columns(condition_str)
-            involved_columns.update(cols)
-
-            if predicate not in predicate_nodes:
-                predicate_nodes[predicate] = {
-                    'id': len(predicate_nodes),
-                    'features': [0]  # Placeholder, will be updated later
-                }
-
-            predicate_id = predicate_nodes[predicate]['id']
-
-            # Add edge: predicate filters operator
-            predicate_filters_operator_edges.append((predicate_id, current_operator_id))
-
-            for col in involved_columns:
-                if col not in column_nodes:
-                    column_nodes[col] = {
-                        'id': len(column_nodes),
-                        'features': [0] * expected_column_feature_len  # Placeholder, will be updated later
-                    }
-                column_id = column_nodes[col]['id']
-                # Add edge: predicate connects column
-                column_connects_predicate_edges.append((column_id, predicate_id))
 
     output_list = plan_parameters.get('Output', [])
     for output_item in output_list:
@@ -155,14 +265,15 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operati
             traverse_operators(sub_plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
                         operator_nodes,literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      literal_connects_predicate_edges, numeral_connects_predicate_edges,
-                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,
+                      column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,
+                      literal_connects_operation_edges, numeral_connects_operation_edges,
+                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges, 
+                      table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges,
                       operator_id_counter, current_operator_id)
 
 
 # Function to parse the query plan and extract the tables, columns, and predicates
-def parse_query_plan(logger, plan, conn, data_type_mapping):
+def parse_query_plan(logger, plan, conn, db_stats):
 
     table_nodes = {}       # table_name -> {'id': int, 'features': [...]}
     column_nodes = {}      # column_name -> {'id': int, 'features': [...]}
@@ -179,26 +290,30 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
     column_outputby_operator_edges = []    
     column_connects_operation_edges = [] 
     operator_calledby_operator_edges = []    
-    table_selfloop_table_edges = []
-    column_selfloop_column_edges = []
+    
 
     operation_filters_operator_edges = []
     operation_connects_predicate_edges = []
     literal_connects_operation_edges = []
     numeral_connects_operation_edges = []
+
+    predicate_connects_predicate_edges = []
+
+    table_selfloop_table_edges = []
+    column_selfloop_column_edges = []
+    
     literal_selfloop_literal_edges = []
     numeral_selfloop_numeral_edges = []
-
-    
 
     operator_id_counter = [0]  # Using a list to make it mutable in recursion
 
 
     traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_operation_edges, operator_calledby_operator_edges,
-                      literal_connects_predicate_edges, numeral_connects_predicate_edges,
-                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,
+                      column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,
+                      literal_connects_operation_edges, numeral_connects_operation_edges,
+                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges, 
+                      table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges,
                       operator_id_counter)
     
     # add self-loop edges for tables and columns
@@ -208,37 +323,52 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
     for column_name, column_info in column_nodes.items():
         column_id = column_info['id']
         column_selfloop_column_edges.append((column_id, column_id))
+    for literal_str, literal_info in literal_nodes.items():
+        literal_id = literal_info['id']
+        literal_selfloop_literal_edges.append((literal_id, literal_id))
+    for numeral_str, numeral_info in numeral_nodes.items():
+        numeral_id = numeral_info['id']
+        numeral_selfloop_numeral_edges.append((numeral_id, numeral_id))
 
+    # print(f"db_stats.keys() {db_stats.keys()}")
+    unique_data_types = sorted(db_stats['unique_data_types'])
+    data_type_mapping = {data_type: i for i, data_type in enumerate(unique_data_types)}
 
     # Now, fetch actual features for tables and columns
     for table_name, table_info in table_nodes.items():
-        relpages, reltuples = get_relpages_reltuples(conn, table_name)
+        relpages, reltuples = db_stats['tables'][table_name]['relpages'], db_stats['tables'][table_name]['reltuples']
         table_nodes[table_name]['features'] = [relpages, reltuples]
         
-        # Update column features
-        columns = get_columns_info(conn, table_name)
-        for column_name, data_type in columns:
-            full_column_name = f"{table_name}.{column_name}"
-            if full_column_name in column_nodes:
-                avg_width, correlation, n_distinct, null_frac = get_column_features(conn, table_name, column_name)
-                one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
-                column_nodes[full_column_name]['features'] = [avg_width, correlation, n_distinct, null_frac] + one_hot
+    for column_name in column_nodes:
+        table_name = column_name.split('.')[0]
+        avg_width = db_stats['tables'][table_name]['column_features'][column_name]['avg_width']
+        correlation = db_stats['tables'][table_name]['column_features'][column_name]['correlation']
+        n_distinct = db_stats['tables'][table_name]['column_features'][column_name]['n_distinct']
+        null_frac = db_stats['tables'][table_name]['column_features'][column_name]['null_frac']
+        data_type = db_stats['tables'][table_name]['column_features'][column_name]['data_type']
+        one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
+        column_nodes[column_name]['features'] = [avg_width, correlation, n_distinct, null_frac] + one_hot
 
-    # Update predicate features: [predicate_length]
-    for pred, pred_info in predicate_nodes.items():
-        predicate_length = len(pred)
-        predicate_nodes[pred]['features'] = [predicate_length]
-
-    return table_nodes, column_nodes, predicate_nodes, operator_nodes, \
+    # # Update predicate features: [predicate_length]
+    # for pred, pred_info in predicate_nodes.items():
+    #     predicate_length = len(pred)
+    #     predicate_nodes[pred]['features'] = [predicate_length]
+ 
+    return table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes, literal_nodes, numeral_nodes, \
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
-                      column_connects_predicate_edges, operator_calledby_operator_edges, \
-                      table_selfloop_table_edges, column_selfloop_column_edges
+                      column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  \
+                      literal_connects_operation_edges, numeral_connects_operation_edges, \
+                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  \
+                      table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges
 
 # Function to create the heterogeneous graph from parsed components
-def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, operator_nodes,
-                      table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
-                      column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      table_selfloop_table_edges, column_selfloop_column_edges, peakmem):
+def create_hetero_graph(logger, 
+                table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes, 
+                      table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, 
+                      column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  
+                      literal_connects_operation_edges, numeral_connects_operation_edges, 
+                      literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  
+                      table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges, peakmem, mem_scaler):
     data = HeteroData()
 
     # Assign operator features
@@ -264,6 +394,21 @@ def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, oper
     predicate_features = [predicate[1]['features'] for predicate in sorted_predicates]
     data['predicate'].x = torch.tensor(predicate_features, dtype=torch.float)
     
+    # Assign operation features
+    sorted_operations = sorted(operation_nodes.items(), key=lambda x: x[1]['id'])
+    operation_features = [operation[1]['features'] for operation in sorted_operations]
+    data['operation'].x = torch.tensor(operation_features, dtype=torch.float)
+    
+    # Assign literal features
+    sorted_literals = sorted(literal_nodes.items(), key=lambda x: x[1]['id'])
+    literal_features = [literal[1]['features'] for literal in sorted_literals]
+    data['literal'].x = torch.tensor(literal_features, dtype=torch.float)
+    
+    # Assign numeral features
+    sorted_numerals = sorted(numeral_nodes.items(), key=lambda x: x[1]['id'])
+    numeral_features = [numeral[1]['features'] for numeral in sorted_numerals]
+    data['numeral'].x = torch.tensor(numeral_features, dtype=torch.float)
+
     
     # Create edge index dictionaries
     # table_scannedby_operator_edges
@@ -281,10 +426,6 @@ def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, oper
         src, dst = zip(*column_outputby_operator_edges)
         data['column', 'outputby', 'operator'].edge_index = torch.tensor([src, dst], dtype=torch.long)
     
-    # column_connects_predicate_edges
-    if column_connects_predicate_edges:
-        src, dst = zip(*column_connects_predicate_edges)
-        data['column', 'connects', 'predicate'].edge_index = torch.tensor([src, dst], dtype=torch.long)
     
     # operator_calledby_operator_edges
     if operator_calledby_operator_edges:
@@ -300,9 +441,51 @@ def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, oper
     if column_selfloop_column_edges:
         src, dst = zip(*column_selfloop_column_edges)
         data['column', 'selfloop', 'column'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+
+    # literal_selfloop_literal_edges
+    if literal_selfloop_literal_edges:
+        src, dst = zip(*literal_selfloop_literal_edges)
+        data['literal', 'selfloop', 'literal'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # numeral_selfloop_numeral_edges
+    if numeral_selfloop_numeral_edges:
+        src, dst = zip(*numeral_selfloop_numeral_edges)
+        data['numeral', 'selfloop', 'numeral'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # column_connects_operation_edges
+    if column_connects_operation_edges:
+        src, dst = zip(*column_connects_operation_edges)
+        data['column', 'connects', 'operation'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # operation_filters_operator_edges
+    if operation_filters_operator_edges:
+        src, dst = zip(*operation_filters_operator_edges)
+        data['operation', 'filters', 'operator'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # operation_connects_predicate_edges
+    if operation_connects_predicate_edges:
+        src, dst = zip(*operation_connects_predicate_edges)
+        data['operation', 'connects', 'predicate'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # literal_connects_operation_edges
+    if literal_connects_operation_edges:
+        src, dst = zip(*literal_connects_operation_edges)
+        data['literal', 'connects', 'operation'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # numeral_connects_operation_edges
+    if numeral_connects_operation_edges:
+        src, dst = zip(*numeral_connects_operation_edges)
+        data['numeral', 'connects', 'operation'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+    
+    # predicate_connects_predicate_edges
+    if predicate_connects_predicate_edges:
+        src, dst = zip(*predicate_connects_predicate_edges)
+        data['predicate', 'connects', 'predicate'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+
+    peakmem = mem_scaler.transform(np.array([peakmem]).reshape(-1, 1)).reshape(-1)
     
     # Assign the target
-    data.y = torch.tensor([peakmem], dtype=torch.float)
+    data.y = torch.tensor(peakmem, dtype=torch.float)
   
     return data
 
@@ -317,6 +500,99 @@ def connect_to_db(DB_CONFIG):
         return None
     
 
+def get_db_stats(dataset):
+    database = dataset
+    db_stats = {}
+    conn = psycopg2.connect(database=database, user="wuy", password='', host='localhost')
+
+    unique_data_types = get_unique_data_types(conn)
+    db_stats['unique_data_types'] = unique_data_types
+    db_stats['tables'] = {}
+
+    relpages_list = []
+    reltuples_list = []
+    table_size_list = []
+
+    # Initialize lists for scaling
+    avg_widths = []
+    correlations = []
+    n_distincts = []
+    null_fracs = []
+    
+    tables = get_tables(conn)
+    for table in tables:
+        relpages, reltuples = get_relpages_reltuples(conn, table)
+        table_size = get_table_size(conn, table)
+
+        # Collect relpages and reltuples for scaling
+        relpages_list.append(relpages)
+        reltuples_list.append(reltuples)
+        table_size_list.append(table_size)
+
+        
+        db_stats['tables'][table] = {'relpages': relpages, 'reltuples': reltuples, 'table_size': table_size}
+        db_stats['tables'][table]['column_features'] = {}
+
+
+        columns = get_columns_info(conn, table)
+        for column in columns:
+            column_name = column[0]
+            data_type = column[1]
+            avg_width, correlation, n_distinct, null_frac, data_type = get_column_features(conn, table, column_name)
+
+            # Collect values for scaling
+            avg_widths.append(avg_width)
+            correlations.append(correlation)
+            n_distincts.append(n_distinct)
+            null_fracs.append(null_frac)
+
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"] = {
+                'avg_width': avg_width,
+                'correlation': correlation,
+                'n_distinct': n_distinct,
+                'null_frac': null_frac,
+                'data_type': data_type
+            }
+        
+
+    # Scale the collected values using RobustScaler
+    column_scaler = RobustScaler()
+    table_scaler = RobustScaler()
+    column_scaled_features = column_scaler.fit_transform(np.array([avg_widths, correlations, n_distincts, null_fracs]).T)
+    table_scaled_features = table_scaler.fit_transform(np.array([relpages_list, reltuples_list, table_size_list]).T)
+
+
+    # Assign scaled values back to the db_stats
+    for i, column in enumerate(columns):
+        column_name = column[0]
+        db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['avg_width'] = column_scaled_features[i][0]
+        db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['correlation'] = column_scaled_features[i][1]
+        db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['n_distinct'] = column_scaled_features[i][2]
+        db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['null_frac'] = column_scaled_features[i][3]
+
+    # Update relpages and reltuples in db_stats
+    for i, table_name in enumerate(tables):
+        db_stats['tables'][table_name]['relpages'] = table_scaled_features[i][0]
+        db_stats['tables'][table_name]['reltuples'] = table_scaled_features[i][1]
+        db_stats['tables'][table_name]['table_size'] = table_scaled_features[i][2]
+
+
+    return db_stats
+import logging
+def get_logger():
+
+    log = logging.getLogger()
+    log.setLevel(logging.DEBUG)
+    fmt = f"[%(asctime)s][%(levelname)s][%(filename)s:%(lineno)d]:%(message)s"
+    formatter = logging.Formatter(fmt, datefmt="%Y-%m-%d %H:%M:%S")
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    log.addHandler(ch)
+    return log
+
+
 if __name__ == '__main__':
     # Example usage:
     DB_CONFIG = {
@@ -326,7 +602,7 @@ if __name__ == '__main__':
         'password': ''
     }
     conn = connect_to_db(DB_CONFIG)
-    data_type_mapping = {data_type: idx for idx, data_type in enumerate(get_unique_data_types(conn))}
+    db_stats = get_db_stats('tpch_sf1')
     plan = {
             "Plan": {
                 "Node Type": "Aggregate",
@@ -417,7 +693,34 @@ if __name__ == '__main__':
             },
             "peakmem": 17220
             }
-    table_nodes, column_nodes, predicate_nodes, operator_nodes, \
-    operator_involves_table_edges, operator_involves_column_edges, \
-    table_contains_column_edges, column_connected_predicate_edges, \
-    _ = parse_query_plan(plan, conn, data_type_mapping)
+    logger = get_logger()
+    table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes, \
+        table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
+        column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  \
+        literal_connects_operation_edges, numeral_connects_operation_edges, \
+        literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  \
+        table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges = parse_query_plan(logger, plan, conn, db_stats)
+
+
+    print(f"table_nodes: {table_nodes}")
+    print(f"column_nodes: {column_nodes}")
+    print(f"predicate_nodes: {predicate_nodes}")
+    print(f"operation_nodes: {operation_nodes}")
+    print(f"operator_nodes: {operator_nodes}")
+    print(f"literal_nodes: {literal_nodes}")
+    print(f"numeral_nodes: {numeral_nodes}")
+
+    print(f"table_scannedby_operator_edges: {table_scannedby_operator_edges}")
+    print(f"predicate_filters_operator_edges: {predicate_filters_operator_edges}")
+    print(f"column_outputby_operator_edges: {column_outputby_operator_edges}")
+    print(f"column_connects_operation_edges: {column_connects_operation_edges}")
+    print(f"operator_calledby_operator_edges: {operator_calledby_operator_edges}")
+    print(f"operation_filters_operator_edges: {operation_filters_operator_edges}")
+    print(f"operation_connects_predicate_edges: {operation_connects_predicate_edges}")
+    print(f"literal_connects_operation_edges: {literal_connects_operation_edges}")
+    print(f"numeral_connects_operation_edges: {numeral_connects_operation_edges}")
+    print(f"literal_selfloop_literal_edges: {literal_selfloop_literal_edges}")
+    print(f"numeral_selfloop_numeral_edges: {numeral_selfloop_numeral_edges}")
+    print(f"table_selfloop_table_edges: {table_selfloop_table_edges}")
+    print(f"column_selfloop_column_edges: {column_selfloop_column_edges}")
+    print(f"predicate_connects_predicate_edges: {predicate_connects_predicate_edges}")

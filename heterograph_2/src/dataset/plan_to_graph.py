@@ -402,4 +402,4 @@ if __name__ == '__main__':
     table_nodes, column_nodes, predicate_nodes, operator_nodes, \
     operator_involves_table_edges, operator_involves_column_edges, \
     table_contains_column_edges, column_connected_predicate_edges, \
-    _ = parse_query_plan(plan, conn, data_type_mapping)
+    _ = parse_query_plan(logger, plan, conn, db_stats)

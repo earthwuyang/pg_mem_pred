@@ -26,7 +26,7 @@ metadata = (
 
 
 
-class HeteroGraphHAN(nn.Module):
+class HeteroGraph(nn.Module):
     def __init__(self, hidden_channels, out_channels, num_column_features, metadata, num_heads=1, dropout=0.6):
         """
         Args:
@@ -37,7 +37,7 @@ class HeteroGraphHAN(nn.Module):
             num_heads (int): Number of attention heads in GATConv.
             dropout (float): Dropout rate for attention.
         """
-        super(HeteroGraphHAN, self).__init__()
+        super(HeteroGraph, self).__init__()
         self.metadata = metadata
         
         # Project node features to hidden_channels
