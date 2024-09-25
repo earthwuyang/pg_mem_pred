@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 import numpy as np
 import random
+import json
 
 from src.datasets.dataloader import get_dataloaders
 from src.models.GIN import GIN
@@ -80,8 +81,11 @@ if __name__ == '__main__':
 
     logger.info(f"args: {args}")
 
+    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset, 'statistics_workload_combined.json')
+    with open(statistics_file_path, 'r') as f:
+        statistics = json.load(f)
     
-    train_loader, val_loader, test_loader = get_dataloaders(args.dataset_dir, args.train_dataset, args.test_dataset, args.batch_size, args.num_workers)
+    train_loader, val_loader, test_loader = get_dataloaders(args.dataset_dir, args.train_dataset, args.test_dataset, statistics, args.batch_size, args.num_workers)
 
     num_node_features = len(train_loader.dataset[0].x[0])  # Number of features per node
     model = MODELS[args.model_name](num_node_features, args.hidden_channels)
@@ -94,7 +98,7 @@ if __name__ == '__main__':
     model = model.to(device)
 
     # Define optimizer and loss
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
 
     criterion = torch.nn.MSELoss()
@@ -104,12 +108,14 @@ if __name__ == '__main__':
         os.makedirs(checkpoint_dir)
     checkpoint_path = os.path.join(checkpoint_dir, f"{args.model_name}_{args.train_dataset}.pth")
 
+    mem_scaler = train_loader.dataset.mem_scaler
+
     if not args.skip_train:
-        train_model(logger, model, train_loader, val_loader, optimizer, criterion, device, args.epochs, checkpoint_path)
+        train_model(logger, model, train_loader, val_loader, optimizer, criterion, device, args.epochs, checkpoint_path, statistics, mem_scaler)
 
     logger.info(f"reload best model from '{checkpoint_path}' and evaluate on test set")
     model.load_state_dict(torch.load(checkpoint_path))
-    test_loss, metrics = evaluate_model(model, test_loader, criterion, device)
+    test_loss, metrics = evaluate_model(model, test_loader, criterion, device, statistics, mem_scaler)
     logger.info(f'Test mettics on {args.test_dataset}, trained on {args.train_dataset}: {metrics}')
         
 

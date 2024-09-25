@@ -43,7 +43,7 @@ class HeteroGraph(torch.nn.Module):
         self.lin_operator = Linear(4, hidden_channels)    # Operators have 4 features
         self.lin_table = Linear(2, hidden_channels)       # Tables have 2 features
         self.lin_column = Linear(num_column_features, hidden_channels)  # Column size + one-hot data types
-        self.lin_predicate = Linear(1, hidden_channels)   # Predicates have 1 feature
+        self.lin_predicate = Linear(3, hidden_channels)   # Predicates have 1 feature
 
         # Define HGTConv layers
         self.conv1 = HGTConv(
@@ -61,7 +61,7 @@ class HeteroGraph(torch.nn.Module):
         )
         
         # Final linear layer to produce the output
-        self.lin = Linear(hidden_channels * num_heads, out_channels)
+        self.lin = Linear(hidden_channels, out_channels)
         
         # Optional: Layer normalization
         self.norm1 = nn.LayerNorm(hidden_channels)
@@ -87,6 +87,7 @@ class HeteroGraph(torch.nn.Module):
                                      ('column', self.lin_column),
                                      ('predicate', self.lin_predicate)]:
             if node_type in x_dict and x_dict[node_type].shape[0] > 0:
+                # print(f"{node_type} x_dict[node_type].shape {x_dict[node_type].shape}")
                 projected_x[node_type] = lin_layer(x_dict[node_type])
             else:
                 # Assign an empty tensor with appropriate feature size
@@ -127,6 +128,8 @@ class HeteroGraph(torch.nn.Module):
         # Global mean pooling over operator nodes per graph
         operator_embedding = global_mean_pool(operator_features, batch_operator)
         
+        # print(f"self.lin {self.lin}")
+        # print(f"operator_embedding {operator_embedding.shape}")
         # Final output
         out = self.lin(operator_embedding)
         return out.squeeze()  # Shape: [batch_size]

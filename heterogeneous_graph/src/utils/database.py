@@ -1,3 +1,4 @@
+import json
 
 def get_relpages_reltuples(conn, table_name):
     try:
@@ -44,20 +45,23 @@ def get_column_features(conn, table_name, column_name):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT avg_width, correlation, n_distinct, null_frac
-                FROM pg_stats
-                WHERE tablename = %s AND attname = %s;
+                SELECT ps.avg_width, ps.correlation, ps.n_distinct, ps.null_frac, ic.data_type
+                FROM pg_stats ps
+                JOIN information_schema.columns ic
+                ON ps.tablename = ic.table_name AND ps.attname = ic.column_name
+                WHERE ps.tablename = %s AND ps.attname = %s;
             """, (table_name, column_name))
             result = cur.fetchone()
             avg_width = result[0] if result and result[0] is not None else 0
             correlation = result[1] if result and result[1] is not None else 0
             n_distinct = result[2] if result and result[2] is not None else 0
             null_frac = result[3] if result and result[3] is not None else 0
-            column_features = [avg_width, correlation, n_distinct, null_frac]
+            data_type = result[4] if result and result[4] is not None else ''
+            column_features = [avg_width, correlation, n_distinct, null_frac, data_type]
         return column_features
     except Exception as e:
         print(f"Error fetching column features for {table_name}.{column_name}: {e}")
-        return [0, 0, 0, 0]
+        return [0, 0, 0, 0, 0]
 
 
 
@@ -76,3 +80,53 @@ def get_unique_data_types(conn):
     except Exception as e:
         print(f"Error fetching unique data types: {e}")
         return []
+    
+def get_tables(conn):
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public';
+            """)
+            tables = [row[0] for row in cur.fetchall()]
+        return tables
+    except Exception as e:
+        print(f"Error fetching tables: {e}")
+        return []
+
+if __name__ == '__main__':
+    import psycopg2
+    database = 'tpch_sf1'
+    db_stats = {}
+    conn = psycopg2.connect(database=database, user="wuy", password='', host='localhost')
+
+    unique_data_types = get_unique_data_types(conn)
+    db_stats['unique_data_types'] = unique_data_types
+    db_stats['tables'] = {}
+
+    tables = get_tables(conn)
+    for table in tables:
+        relpages, reltuples = get_relpages_reltuples(conn, table)
+        table_size = get_table_size(conn, table)
+        db_stats['tables'][table] = {'relpages': relpages, 'reltuples': reltuples, 'table_size': table_size}
+        db_stats['tables'][table]['column_features'] = {}
+        columns = get_columns_info(conn, table)
+        for column in columns:
+            column_name = column[0]
+            data_type = column[1]
+            avg_width, correlation, n_distinct, null_frac, data_type = get_column_features(conn, table, column_name)
+            # print(f"{table}.{column_name}: {data_type}, {column_features}")  # Print column features for each column in the table        
+            # print(f"{table}: {relpages} pages, {reltuples} tuples, {table_size} bytes")  # Print table statistics
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"] = {}
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['avg_width'] = avg_width
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['correlation'] = correlation
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['n_distinct'] = n_distinct
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['null_frac'] = null_frac
+            db_stats['tables'][table]['column_features'][f"{table}.{column_name}"]['data_type'] = data_type
+
+    print(db_stats)
+    # with open('db_stats.json', 'w') as f:
+    #     json.dump(db_stats, f, indent=4)
+
+    conn.close()

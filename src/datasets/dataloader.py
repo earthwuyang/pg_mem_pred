@@ -13,6 +13,7 @@ def load_plans(file_path):
     Returns:
         list: A list of execution plan dictionaries.
     """
+    # file_path = '/home/wuy/DB/pg_mem_data/tpch/tiny_plans.json'   # for debug
     with open(file_path, 'r') as f:
         plans = json.load(f)
     return plans
@@ -29,12 +30,14 @@ def load_data(dataset_dir, train_dataset, test_dataset):
     
     return train_plans, val_plans, test_plans
 
-def get_dataloaders(dataset_dir, train_dataset, test_dataset, batch_size=1, num_workers=0):
+def get_dataloaders(dataset_dir, train_dataset, test_dataset, statistics, batch_size=1, num_workers=0):
     train_plans, val_plans, test_plans = load_data(dataset_dir, train_dataset, test_dataset)
 
-    train_dataset = PlanGraphDataset(train_plans)
-    val_dataset = PlanGraphDataset(val_plans)
-    test_dataset = PlanGraphDataset(test_plans)
+    
+
+    train_dataset = PlanGraphDataset(train_plans, statistics)
+    val_dataset = PlanGraphDataset(val_plans, statistics)
+    test_dataset = PlanGraphDataset(test_plans, statistics)
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
@@ -47,8 +50,8 @@ if __name__ == '__main__':
     num_workers = 0
     batch_size = 1
     dataset_dir ="/home/wuy/DB/pg_mem_data"
-    train_dataset = 'tpch'
-    test_dataset = 'tpch'
+    train_dataset = 'tpch_sf1'
+    test_dataset = 'tpch_sf1'
     train_loader, val_loader, test_loader = get_dataloaders(dataset_dir, train_dataset, test_dataset, batch_size, num_workers)
     for i in val_loader.dataset[:10]:
         print(i)

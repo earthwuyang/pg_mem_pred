@@ -1,4 +1,4 @@
-def parse_plan(plan, parent=None, nodes=None, edges=None, node_id=0):
+def parse_plan(plan, statistics, parent=None, nodes=None, edges=None, node_id=0):
     """
     Recursively parse the JSON plan and build node features and edges.
     
@@ -25,7 +25,7 @@ def parse_plan(plan, parent=None, nodes=None, edges=None, node_id=0):
         plan_node = plan
     
     # Extract features from the current node
-    features = extract_features(plan_node)
+    features = extract_features(plan_node, statistics)
     nodes.append(features)
     
     # If there is a parent, add an edge
@@ -38,11 +38,26 @@ def parse_plan(plan, parent=None, nodes=None, edges=None, node_id=0):
     # Recursively parse children
     for child in children:
         node_id += 1
-        node_id = parse_plan(child, parent=current_id, nodes=nodes, edges=edges, node_id=node_id)
+        node_id = parse_plan(child, statistics, parent=current_id, nodes=nodes, edges=edges, node_id=node_id)
     
     return node_id
 
-def extract_features(plan_node):
+def one_hot_encode(n, num_classes):
+    """
+    One-hot encode a number into a binary vector of length num_classes.
+    
+    Args:
+        n (int): The number to encode.
+        num_classes (int): The number of classes.
+        
+    Returns:
+        one_hot (list): A binary vector of length num_classes.
+    """
+    one_hot = [0] * num_classes
+    one_hot[n] = 1
+    return one_hot
+
+def extract_features(plan_node, statistics):
     """
     Extract relevant features from a plan node.
     
@@ -54,16 +69,42 @@ def extract_features(plan_node):
     """
     # Define which features to extract
     feature_vector = []
-    
-    # Numerical features
-    numerical_features = [
-        plan_node.get('Startup Cost', 0.0),
-        plan_node.get('Total Cost', 0.0),
-        plan_node.get('Plan Rows', 0.0),
-        plan_node.get('Plan Width', 0.0),
-        plan_node.get('Workers Planned', 0.0)
-    ]
-    feature_vector.extend(numerical_features)
+
+    for key in statistics:
+        
+        # if key in ['Output', 'Hash Cond', 'Filter', 'Index Cond', 'Join Filter', 'Recheck Cond', 'Merge Cond', 'One-Time Filter']:
+        #     continue
+        if key in ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Workers Planned', 'Node Type', 'Join Type', 'Strategy', 'Partial Mode', 'Parent Relationship', 'Scan Direction']:
+ 
+            if statistics[key]['type'] == 'numerical':
+                value = plan_node.get(key, 0.0) - statistics[key]['center'] / statistics[key]['scale']
+                feature_vector.append(value)
+            elif statistics[key]['type'] == 'categorical':
+                value = plan_node.get(key, 'unknown')
+                # print(f"key: {key}, value is {value}")
+                one_hot_features = one_hot_encode(statistics[key]['value_dict'].get(value, statistics[key]['no_vals']), statistics[key]['no_vals']+1)  # unknown will map to an extra number in the directory
+                feature_vector.extend(one_hot_features)
+                # feature_vector.append(statistics[key]['value_dict'].get(value, statistics[key]['no_vals'])) # unknown will map to an extra number in the directory
+    # print(f"len(feature_vector): {len(feature_vector)}")
+    return feature_vector
+
+
+    numerical_features = {
+        'Startup Cost': plan_node.get('Startup Cost', 0.0),
+        'Total Cost': plan_node.get('Total Cost', 0.0),
+        'Plan Rows': plan_node.get('Plan Rows', 0.0),
+        'Plan Width': plan_node.get('Plan Width', 0.0),
+        'Workers Planned': plan_node.get('Workers Planned', 0.0)
+    }
+    # # Numerical features
+    # numerical_features = [
+    #     plan_node.get('Startup Cost', 0.0),
+    #     plan_node.get('Total Cost', 0.0),
+    #     plan_node.get('Plan Rows', 0.0),
+    #     plan_node.get('Plan Width', 0.0),
+    #     plan_node.get('Workers Planned', 0.0)
+    # ]
+    # feature_vector.extend(numerical_features)
     
     # Categorical features: Node Type, Join Type, etc.
     categorical_features = [
@@ -236,6 +277,9 @@ if __name__ == '__main__':
     "peakmem": 134636,
     "time": 0.156626
     }
+    import json
+    with open('/home/wuy/DB/pg_mem_data/tpch_sf1/statistics_workload_combined.json') as f:
+        statistics = json.load(f)
 
     nodes, edges = [], []
-    parse_plan(plan)
+    parse_plan(plan, statistics)

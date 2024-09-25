@@ -27,6 +27,8 @@ run `python zsce/split_parsed_plans.py` to split 'parsed_plans.json' into train,
 
 run `python zsce/gather_feature_statistics.py` for zsce method to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
+run `python src/datasets/prepare_data/gather_feature_statistics.py` to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1'. This is for most methods, not for zsce
+
 run `python zsce/train.py` to train the zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
 run `python src/preprocessing/get_database_stats.py` to get database statistics (column_stats, and table_stats). Output is 'database_stats.json'. Need to modify the name of the dataset, e.g 'tpch_sf1'

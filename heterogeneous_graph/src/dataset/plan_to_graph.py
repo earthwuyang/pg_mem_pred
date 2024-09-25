@@ -3,6 +3,7 @@ import re
 import psycopg2
 from torch_geometric.data import HeteroData
 from moz_sql_parser import parse
+import numpy as np
 from ..utils.database import get_relpages_reltuples, get_table_size, get_columns_info, get_column_features, get_unique_data_types
 
 
@@ -27,6 +28,16 @@ def extract_columns(string):
 
     return columns
 
+def extract_predicate_features(predicate):
+    predicate_length = len(predicate)
+    # Count unique columns and operators in the predicate
+    columns = extract_columns(predicate)  # Assuming extract_columns can be reused
+    unique_columns = len(set(columns))  # Unique columns count
+
+    # Count operators (this is a simple example)
+    operator_count = sum(predicate.count(op) for op in ['=', '<>', '>', '<', '>=', '<='])
+
+    return [predicate_length, unique_columns, operator_count]
 
 # Helper function to traverse operators and extract tables, columns, and predicates
 def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operator_nodes, literal_nodes, numeral_nodes,
@@ -130,7 +141,7 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operato
 
 
 # Function to parse the query plan and extract the tables, columns, and predicates
-def parse_query_plan(logger, plan, conn, data_type_mapping):
+def parse_query_plan(logger, plan, conn, db_stats):
 
     table_nodes = {}       # table_name -> {'id': int, 'features': [...]}
     column_nodes = {}      # column_name -> {'id': int, 'features': [...]}
@@ -175,24 +186,29 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
         column_selfloop_column_edges.append((column_id, column_id))
 
 
+    unique_data_types = sorted(db_stats['unique_data_types'])
+    data_type_mapping = {data_type: i for i, data_type in enumerate(unique_data_types)}
+
     # Now, fetch actual features for tables and columns
     for table_name, table_info in table_nodes.items():
-        relpages, reltuples = get_relpages_reltuples(conn, table_name)
+        relpages, reltuples = db_stats['tables'][table_name]['relpages'], db_stats['tables'][table_name]['reltuples']
         table_nodes[table_name]['features'] = [relpages, reltuples]
         
-        # Update column features
-        columns = get_columns_info(conn, table_name)
-        for column_name, data_type in columns:
-            full_column_name = f"{table_name}.{column_name}"
-            if full_column_name in column_nodes:
-                avg_width, correlation, n_distinct, null_frac = get_column_features(conn, table_name, column_name)
-                one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
-                column_nodes[full_column_name]['features'] = [avg_width, correlation, n_distinct, null_frac] + one_hot
+    for column_name in column_nodes:
+        table_name = column_name.split('.')[0]
+        avg_width = db_stats['tables'][table_name]['column_features'][column_name]['avg_width']
+        correlation = db_stats['tables'][table_name]['column_features'][column_name]['correlation']
+        n_distinct = db_stats['tables'][table_name]['column_features'][column_name]['n_distinct']
+        null_frac = db_stats['tables'][table_name]['column_features'][column_name]['null_frac']
+        data_type = db_stats['tables'][table_name]['column_features'][column_name]['data_type']
+        one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
+        column_nodes[column_name]['features'] = [avg_width, correlation, n_distinct, null_frac] + one_hot
+
 
     # Update predicate features: [predicate_length]
     for pred, pred_info in predicate_nodes.items():
-        predicate_length = len(pred)
-        predicate_nodes[pred]['features'] = [predicate_length]
+        features = extract_predicate_features(pred)
+        predicate_nodes[pred]['features'] = features
 
     return table_nodes, column_nodes, predicate_nodes, operator_nodes, \
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
@@ -203,7 +219,7 @@ def parse_query_plan(logger, plan, conn, data_type_mapping):
 def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, operator_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_predicate_edges, operator_calledby_operator_edges, 
-                      table_selfloop_table_edges, column_selfloop_column_edges, peakmem):
+                      table_selfloop_table_edges, column_selfloop_column_edges, peakmem, mem_scaler):
     data = HeteroData()
 
     # Assign operator features
@@ -267,7 +283,8 @@ def create_hetero_graph(logger, table_nodes, column_nodes, predicate_nodes, oper
         data['column', 'selfloop', 'column'].edge_index = torch.tensor([src, dst], dtype=torch.long)
     
     # Assign the target
-    data.y = torch.tensor([peakmem], dtype=torch.float)
+    peakmem = mem_scaler.transform(np.array([peakmem]).reshape(-1, 1)).reshape(-1)
+    data.y = torch.tensor(peakmem, dtype=torch.float)
   
     return data
 

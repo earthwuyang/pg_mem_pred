@@ -32,7 +32,7 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
 
-def validate_model(model, val_loader, criterion):
+def validate_model(model, val_loader, criterion, mem_scaler):
     # Validation
     model.eval()
     val_loss = 0
@@ -48,7 +48,11 @@ def validate_model(model, val_loader, criterion):
             preds.append(out)
             trues.append(batch.y.squeeze())
     avg_val_loss = val_loss / len(val_loader) if len(val_loader) > 0 else 0.0
-    metrics = compute_metrics(torch.cat(trues).cpu().numpy(), torch.cat(preds).cpu().numpy())
+    trues = torch.cat(trues).cpu().numpy()
+    preds = torch.cat(preds).cpu().numpy()
+    trues = mem_scaler.inverse_transform(trues.reshape(-1, 1)).reshape(-1)
+    preds = mem_scaler.inverse_transform(preds.reshape(-1, 1)).reshape(-1)
+    metrics = compute_metrics(trues, preds)
     return avg_val_loss, metrics
 
 def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs):
@@ -70,7 +74,7 @@ def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, e
             total_loss += loss.item()
         avg_train_loss = total_loss / len(train_loader) if len(train_loader) > 0 else 0.0
 
-        avg_val_loss, metrics = validate_model(model, val_loader, criterion)
+        avg_val_loss, metrics = validate_model(model, val_loader, criterion, train_loader.dataset.mem_scaler)
         
         logger.info(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, metrics={metrics}")
 
@@ -104,6 +108,6 @@ def train_model(logger, args):
     train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs)
 
     model.load_state_dict(torch.load(best_model_path))
-    avg_test_loss, metrics = validate_model(model, test_loader, criterion)
+    avg_test_loss, metrics = validate_model(model, test_loader, criterion, train_loader.dataset.mem_scaler)
     logger.info(f"Test Loss={avg_test_loss:.4f}, metrics={metrics}")
     
