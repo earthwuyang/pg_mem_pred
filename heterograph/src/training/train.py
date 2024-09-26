@@ -40,7 +40,7 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
 
-def validate_model(model, val_loader, criterion, mem_scaler):
+def validate_model(model, val_loader, criterion, mem_scaler, device):
     # Validation
     model.eval()
     val_loss = 0
@@ -48,6 +48,7 @@ def validate_model(model, val_loader, criterion, mem_scaler):
     trues = []
     with torch.no_grad():
         for batch in tqdm(val_loader, desc="Val:"):
+            batch = batch.to(device)
             if 'operator' not in batch.x_dict:
                 continue  # Skip batches without 'operator' nodes
             out = model(batch.x_dict, batch.edge_index_dict, batch['operator'].batch)
@@ -63,12 +64,13 @@ def validate_model(model, val_loader, criterion, mem_scaler):
     metrics = compute_metrics(trues, preds)
     return avg_val_loss, metrics
 
-def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs):
+def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs, device):
     logger.info("Training begins")
     for epoch in range(epochs):
         model.train()
         total_loss = 0
         for batch in tqdm(train_loader, desc=f"Epoch {epoch+1} Train:"):
+            batch = batch.to(device)
             optimizer.zero_grad()
             # Ensure that 'operator' node type exists in the batch
             if 'operator' not in batch.x_dict:
@@ -82,7 +84,7 @@ def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, e
             total_loss += loss.item()
         avg_train_loss = total_loss / len(train_loader) if len(train_loader) > 0 else 0.0
 
-        avg_val_loss, metrics = validate_model(model, val_loader, criterion, train_loader.dataset.mem_scaler)
+        avg_val_loss, metrics = validate_model(model, val_loader, criterion, train_loader.dataset.mem_scaler, device)
         
         logger.info(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, metrics={metrics}")
 
@@ -171,6 +173,7 @@ def train_model(logger, args):
     num_column_features = sample_graph.x_dict['column'].shape[1]  # [avg_width] + one-hot encoded data types
 
     model = HeteroGraph(hidden_channels=32, out_channels=1, num_column_features=num_column_features)
+    model = model.to(args.device)
     optimizer = Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.L1Loss()
 
@@ -183,9 +186,9 @@ def train_model(logger, args):
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
     if not args.skip_train:
-        train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs)
+        train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs, args.device)
 
     model.load_state_dict(torch.load(best_model_path))
-    avg_test_loss, metrics = validate_model(model, test_loader, criterion, mem_scaler)
+    avg_test_loss, metrics = validate_model(model, test_loader, criterion, mem_scaler, args.device)
     logger.info(f"Test Loss={avg_test_loss:.4f}, metrics={metrics}")
     
