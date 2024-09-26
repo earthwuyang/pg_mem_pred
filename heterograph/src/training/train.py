@@ -8,7 +8,6 @@ from sklearn.preprocessing import RobustScaler, MinMaxScaler, FunctionTransforme
 from torch_geometric.loader import DataLoader
 from src.dataset.dataset import load_json
 from src.models.HeteroGraph import HeteroGraph
-from src.dataset.dataloader import get_loaders
 from src.training.metrics import compute_metrics
 from src.dataset.dataset import QueryPlanDataset
 
@@ -164,17 +163,15 @@ def train_model(logger, args):
     
     test_loader = DataLoader(testdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-    # train_loader, val_loader, test_loader = get_loaders(logger, args.dataset_dir, args.train_dataset, args.test_dataset, args.batch_size, args.num_workers)
-
     # Initialize the model
     # Determine the number of unique data types for one-hot encoding
     # Assuming all graphs have the same data_type_mapping
     sample_graph = test_loader.dataset[0]
     num_column_features = sample_graph.x_dict['column'].shape[1]  # [avg_width] + one-hot encoded data types
 
-    model = HeteroGraph(hidden_channels=32, out_channels=1, num_column_features=num_column_features)
+    model = HeteroGraph(hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, num_column_features=num_column_features)
     model = model.to(args.device)
-    optimizer = Adam(model.parameters(), lr=0.01)
+    optimizer = Adam(model.parameters(), lr=args.lr)
     criterion = torch.nn.L1Loss()
 
     

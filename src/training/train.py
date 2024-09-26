@@ -6,7 +6,9 @@ from .metrics import compute_metrics
 def train_epoch(model, train_loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
-    for data in train_loader:        
+    for data in train_loader:     
+        print(f"data", data)
+        while 1:pass   
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data)

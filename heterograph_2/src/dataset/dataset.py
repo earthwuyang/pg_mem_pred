@@ -3,11 +3,11 @@ import os
 import psycopg2
 from tqdm import tqdm
 from torch_geometric.data import Dataset
-import pickle
-from sklearn.preprocessing import StandardScaler, FunctionTransformer, RobustScaler
 import numpy as np
-
+from sklearn.preprocessing import RobustScaler
+import pickle
 from ..utils.database import get_unique_data_types, get_tables, get_relpages_reltuples, get_table_size, get_columns_info, get_column_features
+
 from .plan_to_graph import parse_query_plan, create_hetero_graph, connect_to_db
 
 def load_json(json_file):
@@ -15,29 +15,6 @@ def load_json(json_file):
     with open(json_file, 'r') as f:
         query_plans = json.load(f)
     return query_plans
-
-
-class LogRobustScaler(): # first robustscaler then log
-    def __init__(self):
-        self.scaler = RobustScaler()
-
-    def fit(self, X, y=None):
-        self.scaler.fit(X)
-        return self
-
-    def transform(self, X):
-        Y = self.scaler.transform(X)
-        Y_log = np.log1p(Y)
-        return Y_log
-    
-    def fit_transform(self, X, y=None):
-        Y=self.scaler.fit_transform(X)
-        Y_log = np.log1p(Y)
-        return Y_log
-
-    def inverse_transform(self, X):
-        X_exp = np.expm1(X)  # exp(X) - 1 to reverse log(1 + X)
-        return self.scaler.inverse_transform(X_exp)  # inverse the robust scaling
 
 
 def get_db_stats(dataset):
@@ -118,7 +95,6 @@ def get_db_stats(dataset):
 
 
     return db_stats
-
     
 class QueryPlanDataset(Dataset):
     def __init__(self, logger, dataset_dir, dataset, mode, mem_scaler):
@@ -143,9 +119,8 @@ class QueryPlanDataset(Dataset):
             self.logger.info(f"Creating dataset from {json_file_path}")
             self.db_stats = get_db_stats(dataset)
             self.dataset = self.get_dataset(logger, json_file_path, dataset)
-            # with open(dataset_pickle_path, 'wb') as f:
-            #     pickle.dump(self.dataset, f)
-
+            with open(dataset_pickle_path, 'wb') as f:
+                pickle.dump(self.dataset, f)
 
 
     def get_dataset(self, logger, json_file_path, dataset):
@@ -168,7 +143,7 @@ class QueryPlanDataset(Dataset):
         self.dataset = []
         for idx, plan in tqdm(enumerate(plans), total=len(plans)):
             # for idx, plan in enumerate(plans):
-            table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes, \
+            table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes, literal_nodes, numeral_nodes, \
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  \
                       literal_connects_operation_edges, numeral_connects_operation_edges, \
@@ -176,7 +151,7 @@ class QueryPlanDataset(Dataset):
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges = parse_query_plan(logger, plan, conn, self.db_stats)
 
             graph = create_hetero_graph(logger, 
-                table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes, 
+                table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes, literal_nodes, numeral_nodes, 
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, 
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  
                       literal_connects_operation_edges, numeral_connects_operation_edges, 

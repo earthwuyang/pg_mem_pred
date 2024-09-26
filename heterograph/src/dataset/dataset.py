@@ -11,7 +11,7 @@ from ..utils.database import get_unique_data_types, get_tables, get_relpages_rel
 from .plan_to_graph import parse_query_plan, create_hetero_graph, connect_to_db
 
 def load_json(json_file):
-    # json_file = '/home/wuy/DB/pg_mem_data/tpch/tiny_plans.json' # for debug
+    json_file = '/home/wuy/DB/pg_mem_data/tpch/tiny_plans.json' # for debug
     with open(json_file, 'r') as f:
         query_plans = json.load(f)
     return query_plans
@@ -146,7 +146,7 @@ class QueryPlanDataset(Dataset):
             table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes, literal_nodes, numeral_nodes, \
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  \
-                      literal_connects_operation_edges, numeral_connects_operation_edges, \
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges, \
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  \
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges = parse_query_plan(logger, plan, conn, self.db_stats)
 
@@ -154,7 +154,7 @@ class QueryPlanDataset(Dataset):
                 table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes, literal_nodes, numeral_nodes, 
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, 
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  
-                      literal_connects_operation_edges, numeral_connects_operation_edges, 
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges, 
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges, plan['peakmem'], self.mem_scaler
             )

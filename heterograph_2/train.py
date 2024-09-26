@@ -57,6 +57,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--hidden_dim', type=int, default=128, help='hidden dimension')
     parser.add_argument('--dropout', type=float, default=0.5, help='dropout rate')
     parser.add_argument('--num_workers', type=int, default=0, help='number of workers for data loading')
+    parser.add_argument('--device', type=str, default='cuda:0', help='device to use for training')
     args = parser.parse_args()
 
     log_dir = 'logs/'

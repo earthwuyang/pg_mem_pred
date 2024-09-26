@@ -184,12 +184,12 @@ def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, l
                     literal_connects_operation_edges, numeral_connects_operation_edges, predicate_connects_predicate_edges, parent_id = parent_id, parent_is_operator=True)
 
 # Helper function to traverse operators and extract tables, columns, and predicates
-def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
+def traverse_operators(db_stats, plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
                       operator_nodes, literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, 
                       operation_connects_predicate_edges,
-                      literal_connects_operation_edges, numeral_connects_operation_edges,
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges,
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges, 
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges,
                       operator_id_counter, parent_operator_id=None):
@@ -229,6 +229,17 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operati
         table_id = table_nodes[table_name]['id']
         # Add edge: operator involves table
         table_scannedby_operator_edges.append((table_id, current_operator_id))
+
+        # add column to tables for column_containedby_table_edges
+        for column in db_stats['tables'][table_name]['column_features']:
+            if column not in column_nodes:
+                column_nodes[column] = {
+                    'id': len(column_nodes),
+                    'features': [0] * expected_column_feature_len  # Placeholder, will be updated later
+                }
+            column_id = column_nodes[column]['id']
+            column_containedby_table_edges.append((column_id, table_id))
+
     else:
         table_id = None
 
@@ -262,11 +273,11 @@ def traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operati
     # Recurse into sub-plans
     if 'Plans' in plan_parameters:
         for sub_plan in plan_parameters['Plans']:
-            traverse_operators(sub_plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
+            traverse_operators(db_stats, sub_plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, 
                         operator_nodes,literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,
-                      literal_connects_operation_edges, numeral_connects_operation_edges,
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges,
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges, 
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges,
                       operator_id_counter, current_operator_id)
@@ -298,6 +309,7 @@ def parse_query_plan(logger, plan, conn, db_stats):
     numeral_connects_operation_edges = []
 
     predicate_connects_predicate_edges = []
+    column_containedby_table_edges = []
 
     table_selfloop_table_edges = []
     column_selfloop_column_edges = []
@@ -308,10 +320,10 @@ def parse_query_plan(logger, plan, conn, db_stats):
     operator_id_counter = [0]  # Using a list to make it mutable in recursion
 
 
-    traverse_operators(plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes,
+    traverse_operators(db_stats, plan, table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes,
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges,
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,
-                      literal_connects_operation_edges, numeral_connects_operation_edges,
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges,
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges, 
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges,
                       operator_id_counter)
@@ -357,7 +369,7 @@ def parse_query_plan(logger, plan, conn, db_stats):
     return table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes, literal_nodes, numeral_nodes, \
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  \
-                      literal_connects_operation_edges, numeral_connects_operation_edges, \
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges, \
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  \
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges
 
@@ -366,7 +378,7 @@ def create_hetero_graph(logger,
                 table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes, 
                       table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, 
                       column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  
-                      literal_connects_operation_edges, numeral_connects_operation_edges, 
+                      literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges,
                       literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  
                       table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges, peakmem, mem_scaler):
     data = HeteroData()
@@ -481,6 +493,10 @@ def create_hetero_graph(logger,
     if predicate_connects_predicate_edges:
         src, dst = zip(*predicate_connects_predicate_edges)
         data['predicate', 'connects', 'predicate'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+
+    if column_containedby_table_edges:
+        src, dst = zip(*column_containedby_table_edges)
+        data['column', 'containedby', 'table'].edge_index = torch.tensor([src, dst], dtype=torch.long)
 
     peakmem = mem_scaler.transform(np.array([peakmem]).reshape(-1, 1)).reshape(-1)
     

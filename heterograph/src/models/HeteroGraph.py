@@ -16,6 +16,7 @@ class HeteroGraph(torch.nn.Module):
         self,
         hidden_channels,
         out_channels,
+        num_layers,
         num_column_features=10,
         dropout=0.2,
     ):
@@ -42,6 +43,7 @@ class HeteroGraph(torch.nn.Module):
                     ('operation', 'connects', 'predicate'),
                     ('literal', 'connects', 'operation'),
                     ('numeral', 'connects', 'operation'),
+                    ('column', 'containedby', 'table'),
                     ('literal', 'selfloop', 'literal'),
                     ('numeral', 'selfloop', 'numeral'),
                     ('table', 'selfloop', 'table'),
@@ -53,6 +55,7 @@ class HeteroGraph(torch.nn.Module):
         num_relations = len(self.edge_type_mapping)
         num_node_types = len(metadata[0])
 
+        self.num_layers = num_layers
         # Project node features to hidden_channels with separate linear layers
         self.lin_operator = Linear(4, hidden_channels)    # Operators have 4 features
         self.lin_table = Linear(2, hidden_channels)       # Tables have 2 features
@@ -66,15 +69,13 @@ class HeteroGraph(torch.nn.Module):
         self.num_node_types = num_node_types
 
         # RGCNConv layers
-        self.conv1 = RGCNConv(hidden_channels, hidden_channels, num_relations)
-        self.conv2 = RGCNConv(hidden_channels, hidden_channels, num_relations)
+        self.conv = RGCNConv(hidden_channels, hidden_channels, num_relations)
 
         # Final linear layer to produce the output
         self.lin = Linear(hidden_channels, out_channels)
 
         # Optional: Layer normalization
-        self.norm1 = nn.LayerNorm(hidden_channels)
-        self.norm2 = nn.LayerNorm(hidden_channels)
+        self.norm = nn.LayerNorm(hidden_channels)
 
         # Dropout layer
         self.dropout = nn.Dropout(dropout)
@@ -142,17 +143,11 @@ class HeteroGraph(torch.nn.Module):
             edge_index = torch.empty((2, 0), dtype=torch.long, device=device)
             edge_type = torch.empty((0,), dtype=torch.long, device=device)
 
-        # First RGCNConv layer
-        x = self.conv1(x, edge_index, edge_type)
-        x = F.elu(x)
-        x = self.norm1(x)
-        x = self.dropout(x)
-
-        # Second RGCNConv layer
-        x = self.conv2(x, edge_index, edge_type)
-        x = F.elu(x)
-        x = self.norm2(x)
-        x = self.dropout(x)
+        for i in range(self.num_layers):
+            x = self.conv(x, edge_index, edge_type)
+            x = F.elu(x)
+            x = self.norm(x)
+            x = self.dropout(x)
 
         # Extract operator node features
         operator_offset = node_type_offsets['operator']

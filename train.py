@@ -7,14 +7,17 @@ from datetime import datetime
 import numpy as np
 import random
 import json
+from torch_geometric.loader import DataLoader
 
-from src.datasets.dataloader import get_dataloaders
 from src.models.GIN import GIN
 from src.models.GAT import GAT
 from src.models.GCN import GCN
 from src.models.GraphTransformer import GraphTransformer
 from src.models.TreeTransformer import TreeTransformer
 from src.models.TreeLSTM import TreeLSTM
+
+from src.utils.utils import load_json
+from src.datasets.dataset import PlanGraphDataset
 
 from src.training.train import train_model, evaluate_model
 from src.training.metrics import compute_metrics
@@ -85,7 +88,26 @@ if __name__ == '__main__':
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
     
-    train_loader, val_loader, test_loader = get_dataloaders(args.dataset_dir, args.train_dataset, args.test_dataset, statistics, args.batch_size, args.num_workers)
+    if not args.skip_train:
+        train_file = os.path.join(args.dataset_dir, args.train_dataset, 'train_plans.json')
+        val_file = os.path.join(args.dataset_dir, args.train_dataset, 'val_plans.json')
+
+        train_plans = load_json(train_file)
+        val_plans = load_json(val_file)
+
+        train_dataset = PlanGraphDataset(train_plans, statistics)
+        logger.info(f"train dataset size: {len(train_dataset)}")
+        val_dataset = PlanGraphDataset(val_plans, statistics)
+        logger.info(f"val dataset size: {len(val_dataset)}")
+
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
+
+    test_file = os.path.join(args.dataset_dir, args.test_dataset, 'test_plans.json')
+    test_plans = load_json(test_file)
+    test_dataset = PlanGraphDataset(test_plans, statistics)
+    logger.info(f"test dataset size: {len(test_dataset)}")
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
 
     num_node_features = len(train_loader.dataset[0].x[0])  # Number of features per node
     model = MODELS[args.model_name](num_node_features, args.hidden_channels)
@@ -116,6 +138,6 @@ if __name__ == '__main__':
     logger.info(f"reload best model from '{checkpoint_path}' and evaluate on test set")
     model.load_state_dict(torch.load(checkpoint_path))
     test_loss, metrics = evaluate_model(model, test_loader, criterion, device, statistics, mem_scaler)
-    logger.info(f'Test mettics on {args.test_dataset}, trained on {args.train_dataset}: {metrics}')
+    logger.info(f'Test metrics on {args.test_dataset}, trained on {args.train_dataset}: {metrics}')
         
 
