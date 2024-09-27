@@ -62,7 +62,7 @@ class HeteroGraph(torch.nn.Module):
         self.lin_column = Linear(num_column_features, hidden_channels)  # Column size + one-hot data types
         self.lin_predicate = Linear(4, hidden_channels)   # Predicates have 4 features
         self.lin_operation = Linear(8, hidden_channels)   # Operations have 8 features
-        self.lin_literal = Linear(1, hidden_channels)     # Literals have 1 feature
+        self.lin_literal = Linear(18, hidden_channels)     
         self.lin_numeral = Linear(1, hidden_channels)     # Numerals have 1 feature
 
         # Total number of node types
@@ -100,7 +100,8 @@ class HeteroGraph(torch.nn.Module):
         predicate = self.lin_predicate(x_dict['predicate'])
         operation = self.lin_operation(x_dict['operation'])
         literal = self.lin_literal(x_dict['literal'])
-        numeral = self.lin_numeral(x_dict['numeral'])
+        # print(f"numeral shape: {x_dict['numeral'].shape}")
+        numeral = self.lin_numeral(x_dict['numeral'].reshape(-1, 1))
 
         # Concatenate all node features into a single tensor
         x = torch.cat([

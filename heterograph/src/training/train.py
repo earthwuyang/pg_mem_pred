@@ -63,7 +63,7 @@ def validate_model(model, val_loader, criterion, mem_scaler, device):
     metrics = compute_metrics(trues, preds)
     return avg_val_loss, metrics
 
-def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs, device):
+def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs, device, mem_scaler):
     logger.info("Training begins")
     for epoch in range(epochs):
         model.train()
@@ -83,7 +83,7 @@ def train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, e
             total_loss += loss.item()
         avg_train_loss = total_loss / len(train_loader) if len(train_loader) > 0 else 0.0
 
-        avg_val_loss, metrics = validate_model(model, val_loader, criterion, train_loader.dataset.mem_scaler, device)
+        avg_val_loss, metrics = validate_model(model, val_loader, criterion, mem_scaler, device)
         
         logger.info(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, metrics={metrics}")
 
@@ -138,6 +138,7 @@ def get_mem_scaler(dataset_dir, train_dataset, mode):
             pickle.dump(mem_scaler, f)
     return mem_scaler
 
+
 # Define training function (redefined for clarity)
 def train_model(logger, args):
 
@@ -183,7 +184,7 @@ def train_model(logger, args):
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
     if not args.skip_train:
-        train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs, args.device)
+        train_epoch(logger, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs, args.device, mem_scaler)
 
     model.load_state_dict(torch.load(best_model_path))
     avg_test_loss, metrics = validate_model(model, test_loader, criterion, mem_scaler, args.device)

@@ -11,7 +11,7 @@ from ..utils.database import get_unique_data_types, get_tables, get_relpages_rel
 from .plan_to_graph import parse_query_plan, create_hetero_graph, connect_to_db
 
 def load_json(json_file):
-    json_file = '/home/wuy/DB/pg_mem_data/tpch/tiny_plans.json' # for debug
+    # json_file = '/home/wuy/DB/pg_mem_data/tpch_sf1/tiny_plans.json' # for debug
     with open(json_file, 'r') as f:
         query_plans = json.load(f)
     return query_plans

@@ -70,48 +70,6 @@ def extract_columns(string):
 
     return columns
 
-def encode_string_literal(string):
-    features = []
-    
-    # 1. String Length
-    str_length = len(string)
-    features.append(str_length)
-    
-    # 2. String Type Indicators
-    # Example: Determine if the string is used with LIKE
-    if '%' in string or '_' in string:
-        features.extend([1, 0, 0])  # LIKE pattern with wildcards
-    else:
-        features.extend([0, 1, 0])  # Exact match
-        # Add more indicators as needed
-    
-    # 3. Character Composition
-    alpha_count = sum(c.isalpha() for c in string)
-    digit_count = sum(c.isdigit() for c in string)
-    special_count = len(string) - alpha_count - digit_count
-    features.extend([alpha_count, digit_count, special_count])
-    
-    # # 4. Uniqueness and Frequency
-    # # Assuming you have access to frequency stats
-    # frequency = db_stats.get('string_frequency', {}).get(string, 1)
-    # unique_flag = 1 if frequency == 1 else 0
-    # features.extend([unique_flag, frequency])
-    
-    # 5. Embedding Representations
-    # Example using a simple character-level embedding (you can use more sophisticated methods)
-    embedding_dim = 10
-    embedding = np.zeros(embedding_dim)
-    for i, char in enumerate(string[:embedding_dim]):
-        embedding[i] = ord(char) / 255.0  # Normalize ASCII values
-    features.extend(embedding.tolist())
-    
-    # 6. Hash-Based Features
-    hash_value = hash(string) % (10**8)  # Example hash function
-    features.append(hash_value)
-    
-    return features
-
-
 def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
                     predicate_filters_operator_edges, operation_connects_predicate_edges, 
                     operation_filters_operator_edges, column_connects_operation_edges,
@@ -144,7 +102,7 @@ def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, l
                 predicate_filters_operator_edges.append((predicate_id, parent_id))
             else:
                 predicate_connects_predicate_edges.append((predicate_id, parent_id))
-            for condition in parsed_dict[predicate.split('_')[0]]:
+            for condition in parsed_dict[predicate]:
                 traverse(condition, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
                         predicate_filters_operator_edges, operation_connects_predicate_edges, 
                         operation_filters_operator_edges, column_connects_operation_edges, 
@@ -198,15 +156,13 @@ def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, l
 
             if isinstance(right, str):
                 if right not in literal_nodes:
-                    features = encode_string_literal(right)
-
                     literal_nodes[right] = {
                         'id': len(literal_nodes),
-                        'features': features  # Placeholder, will be updated later
+                        'features': [0] * 1  # Placeholder, will be updated later
                     }
                 literal_id = literal_nodes[right]['id']
                 literal_connects_operation_edges.append((literal_id, operation_id))
-            elif isinstance(right, float) or isinstance(right, int):
+            elif isinstance(right, int):
                 if right not in numeral_nodes:
                     numeral_nodes[right] = {
                         'id': len(numeral_nodes),
@@ -214,28 +170,15 @@ def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, l
                     }
                 numeral_id = numeral_nodes[right]['id']
                 numeral_connects_operation_edges.append((numeral_id, operation_id))
-            else:    
-                # print(f"parsed_dict     {parsed_dict}, right {right}")
-                literals = right.get('cast', [dict()])[0].get('literal')
-                # print(f"literals     {literals}")
-                if literals not in literal_nodes:
-                    features = encode_string_literal(literals)
+            # else:    # just ignore other types of right operands for now
+            #     print(f"parsed_dict     {parsed_dict}, right {right}")
+            #     raise ValueError("Invalid right operand type")
 
-                    literal_nodes[literals] = {
-                        'id': len(literal_nodes),
-                        'features': features  # Placeholder, will be updated later
-                    }
-                literal_id = literal_nodes[literals]['id']
-                literal_connects_operation_edges.append((literal_id, operation_id))
-                # raise ValueError("Invalid right operand type")
 
-    
-    predicate = predicate.replace('~~', 'like')
+            
     sql_query = f"select * from dummy_table where {predicate}"
-
     parsed = parse(sql_query)
     where_clause = parsed.get('where', {})
-    # print(f"where_clause     {where_clause}")
     traverse(where_clause, predicate_nodes, operation_nodes, column_nodes, literal_nodes, numeral_nodes,
                     predicate_filters_operator_edges, operation_connects_predicate_edges, 
                     operation_filters_operator_edges, column_connects_operation_edges,
@@ -400,7 +343,6 @@ def parse_query_plan(logger, plan, conn, db_stats):
         numeral_id = numeral_info['id']
         numeral_selfloop_numeral_edges.append((numeral_id, numeral_id))
 
-
     # print(f"db_stats.keys() {db_stats.keys()}")
     unique_data_types = sorted(db_stats['unique_data_types'])
     data_type_mapping = {data_type: i for i, data_type in enumerate(unique_data_types)}
@@ -419,33 +361,6 @@ def parse_query_plan(logger, plan, conn, db_stats):
         data_type = db_stats['tables'][table_name]['column_features'][column_name]['data_type']
         one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
         column_nodes[column_name]['features'] = [avg_width, correlation, n_distinct, null_frac] + one_hot
-
-    if literal_nodes:
-        literal_scaler = RobustScaler()
-        scaled_literal_features = literal_scaler.fit_transform(np.array([literal_nodes[literal]['features'] for literal in literal_nodes]))
-        for i, literal in enumerate(literal_nodes):
-            literal_nodes[literal]['features'] = scaled_literal_features[i].tolist()
-
-    if numeral_nodes:
-        numeral_scaler = RobustScaler()
-        scaled_numeral_features = numeral_scaler.fit_transform(np.array([numeral_nodes[numeral]['features'] for numeral in numeral_nodes]).reshape(-1, 1)).reshape(-1)
-        for i, numeral in enumerate(numeral_nodes):
-            numeral_nodes[numeral]['features'] = scaled_numeral_features[i].tolist()
-
-    if table_nodes:
-        # normalize table features and column features
-        table_scaler = RobustScaler()
-        scaled_table_features = table_scaler.fit_transform(np.array([table_nodes[table]['features'] for table in table_nodes]))
-        for i, table in enumerate(table_nodes):
-            table_nodes[table]['features'] = scaled_table_features[i].tolist()
-
-    if column_nodes:
-        column_scaler = RobustScaler()
-        scaled_column_features = column_scaler.fit_transform(np.array([column_nodes[column]['features'] for column in column_nodes]))
-        for i, column in enumerate(column_nodes):
-            column_nodes[column]['features'] = scaled_column_features[i].tolist()
-
-
 
     # # Update predicate features: [predicate_length]
     # for pred, pred_info in predicate_nodes.items():
@@ -506,7 +421,6 @@ def create_hetero_graph(logger,
     sorted_numerals = sorted(numeral_nodes.items(), key=lambda x: x[1]['id'])
     numeral_features = [numeral[1]['features'] for numeral in sorted_numerals]
     data['numeral'].x = torch.tensor(numeral_features, dtype=torch.float)
-
 
     
     # Create edge index dictionaries
@@ -796,113 +710,11 @@ if __name__ == '__main__':
             },
             "peakmem": 17220
             }
-    
-    plan ={
-            "Plan": {
-                "Node Type": "Gather Merge",
-                "Parallel Aware": False,
-                "Async Capable": False,
-                "Startup Cost": 40072.66,
-                "Total Cost": 40079.66,
-                "Plan Rows": 60,
-                "Plan Width": 12,
-                "Output": ["customer.c_custkey", "orders.o_orderkey", "orders.o_orderdate"],
-                "Workers Planned": 2,
-                "Plans": [
-                {
-                    "Node Type": "Sort",
-                    "Parent Relationship": "Outer",
-                    "Parallel Aware": False,
-                    "Async Capable": False,
-                    "Startup Cost": 39072.64,
-                    "Total Cost": 39072.71,
-                    "Plan Rows": 30,
-                    "Plan Width": 12,
-                    "Output": ["customer.c_custkey", "orders.o_orderkey", "orders.o_orderdate"],
-                    "Sort Key": ["orders.o_orderdate DESC"],
-                    "Plans": [
-                    {
-                        "Node Type": "Hash Join",
-                        "Parent Relationship": "Outer",
-                        "Parallel Aware": True,
-                        "Async Capable": False,
-                        "Join Type": "Inner",
-                        "Startup Cost": 4366.32,
-                        "Total Cost": 39071.90,
-                        "Plan Rows": 30,
-                        "Plan Width": 12,
-                        "Output": ["customer.c_custkey", "orders.o_orderkey", "orders.o_orderdate"],
-                        "Inner Unique": True,
-                        "Hash Cond": "(orders.o_custkey = customer.c_custkey)",
-                        "Plans": [
-                        {
-                            "Node Type": "Seq Scan",
-                            "Parent Relationship": "Outer",
-                            "Parallel Aware": True,
-                            "Async Capable": False,
-                            "Relation Name": "orders",
-                            "Schema": "public",
-                            "Alias": "orders",
-                            "Startup Cost": 0.00,
-                            "Total Cost": 33907.50,
-                            "Plan Rows": 304021,
-                            "Plan Width": 12,
-                            "Output": [
-                            "orders.o_orderkey",
-                            "orders.o_custkey",
-                            "orders.o_orderstatus",
-                            "orders.o_totalprice",
-                            "orders.o_orderdate",
-                            "orders.o_orderpriority",
-                            "orders.o_clerk",
-                            "orders.o_shippriority",
-                            "orders.o_comment"
-                            ],
-                            "Filter": "(orders.o_orderstatus = 'F'::bpchar)"
-                        },
-                        {
-                            "Node Type": "Hash",
-                            "Parent Relationship": "Inner",
-                            "Parallel Aware": True,
-                            "Async Capable": False,
-                            "Startup Cost": 4366.25,
-                            "Total Cost": 4366.25,
-                            "Plan Rows": 6,
-                            "Plan Width": 4,
-                            "Output": ["customer.c_custkey"],
-                            "Plans": [
-                            {
-                                "Node Type": "Seq Scan",
-                                "Parent Relationship": "Outer",
-                                "Parallel Aware": True,
-                                "Async Capable": False,
-                                "Relation Name": "customer",
-                                "Schema": "public",
-                                "Alias": "customer",
-                                "Startup Cost": 0.00,
-                                "Total Cost": 4366.25,
-                                "Plan Rows": 6,
-                                "Plan Width": 4,
-                                "Output": ["customer.c_custkey"],
-                                "Filter": "((customer.c_name)::text like 'Alice%'::text)"
-                            }
-                            ]
-                        }
-                        ]
-                    }
-                    ]
-                }
-                ]
-            }
-            }
-
-
-
     logger = get_logger()
     table_nodes, column_nodes, predicate_nodes, operation_nodes, operator_nodes,literal_nodes, numeral_nodes, \
         table_scannedby_operator_edges, predicate_filters_operator_edges, column_outputby_operator_edges, \
         column_connects_operation_edges, operator_calledby_operator_edges, operation_filters_operator_edges, operation_connects_predicate_edges,  \
-        literal_connects_operation_edges, numeral_connects_operation_edges, column_containedby_table_edges, \
+        literal_connects_operation_edges, numeral_connects_operation_edges, \
         literal_selfloop_literal_edges, numeral_selfloop_numeral_edges,  \
         table_selfloop_table_edges, column_selfloop_column_edges, predicate_connects_predicate_edges = parse_query_plan(logger, plan, conn, db_stats)
 
@@ -924,7 +736,6 @@ if __name__ == '__main__':
     print(f"operation_connects_predicate_edges: {operation_connects_predicate_edges}")
     print(f"literal_connects_operation_edges: {literal_connects_operation_edges}")
     print(f"numeral_connects_operation_edges: {numeral_connects_operation_edges}")
-    print(f"column_containedby_table_edges: {column_containedby_table_edges}")
     print(f"literal_selfloop_literal_edges: {literal_selfloop_literal_edges}")
     print(f"numeral_selfloop_numeral_edges: {numeral_selfloop_numeral_edges}")
     print(f"table_selfloop_table_edges: {table_selfloop_table_edges}")
