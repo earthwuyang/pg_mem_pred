@@ -208,7 +208,7 @@ def train_model(logger, args):
 
     # avg_test_loss, metrics = validate_model(model, test_loader, criterion, mem_scaler)
     # logger.info(f"before train, model metrics Test Loss={avg_test_loss:.4f}, metrics={metrics}")
-        
+    
     best_model_path = 'best_model.pth'
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
@@ -218,4 +218,8 @@ def train_model(logger, args):
 
     model.load_state_dict(torch.load(best_model_path))
     avg_test_loss, metrics = validate_model(model, test_loader, criterion, scalers, args.device, args.mem_pred, args.time_pred)
-    logger.info(f"Test Loss={avg_test_loss:.4f}, \npeakmem metrics={metrics['peakmem']}, \ntime metrics={metrics['time']}")
+    logger.info(f"Test Loss={avg_test_loss:.4f}")
+    if args.mem_pred:
+        logger.info(f"peakmem metrics={metrics['peakmem']}")
+    if args.time_pred:
+        logger.info(f"time metrics={metrics['time']}")

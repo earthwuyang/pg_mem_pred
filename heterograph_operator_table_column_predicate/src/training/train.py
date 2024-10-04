@@ -164,8 +164,8 @@ def get_scalers(dataset_dir, train_dataset, mode):
         scalers['peakmem'].fit_transform(np.array(peakmem_list).reshape(-1, 1)).reshape(-1)
         scalers['time'] = LogRobustScaler()
         scalers['time'].fit_transform(np.array(time_list).reshape(-1, 1)).reshape(-1)
-        with open(scaler_pickle_path, 'wb') as f:
-            pickle.dump(scalers, f)
+        # with open(scaler_pickle_path, 'wb') as f:
+        #     pickle.dump(scalers, f)
     return scalers
 
 # Define training function (redefined for clarity)
@@ -227,4 +227,8 @@ def train_model(logger, args):
 
     model.load_state_dict(torch.load(best_model_path))
     avg_test_loss, metrics = validate_model(model, test_loader, criterion, scalers, args.device, args.mem_pred, args.time_pred)
-    logger.info(f"Test Loss={avg_test_loss:.4f}, \npeakmem metrics={metrics['peakmem']}, \ntime metrics={metrics['time']}")
+    logger.info(f"Test Loss={avg_test_loss:.4f}")
+    if args.mem_pred:
+        logger.info(f"peakmem metrics={metrics['peakmem']}")
+    if args.time_pred:
+        logger.info(f"time metrics={metrics['time']}")

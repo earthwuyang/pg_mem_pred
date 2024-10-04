@@ -9,7 +9,13 @@ import json
 import os
 from ..utils.database import get_relpages_reltuples, get_table_size, get_columns_info, get_column_features, get_unique_data_types, get_tables, get_db_stats
 
+# Define unique predicates and operations
+unique_predicates = ['AND', 'OR', 'NOT']
+unique_operations = ['=', '<>', '>', '>=', '<', '<=', 'LIKE']
 
+# Create mappings
+predicate_mapping = {pred: idx for idx, pred in enumerate(unique_predicates)}
+operation_mapping = {op: idx for idx, op in enumerate(unique_operations)}
     
 # ---------------------- Helper Functions ---------------------- #
 # One-hot encode data types with an 'unknown' category
@@ -24,41 +30,17 @@ def one_hot_encode_data_type(data_type, data_type_mapping):
     assert len(one_hot) == 6, "One-hot encoding should have 6 dimensions"
     return one_hot
 
-def one_hot_encode_andornot_type(predicate_type):
-    andornot_type_mapping = {
-        'AND': 0,
-        'OR': 1,
-        'NOT': 2,
-    }
-    one_hot = [0] * 4  # 4 types: AND, OR, NOT, unknown
-    if predicate_type in andornot_type_mapping:
-        index = andornot_type_mapping[predicate_type]
-        one_hot[index] = 1
-    else:
-        # Assign 'unknown' category
-        one_hot[-1] = 1
-    assert len(one_hot) == 4, "One-hot encoding should have 4 dimensions"
+def one_hot_encode_predicate_type(predicate_type):
+    one_hot = [0] * (len(predicate_mapping) + 1)
+    index = predicate_mapping.get(predicate_type, len(predicate_mapping))
+    one_hot[index] = 1
     return one_hot
 
 def one_hot_encode_operation_type(operation_type):
-    operation_type_mapping = {
-        '=': 0,
-        '<>': 1,
-        '>': 2,
-        '>=': 3,
-        '<': 4,
-        '<=': 5,
-        'LIKE': 6,
-        'UNKNOWN': 7,
-    }
-    one_hot = [0] * 8  # 8 types: =, <>, >, >=, <, <=, LIKE, UNKNOWN
-    if operation_type in operation_type_mapping:
-        index = operation_type_mapping[operation_type]
-        one_hot[index] = 1
-    else:
-        # Assign 'unknown' category
-        one_hot[-1] = 1
-    assert len(one_hot) == 8, "One-hot encoding should have 8 dimensions"
+    one_hot = [0] * (len(operation_mapping) + 1)
+    index = operation_mapping.get(operation_type, len(operation_mapping))
+    one_hot[index] = 1
+
     return one_hot
 
 
@@ -90,13 +72,16 @@ def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, l
                 predicate = 'or'
             elif 'not' in parsed_dict:
                 predicate = 'not'
-            if predicate not in predicate_nodes:  # CAUTION: PITFALL: If the same predicate appears multiple times, it should be added multiple times to the graph
-                predicate_nodes[predicate] = {
+            predicate_node_name = f"{predicate}_{len(predicate_nodes)}"
+            # features = encode_predicate_with_embedding(predicate.split('_')[0].upper())
+            features = one_hot_encode_predicate_type(predicate)
+            if predicate_node_name not in predicate_nodes: 
+                predicate_nodes[predicate_node_name] = {
                     'id': len(predicate_nodes),
-                    'features': one_hot_encode_andornot_type(predicate)  # Placeholder, will be updated later
+                    'features': features
                 }
 
-            predicate_id = predicate_nodes[predicate]['id']
+            predicate_id = predicate_nodes[predicate_node_name]['id']
             if parent_is_operator:
                 predicate_filters_operator_edges.append((predicate_id, parent_id))
             else:
@@ -133,12 +118,14 @@ def parse_predicate(predicate, predicate_nodes, operation_nodes, column_nodes, l
             else:
                 op = 'UNKNOWN'
 
-            if op not in operation_nodes:
-                operation_nodes[op] = {
+            op_node_name = f"{op}_{len(operation_nodes)}"
+            features = one_hot_encode_operation_type(op)
+            if op_node_name not in operation_nodes:
+                operation_nodes[op_node_name] = {
                     'id': len(operation_nodes),
-                    'features': one_hot_encode_operation_type(op)  # Placeholder, will be updated later
+                    'features': features
                 }
-            operation_id = operation_nodes[op]['id']
+            operation_id = operation_nodes[op_node_name]['id']
             if parent_is_operator:
                 operation_filters_operator_edges.append((operation_id, parent_id))
             else:
