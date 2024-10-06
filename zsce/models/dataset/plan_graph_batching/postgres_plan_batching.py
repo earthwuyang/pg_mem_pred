@@ -238,6 +238,7 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
     for sample_idx, p in plans:
         sample_idxs.append(sample_idx)
         # labels.append(p.plan_runtime)
+        peakmem = feature_statistics['peakmem']['scaler'].transform(np.array([[p.peakmem]])).item()
         labels.append(p.peakmem)
         
         plan_to_graph(p, p.database_id, plan_depths, plan_features, plan_to_plan_edges, db_statistics,

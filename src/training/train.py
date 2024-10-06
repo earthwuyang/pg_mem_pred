@@ -93,10 +93,10 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
             memories.extend(labels[:, 0].cpu())
             times.extend(labels[:, 1].cpu())
     avg_val_loss = val_loss / len(val_loader) if len(val_loader) > 0 else 0.0
-    mem_preds = np.array(mem_preds) * statistics['peakmem']['scale'] + statistics['peakmem']['scale']
-    time_preds = np.array(time_preds) * statistics['time']['scale'] + statistics['time']['scale']
-    memories = np.array(memories) * statistics['peakmem']['scale'] + statistics['peakmem']['scale']
-    times = np.array(times) * statistics['time']['scale'] + statistics['time']['scale']
+    mem_preds = np.array(mem_preds) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+    time_preds = np.array(time_preds) * statistics['time']['scale'] + statistics['time']['center']
+    memories = np.array(memories) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+    times = np.array(times) * statistics['time']['scale'] + statistics['time']['center']
     metrics={}
     metrics['peakmem'] = compute_metrics(memories, mem_preds)
     metrics['time'] = compute_metrics(times, time_preds)

@@ -76,7 +76,7 @@ def create_datasets(logger, workload_run_paths, cap_training_samples=None, val_r
         val_dataset = PlanDataset([plans[i] for i in val_idxs], val_idxs)
 
     # derive label normalization
-    runtimes = np.array([p.plan_runtime / 1000 for p in plans])
+    runtimes = np.array([p.plan_runtime  for p in plans])
     peakmems = np.array([p.peakmem for p in plans])
     # label_norm = derive_label_normalizer(loss_class_name, runtimes)
     label_norm = derive_label_normalizer(loss_class_name, peakmems)

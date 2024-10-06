@@ -68,6 +68,7 @@ def get_raw_plans(data_dir, dataset):
             plan_tuple['verbose_plan']=get_result_verbose(verbose_query)
             plan_tuple['sql'] = sql
             plan_tuple['peakmem'] = int(df.loc[i-1, 'peakmem'])
+            plan_tuple['time'] = float(df.loc[i-1, 'time'])
             plan_tuple['queryid'] = int(df.loc[i-1, 'queryid'])
             plan['query_list'].append(plan_tuple)
             assert i == df.loc[i-1, 'queryid'], f"queryid {i} does not match with the index in mem_info.csv"
@@ -85,5 +86,5 @@ def get_raw_plans(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch_sf1']:
+    for dataset in ['tpcds_sf1']:
         get_raw_plans(data_dir, dataset)
