@@ -21,7 +21,7 @@ def one_hot_encode_data_type(data_type, data_type_mapping):
     else:
         # Assign 'unknown' category
         one_hot[-1] = 1
-    assert len(one_hot) == 6, "One-hot encoding should have 6 dimensions"
+    assert len(one_hot) == len(data_type_mapping) + 1, "One-hot encoding should have len(data_type_mapping) + 1 dimensions"
     return one_hot
 
 
@@ -60,15 +60,25 @@ def extract_features(plan_node, statistics):
     """
     # Define which features to extract
     feature_vector = []
-    for key in ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Node Type']:
-        if statistics[key]['type'] == 'numeric':
-            value = ( plan_node[key] - statistics[key]['center']) / statistics[key]['scale']
-            feature_vector.append(value)
-        elif statistics[key]['type'] == 'categorical':
-            value = plan_node.get(key, 'unknown')
-            one_hot_features = one_hot_encode(statistics[key]['value_dict'].get(value, statistics[key]['no_vals']), statistics[key]['no_vals']+1)  # unknown will map to an extra number in the directory
-            feature_vector.extend(one_hot_features)
-   
+
+    for key in statistics:
+        
+        # if key in ['Output', 'Hash Cond', 'Filter', 'Index Cond', 'Join Filter', 'Recheck Cond', 'Merge Cond', 'One-Time Filter']:
+        #     continue
+        # features = ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Workers Planned', 'Node Type', 'Join Type', 'Strategy', 'Partial Mode', 'Parent Relationship', 'Scan Direction']
+        features = ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Workers Planned', 'Node Type', 'Join Type']
+        if key in features:
+ 
+            if statistics[key]['type'] == 'numerical':
+                value = ( plan_node.get(key, 0.0) - statistics[key]['center']) / statistics[key]['scale']
+                feature_vector.append(value)
+            elif statistics[key]['type'] == 'categorical':
+                value = plan_node.get(key, 'unknown')
+                # print(f"key: {key}, value is {value}")
+                one_hot_features = one_hot_encode(statistics[key]['value_dict'].get(value, statistics[key]['no_vals']), statistics[key]['no_vals']+1)  # unknown will map to an extra number in the directory
+                feature_vector.extend(one_hot_features)
+                # feature_vector.append(statistics[key]['value_dict'].get(value, statistics[key]['no_vals'])) # unknown will map to an extra number in the directory
+    # print(f"len(feature_vector): {len(feature_vector)}")
     return feature_vector
 
 # Helper function to traverse operators and extract tables, columns, and predicates
@@ -85,13 +95,13 @@ def traverse_operators(statistics, plan, encode_schema, operator_nodes, table_no
         plan_parameters = plan
 
 
-    # # Extract operator features
+    # Extract operator features
     operator_features = extract_features(plan_parameters, statistics) 
+
     operator_nodes.append({
         'id': current_operator_id,
         'features': operator_features
     })
-  
     # If there is a parent operator, add an edge (operator calls operator)
     if parent_operator_id is not None:
         operator_calledby_operator_edges.append((current_operator_id, parent_operator_id))
@@ -102,6 +112,8 @@ def traverse_operators(statistics, plan, encode_schema, operator_nodes, table_no
             table_name = plan_parameters['Relation Name']
             table_id = table_nodes[table_name]['id']
             table_scannedby_operator_edges.append((table_id, current_operator_id))
+        else:
+            table_id = None
 
         output_list = plan_parameters.get('Output', [])
         for output_item in output_list:

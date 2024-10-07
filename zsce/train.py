@@ -328,8 +328,7 @@ if __name__ == '__main__':
     hyperparams = load_json(hyperparameter_path, namespace=False)
 
     # loss_class_name='QLoss'
-    # loss_class_name='MSELoss'
-    loss_class_name='L1Loss'
+    loss_class_name='MSELoss'
     max_epoch_tuples=100000
     seed = 0
     device = 'cpu'

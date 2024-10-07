@@ -188,7 +188,6 @@ def train_model(logger, args):
         sample_graph = test_loader.dataset[0]
         num_node_features = sample_graph.x.shape[1]
         model = MODELS[args.model](hidden_channels=args.hidden_dim, out_channels=1, num_layers = args.num_layers, num_node_features=num_node_features, dropout=args.dropout)
-    
     model = model.to(args.device)
     optimizer = Adam(model.parameters(), lr=args.lr)
     criterion = torch.nn.L1Loss()

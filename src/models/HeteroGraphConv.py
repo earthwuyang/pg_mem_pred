@@ -14,7 +14,7 @@ class HeteroGraphConv(torch.nn.Module):
         self.encode_schema = encode_schema
         # Project node features to hidden_channels
         kwargs = SimpleNamespace(**kwargs)
-        self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    # Operators have 4 features
+        self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    
         if encode_schema:
             self.lin_table = Linear(kwargs.num_table_features, hidden_channels)
             self.lin_column = Linear(kwargs.num_column_features, hidden_channels)
@@ -41,7 +41,6 @@ class HeteroGraphConv(torch.nn.Module):
         # # Debugging: Print shapes before projection
         # for key, x in x_dict.items():
         #     print(f"Node type '{key}' has features shape: {x.shape}")
-        
         # Project node features with checks
         projected_x = {}
         node_layers =  [('operator', self.lin_operator)]
@@ -53,7 +52,6 @@ class HeteroGraphConv(torch.nn.Module):
             else:
                 # Assign an empty tensor with appropriate feature size
                 projected_x[node_type] = torch.empty((0, lin_layer.out_features), device=x_dict[next(iter(x_dict))].device)
-
         
         x_dict = projected_x
         

@@ -69,81 +69,15 @@ def extract_features(plan_node, statistics):
     """
     # Define which features to extract
     feature_vector = []
-
-    for key in statistics:
-        
-        # if key in ['Output', 'Hash Cond', 'Filter', 'Index Cond', 'Join Filter', 'Recheck Cond', 'Merge Cond', 'One-Time Filter']:
-        #     continue
-        if key in ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Workers Planned', 'Node Type', 'Join Type', 'Strategy', 'Partial Mode', 'Parent Relationship', 'Scan Direction']:
- 
-            if statistics[key]['type'] == 'numerical':
-                value = (plan_node.get(key, 0.0) - statistics[key]['center']) / statistics[key]['scale']
-                feature_vector.append(value)
-            elif statistics[key]['type'] == 'categorical':
-                value = plan_node.get(key, 'unknown')
-                # print(f"key: {key}, value is {value}")
-                one_hot_features = one_hot_encode(statistics[key]['value_dict'].get(value, statistics[key]['no_vals']), statistics[key]['no_vals']+1)  # unknown will map to an extra number in the directory
-                feature_vector.extend(one_hot_features)
-                # feature_vector.append(statistics[key]['value_dict'].get(value, statistics[key]['no_vals'])) # unknown will map to an extra number in the directory
-    # print(f"len(feature_vector): {len(feature_vector)}")
-    return feature_vector
-
-
-    numerical_features = {
-        'Startup Cost': plan_node.get('Startup Cost', 0.0),
-        'Total Cost': plan_node.get('Total Cost', 0.0),
-        'Plan Rows': plan_node.get('Plan Rows', 0.0),
-        'Plan Width': plan_node.get('Plan Width', 0.0),
-        'Workers Planned': plan_node.get('Workers Planned', 0.0)
-    }
-    # # Numerical features
-    # numerical_features = [
-    #     plan_node.get('Startup Cost', 0.0),
-    #     plan_node.get('Total Cost', 0.0),
-    #     plan_node.get('Plan Rows', 0.0),
-    #     plan_node.get('Plan Width', 0.0),
-    #     plan_node.get('Workers Planned', 0.0)
-    # ]
-    # feature_vector.extend(numerical_features)
-    
-    # Categorical features: Node Type, Join Type, etc.
-    categorical_features = [
-        plan_node.get('Node Type', ''),
-        plan_node.get('Join Type', ''),
-        plan_node.get('Strategy', ''),
-        plan_node.get('Partial Mode', ''),
-        plan_node.get('Parent Relationship', ''),
-        plan_node.get('Scan Direction', ''),
-        plan_node.get('Filter', ''),
-        plan_node.get('Hash Cond', ''),
-        plan_node.get('Index Cond', ''),
-        plan_node.get('Join Filter', '')
-    ]
-    
-    # Convert categorical features to numerical via one-hot encoding or other encoding schemes
-    # For simplicity, we'll use a basic encoding: assign a unique integer to each category
-    # In practice, you might want to use more sophisticated encoding methods
-    categorical_dict = {
-        'Node Type': {},
-        'Join Type': {},
-        'Strategy': {},
-        'Partial Mode': {},
-        'Parent Relationship': {},
-        'Scan Direction': {},
-        'Filter': {},
-        'Hash Cond': {},
-        'Index Cond': {},
-        'Join Filter': {}
-    }
-    
-    # This dictionary should be built based on your dataset to map categories to integers
-    # For demonstration, we'll assign arbitrary integers
-    # You should replace this with a consistent encoding based on your dataset
-    for i, cat in enumerate(categorical_features):
-        if cat not in categorical_dict[list(categorical_dict.keys())[i]]:
-            categorical_dict[list(categorical_dict.keys())[i]][cat] = len(categorical_dict[list(categorical_dict.keys())[i]])
-        feature_vector.append(categorical_dict[list(categorical_dict.keys())[i]][cat])
-    
+    for key in ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Node Type']:
+        if statistics[key]['type'] == 'numeric':
+            value = ( plan_node[key] - statistics[key]['center']) / statistics[key]['scale']
+            feature_vector.append(value)
+        elif statistics[key]['type'] == 'categorical':
+            value = plan_node.get(key, 'unknown')
+            one_hot_features = one_hot_encode(statistics[key]['value_dict'].get(value, statistics[key]['no_vals']), statistics[key]['no_vals']+1)  # unknown will map to an extra number in the directory
+            feature_vector.extend(one_hot_features)
+   
     return feature_vector
 
 
