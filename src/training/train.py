@@ -183,7 +183,7 @@ def train_model(logger, args):
         num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
         model = MODELS[args.model](
             hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_schema=args.encode_schema, 
-            num_operator_features=num_operator_features, num_table_features=num_table_features, num_column_features=num_column_features)
+            num_operator_features=num_operator_features, num_table_features=num_table_features, num_column_features=num_column_features, dropout=args.dropout)
     else: 
         sample_graph = test_loader.dataset[0]
         num_node_features = sample_graph.x.shape[1]
@@ -195,7 +195,8 @@ def train_model(logger, args):
     best_model_dir = 'checkpoints'
     if not os.path.exists(best_model_dir):
         os.makedirs(best_model_dir)
-    best_model_path = os.path.join(best_model_dir, f"{args.model}_{args.train_dataset}.pth")
+    encode_schema_flag = '_schema' if args.encode_schema else ''
+    best_model_path = os.path.join(best_model_dir, f"{args.model}_{args.train_dataset}{encode_schema_flag}.pth")
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
     if not args.skip_train:

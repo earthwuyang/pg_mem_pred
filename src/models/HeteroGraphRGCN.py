@@ -7,19 +7,13 @@ from torch_geometric.nn import RGCNConv, global_mean_pool
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from torch.nn import Linear
+from types import SimpleNamespace
 
 # ---------------------- GNN Model Definition ---------------------- #
 
 
 class HeteroGraphRGCN(torch.nn.Module):
-    def __init__(
-        self,
-        hidden_channels,
-        out_channels,
-        num_layers,
-        num_operator_features,
-        dropout=0.2,
-    ):
+    def __init__(self, hidden_channels, out_channels, num_layers, encode_schema, **kwargs):
         """
         Args:
             hidden_channels (int): Number of hidden units.
@@ -36,14 +30,31 @@ class HeteroGraphRGCN(torch.nn.Module):
                     ('operator', 'calledby', 'operator'),
                 ]  # Edge types
             )
-        self.metadata = metadata
         
+        if encode_schema:
+            metadata = (
+                ['operator', 'table', 'column'],  # Node types
+                [
+                    ('operator', 'calledby', 'operator'),
+                    ('table', 'scannedby', 'operator'),
+                    ('column', 'outputby', 'operator'),
+                    ('column', 'referencedby', 'column'),
+                    ('column', 'containedby', 'table'),
+                    ('column', 'selfloop', 'column')
+                ]  # Edge types
+            )
+        self.metadata = metadata
+        self.num_layers = num_layers
+        self.encode_schema = encode_schema
         self.edge_type_mapping = {etype: idx for idx, etype in enumerate(metadata[1])}
         num_relations = len(self.edge_type_mapping)
 
-        self.num_layers = num_layers
         # Project node features to hidden_channels with separate linear layers
-        self.lin_operator = Linear(num_operator_features, hidden_channels)    # Operators have 4 features
+        kwargs = SimpleNamespace(**kwargs)
+        self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    
+        if encode_schema:
+            self.lin_table = Linear(kwargs.num_table_features, hidden_channels)
+            self.lin_column = Linear(kwargs.num_column_features, hidden_channels)
 
         # RGCNConv layers
         self.conv = RGCNConv(hidden_channels, hidden_channels, num_relations)
@@ -56,7 +67,7 @@ class HeteroGraphRGCN(torch.nn.Module):
         self.norm = nn.LayerNorm(hidden_channels)
 
         # Dropout layer
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(kwargs.dropout)
 
     def forward(self, x_dict, edge_index_dict, batch_operator):
         """
@@ -73,10 +84,20 @@ class HeteroGraphRGCN(torch.nn.Module):
 
         # Project node features
         operator = self.lin_operator(x_dict['operator'])
+        if self.encode_schema:
+            table = self.lin_table(x_dict['table'])
+            column = self.lin_column(x_dict['column'])
         
         x = torch.cat([
             operator
         ], dim=0)
+
+        if self.encode_schema:
+            x = torch.cat([
+                operator, 
+                table,
+                column
+            ], dim=0)
 
         # Create a list to keep track of node type offsets
         node_type_offsets = {}

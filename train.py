@@ -14,6 +14,7 @@ import os
 from datetime import datetime
 
 from src.training.train import train_model
+from src.training.train_xgboost import train_XGBoost
 
 
 
@@ -78,6 +79,9 @@ if __name__ == "__main__":# Set random seed for reproducibility
     logger.info(f"Args: {args}")
 
     # Train the model
-    train_model(logger, args)
+    if args.model == 'XGBoost':
+        train_XGBoost(args)
+    else:
+        train_model(logger, args)
 
   

@@ -43,7 +43,7 @@ class QueryPlanDataset(Dataset):
 
         else:
             if self.model.startswith('Hetero'):
-                dataset_pickle_dir = 'data' + '_schema' if self.encode_schema else ''
+                dataset_pickle_dir = 'data' + ('_schema' if self.encode_schema else '')
                 dataset_pickle_path = os.path.join(dataset_pickle_dir, f'{dataset}_{mode}_dataset.pkl')
                 
                 os.makedirs(dataset_pickle_dir, exist_ok=True)
