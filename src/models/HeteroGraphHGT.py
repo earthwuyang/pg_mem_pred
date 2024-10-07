@@ -8,14 +8,14 @@ from torch_geometric.nn import HGTConv, global_mean_pool
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from torch.nn import Linear
-
+from types import SimpleNamespace
 # ---------------------- GNN Model Definition ---------------------- #
 
 
 
 
 class HeteroGraphHGT(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels, num_layers, num_operator_features, num_heads=4, dropout=0.2):
+    def __init__(self, hidden_channels, out_channels, num_layers, encode_schema, **kwargs):
         """
         Args:
             hidden_channels (int): Number of hidden units.
@@ -33,10 +33,11 @@ class HeteroGraphHGT(torch.nn.Module):
                 ]  # Edge types
             )
         metadata = self.metadata
-
+        num_heads = 4
+        kwargs = SimpleNamespace(**kwargs)
         self.num_layers = num_layers
         # Project node features to hidden_channels
-        self.lin_operator = Linear(num_operator_features, hidden_channels)    # Operators have 4 features
+        self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    # Operators have 4 features
     
         self.conv = HGTConv(
             in_channels=hidden_channels,
