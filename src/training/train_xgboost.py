@@ -23,65 +23,62 @@ def load_plans(file_path):
         plans = json.load(f)
     return plans
 
+def one_hot_encode(n, num_classes):
+    """
+    One-hot encode a number into a binary vector of length num_classes.
+    
+    Args:
+        n (int): The number to encode.
+        num_classes (int): The number of classes.
+        
+    Returns:
+        one_hot (list): A binary vector of length num_classes.
+    """
+    one_hot = [0] * num_classes
+    one_hot[n] = 1
+    return one_hot
 
-def extract_features(parsed_plan):
+def extract_features(plan, statistics):
     """
     Extract features from a parsed PostgreSQL query plan.
 
     Args:
-        parsed_plan (dict): The parsed query plan.
+        plan (dict): The parsed query plan.
 
     Returns:
         dict: A dictionary of aggregated features.
     """
     features = defaultdict(float)
-    op_counts = defaultdict(int)
-    numerical_features = defaultdict(list)
-    max_depth = 0
 
-    def traverse(node, depth=1):
-        nonlocal max_depth
-        max_depth = max(max_depth, depth)
+    def traverse(plan_node):
+        if 'Plan' in plan_node:
+            plan_node = plan_node.get('Plan', {})
+        else:
+            plan_node = plan_node
 
-        params = node.get('plan_parameters', {})
-        op_name = params.get('op_name', 'Unknown')
-        op_counts[op_name] += 1
+        for key in ['Startup Cost', 'Total Cost', 'Plan Rows', 'Plan Width', 'Node Type']:
+            if statistics[key]['type'] == 'numeric':
+                value = ( plan_node[key] - statistics[key]['center']) / statistics[key]['scale']
+                features[key] = value
+            elif statistics[key]['type'] == 'categorical':
+                for value in statistics[key]['value_dict'].values():
+                    features[value] = 0
+                if key in plan_node:
+                    features[plan_node[key]] = 1
+    
+        # Traverse children
+        if 'Plans' in plan_node:
+            for child in plan_node['Plans']:
+                traverse(child)
 
-        # Collect numerical features
-        numerical_features['est_startup_cost'].append(params.get('est_startup_cost', 0.0))
-        numerical_features['est_cost'].append(params.get('est_cost', 0.0))
-        numerical_features['est_card'].append(params.get('est_card', 0.0))
-        numerical_features['est_width'].append(params.get('est_width', 0.0))
-        numerical_features['workers_planned'].append(params.get('workers_planned', 0.0))
-        numerical_features['est_children_card'].append(params.get('est_children_card', 0.0))
-
-        # Recursively traverse children
-        for child in node.get('children', []):
-            traverse(child, depth + 1)
-
-    traverse(parsed_plan)
-
-    # Aggregate operation counts
-    for op, count in op_counts.items():
-        features[f'op_count_{op}'] = count
-
-    # Aggregate numerical features
-    for feature, values in numerical_features.items():
-        features[f'{feature}_sum'] = sum(values)
-        features[f'{feature}_mean'] = np.mean(values) if values else 0.0
-        features[f'{feature}_max'] = max(values) if values else 0.0
-        features[f'{feature}_min'] = min(values) if values else 0.0
-
-    # Add structural features
-    features['tree_depth'] = max_depth
-    features['num_nodes'] = len(numerical_features['est_cost'])
-
+    # Traverse the plan and collect features
+    traverse(plan)
     return features
 
 
 
 
-def prepare_dataset(plans):
+def prepare_dataset(dataset_dir, datasets, mode, statistics, debug):
     """
     Prepare a dataset by extracting features and collecting labels.
 
@@ -92,13 +89,24 @@ def prepare_dataset(plans):
         pd.DataFrame: DataFrame containing features.
         pd.Series: Series containing labels (peak memory).
     """
+    plans = []
+    for ds in datasets:
+        plan_file = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+        if debug:
+            plan_file = os.path.join(dataset_dir, 'tpch_sf1', 'tiny_plans.json')
+        plan = load_plans(plan_file)
+        plans.extend(plan)
+    print(f"number of {mode} plans: {len(plans)}")
+
+    # Extract features and labels
     feature_dicts = []
     labels = []
 
-    for plan in tqdm(plans['parsed_plans']):
-        features = extract_features(plan)
+    for plan in tqdm(plans):
+        features = extract_features(plan, statistics)
         feature_dicts.append(features)
-        labels.append(plan.get('peakmem', 0.0))  # Assuming 'peakmem' is the target
+        peakmem = plan.get('peakmem', 0.0)
+        labels.append(peakmem)  # Assuming 'peakmem' is the target
 
     # Convert to DataFrame
     df_features = pd.DataFrame(feature_dicts)
@@ -107,41 +115,22 @@ def prepare_dataset(plans):
     # Handle missing values if any
     df_features.fillna(0, inplace=True)
 
-    # Encode categorical features (if any)
-    # Assuming 'op_count_*' are categorical; adjust based on actual data
-    op_count_features = [col for col in df_features.columns if col.startswith('op_count_')]
-    # If they are counts, you might treat them as numerical
-    # Otherwise, use label encoding or one-hot encoding as needed
-
-    # Feature scaling (optional)
-    scaler = StandardScaler()
-    numerical_cols = [col for col in df_features.columns if any(sub in col for sub in ['est_startup_cost', 'est_cost', 'est_card', 'est_width', 'workers_planned', 'est_children_card'])]
-    df_features[numerical_cols] = scaler.fit_transform(df_features[numerical_cols])
-
     return df_features, df_labels
 
 
 
 
-
 def train_XGBoost(args):
-    train_plan_file = os.path.join(args.dataset_dir, args.train_dataset, 'zsce', 'train_plans.json')
-    train_plans = load_plans(train_plan_file)
-    print(f"number of training plans: {len(train_plans['parsed_plans'])}")
 
-    val_plan_file = os.path.join(args.dataset_dir, args.train_dataset, 'zsce', 'val_plans.json')
-    val_plans = load_plans(val_plan_file)
-    print(f"number of validation plans: {len(val_plans['parsed_plans'])}")
-
-    test_plan_file = os.path.join(args.dataset_dir, args.test_dataset, 'zsce', 'test_plans.json')
-    test_plans = load_plans(test_plan_file)
-    print(f"number of testing plans: {len(test_plans['parsed_plans'])}")
+    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'statistics_workload_combined.json')  # CAUTION
+    with open(statistics_file_path, 'r') as f:
+        statistics = json.load(f)
 
     # Prepare training and validation datasets
-    X_train, y_train = prepare_dataset(train_plans)
-    X_val, y_val = prepare_dataset(val_plans)
+    X_train, y_train = prepare_dataset(args.dataset_dir, args.train_dataset, 'train', statistics, args.debug)
+    X_val, y_val = prepare_dataset(args.dataset_dir, args.train_dataset, 'val', statistics, args.debug)
     X_val = X_val[X_train.columns]
-    X_test, y_test = prepare_dataset(test_plans)
+    X_test, y_test = prepare_dataset(args.dataset_dir, args.test_dataset, 'test', statistics, args.debug)
     X_test = X_test[X_train.columns]
 
     print("Training features shape:", X_train.shape)
@@ -166,6 +155,9 @@ def train_XGBoost(args):
     print(f"Testing XGBoost model...")
     # Predict on test set
     y_pred = xgb_reg.predict(X_test)
+
+    y_pred = np.array(y_pred) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+    y_test = np.array(y_test) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
 
     # Evaluate
     mse = mean_squared_error(y_test, y_pred)
