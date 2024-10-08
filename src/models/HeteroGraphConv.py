@@ -8,14 +8,14 @@ from types import SimpleNamespace
 # ---------------------- GNN Model Definition ---------------------- #
 
 class HeteroGraphConv(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels, num_layers, encode_schema, **kwargs):
+    def __init__(self, hidden_channels, out_channels, num_layers, encode_table_column, **kwargs):
         super().__init__()
         self.num_layers = num_layers
-        self.encode_schema = encode_schema
+        self.encode_table_column = encode_table_column
         # Project node features to hidden_channels
         kwargs = SimpleNamespace(**kwargs)
         self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    
-        if encode_schema:
+        if encode_table_column:
             self.lin_table = Linear(kwargs.num_table_features, hidden_channels)
             self.lin_column = Linear(kwargs.num_column_features, hidden_channels)
         
@@ -23,12 +23,11 @@ class HeteroGraphConv(torch.nn.Module):
         layers = {
             ('operator', 'calledby', 'operator'): GraphConv(hidden_channels, hidden_channels),
         }
-        if encode_schema:
+        if encode_table_column:
             layers.update({
                 ('table', 'scannedby', 'operator'): GraphConv(hidden_channels, hidden_channels),
                 ('column', 'outputby', 'operator'): GraphConv(hidden_channels, hidden_channels),
-                ('column', 'referencedby', 'column'): GraphConv(hidden_channels, hidden_channels),
-                ('column', 'containedby', 'table'): GraphConv(hidden_channels, hidden_channels),
+                ('table', 'selfloop', 'table'): GraphConv(hidden_channels, hidden_channels),
                 ('column', 'selfloop', 'column'): GraphConv(hidden_channels, hidden_channels)
             })
         self.conv = HeteroConv(layers, aggr='sum')
@@ -44,7 +43,7 @@ class HeteroGraphConv(torch.nn.Module):
         # Project node features with checks
         projected_x = {}
         node_layers =  [('operator', self.lin_operator)]
-        if self.encode_schema:
+        if self.encode_table_column:
             node_layers += [('table', self.lin_table), ('column', self.lin_column)]
         for node_type, lin_layer in node_layers:
             if node_type in x_dict and x_dict[node_type].shape[0] > 0:

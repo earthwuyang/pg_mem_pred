@@ -42,10 +42,10 @@ if __name__ == "__main__":# Set random seed for reproducibility
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
-    parser.add_argument('--train_dataset', type=str, default='tpch_sf1', help='dataset name. train and validation will use the same dataset')
-    parser.add_argument('--test_dataset', type=str, default='tpch_sf1', help='dataset name')
-    parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name')
-    parser.add_argument('--encode_schema', action='store_true', default=False, help='encode schema, table nodes, and column nodes')
+    parser.add_argument('--train_dataset', type=str, nargs='+', default=['tpch_sf1'], help='dataset name. train and validation will use the same dataset')
+    parser.add_argument('--test_dataset', type=str, nargs='+', default=['tpch_sf1'], help='dataset name. test will use the same dataset')
+    parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
+    parser.add_argument('--encode_table_column', action='store_true', default=False, help='encode table and column nodes')
     parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
     parser.add_argument('--epochs', type=int, default=10000, help='number of epochs')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stopping')
@@ -64,6 +64,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--debug', action='store_true', default=False, help='debug mode')
     args = parser.parse_args()
 
+
     assert args.mem_pred or args.time_pred, "At least one of --mem_pred (default True) and --time_pred (default False) should be set"
 
     seed = 1
@@ -74,7 +75,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     log_dir = 'logs/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, f"train_{args.train_dataset}_test_{args.test_dataset}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    log_file = os.path.join(log_dir, f"train_{'_'.join(args.train_dataset)}_test_{args.test_dataset}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logger = get_logger(log_file)
     logger.info(f"Args: {args}")
 

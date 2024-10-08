@@ -22,49 +22,47 @@ def load_json(json_file):
 
     
 class QueryPlanDataset(Dataset):
-    def __init__(self, logger, model, encode_schema, dataset_dir, dataset, mode, statistics, debug):
+    def __init__(self, logger, model, encode_table_column, dataset_dir, dataset, mode, statistics, debug):
         super(QueryPlanDataset, self).__init__()
         self.logger = logger
         self.model = model
         self.statistics = statistics
-        self.encode_schema = encode_schema
+        self.encode_table_column = encode_table_column
 
-        if self.encode_schema:
-            schema_file_path = os.path.join(dataset_dir, dataset, 'schema.json')
-            with open(schema_file_path, 'r') as f:
-                self.schema = json.load(f)
-
-        if model.startswith('Hetero'):
-            self.db_stats = get_db_stats(dataset)
 
         if debug:
             json_file_path = '/home/wuy/DB/pg_mem_data/tpch_sf1/tiny_plans.json' # for debug
-            self.dataset = self.get_dataset(logger, json_file_path, dataset)
+            self.dataset_list = self.get_dataset(logger, json_file_path, dataset)
 
         else:
             if self.model.startswith('Hetero'):
-                dataset_pickle_dir = 'data' + ('_schema' if self.encode_schema else '')
-                dataset_pickle_path = os.path.join(dataset_pickle_dir, f'{dataset}_{mode}_dataset.pkl')
+                dataset_pickle_dir = 'data' + ('_table_column' if self.encode_table_column else '')
+                dataset_pickle_path = os.path.join(dataset_pickle_dir, f'{"_".join(dataset)}_{mode}_dataset.pkl')
                 
                 os.makedirs(dataset_pickle_dir, exist_ok=True)
 
                 if os.path.exists(dataset_pickle_path):
                     self.logger.info(f"Loading dataset from {dataset_pickle_path}")
                     with open(dataset_pickle_path, 'rb') as f:
-                        self.dataset = pickle.load(f)
+                        self.dataset_list = pickle.load(f)
                 else:
-                    json_file_path = os.path.join(dataset_dir, dataset, f'{mode}_plans.json')
-                    self.logger.info(f"Creating dataset from {json_file_path}")
+                    self.dataset_list = []
+                    for ds in dataset:
+                        json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+                  
+                        self.logger.info(f"Creating dataset from {json_file_path} for {ds}")
+                        self.dataset_list.extend(self.get_dataset(logger, json_file_path, ds))
 
-                    self.dataset = self.get_dataset(logger, json_file_path, dataset)
                     with open(dataset_pickle_path, 'wb') as f:
-                        pickle.dump(self.dataset, f)
+                        pickle.dump(self.dataset_list, f)
                 
 
             else:   # homogeneous graph
-                json_file_path = os.path.join(dataset_dir, dataset, f'{mode}_plans.json')
-                self.logger.info(f"Creating dataset from {json_file_path}")
-                self.dataset = self.get_dataset(logger, json_file_path, dataset)
+                self.dataset_list = []
+                for ds in dataset:
+                    json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+                    self.logger.info(f"Creating dataset from {json_file_path} for {ds}")
+                    self.dataset_list.extend(self.get_dataset(logger, json_file_path, ds))
 
 
     def get_dataset(self, logger, json_file_path, dataset):
@@ -84,15 +82,17 @@ class QueryPlanDataset(Dataset):
             raise Exception("Failed to connect to the database")
             exit(1)  # Exit if connection failed
         # Parse all query plans and create graphs
-        self.dataset = []
+        graph_list = []
+        if self.model.startswith('Hetero'):
+            db_stats = get_db_stats(dataset)
         for idx, plan in tqdm(enumerate(plans), total=len(plans)):
             peakmem = (plan['peakmem'] - self.statistics['peakmem']['center']) / self.statistics['peakmem']['scale']
             time = (plan['time'] - self.statistics['time']['center']) / self.statistics['time']['scale']
 
             if self.model.startswith('Hetero'):
-                graph = create_hetero_graph(logger, plan, conn, self.statistics, self.db_stats, self.schema if self.encode_schema else None, self.encode_schema, peakmem, time)
+                graph = create_hetero_graph(logger, plan, conn, self.statistics, db_stats, self.encode_table_column, peakmem, time)
                 # logger.info(graph)
-                self.dataset.append(graph)
+                graph_list.append(graph)
             else:   # homogeneous graph
                 nodes = []
                 edges = []
@@ -103,18 +103,18 @@ class QueryPlanDataset(Dataset):
                 edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
                 y = torch.tensor(np.array([peakmem, time]), dtype=torch.float)
                 data = Data(x=x, edge_index=edge_index, y=y)
-                self.dataset.append(data)
+                graph_list.append(data)
 
         # Close the database connection
         conn.close()
 
-        return self.dataset
+        return graph_list
 
     def __len__(self):
-        return len(self.dataset)
+        return len(self.dataset_list)
     
     def __getitem__(self, idx):
-        return self.dataset[idx]
+        return self.dataset_list[idx]
 
 
 

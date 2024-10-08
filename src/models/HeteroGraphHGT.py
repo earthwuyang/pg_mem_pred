@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 
 class HeteroGraphHGT(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels, num_layers, encode_schema, **kwargs):
+    def __init__(self, hidden_channels, out_channels, num_layers, encode_table_column, **kwargs):
         """
         Args:
             hidden_channels (int): Number of hidden units.

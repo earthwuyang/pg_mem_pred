@@ -154,20 +154,20 @@ def train_model(logger, args):
     batch_size = args.batch_size
     num_workers = args.num_workers
 
-    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset, 'statistics_workload_combined.json')
+    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'statistics_workload_combined.json')  # CAUTION
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
 
     # Load the dataset
     if not args.skip_train:
-        traindataset = QueryPlanDataset(logger, args.model, args.encode_schema, dataset_dir, train_dataset, 'train', statistics, args.debug)
+        traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug)
         logger.info('Train dataset size: {}'.format(len(traindataset)))
-        valdataset = QueryPlanDataset(logger, args.model, args.encode_schema, dataset_dir, train_dataset, 'val', statistics, args.debug)
+        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'val', statistics, args.debug)
         logger.info('Val dataset size: {}'.format(len(valdataset)))
         train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-    testdataset = QueryPlanDataset(logger, args.model, args.encode_schema, dataset_dir, test_dataset, 'test', statistics, args.debug)  
+    testdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, test_dataset, 'test', statistics, args.debug)  
 
     logger.info('Test dataset size: {}'.format(len(testdataset)))
     
@@ -182,7 +182,7 @@ def train_model(logger, args):
         num_table_features = sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
         num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
         model = MODELS[args.model](
-            hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_schema=args.encode_schema, 
+            hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_table_column=args.encode_table_column, 
             num_operator_features=num_operator_features, num_table_features=num_table_features, num_column_features=num_column_features, dropout=args.dropout)
     else: 
         sample_graph = test_loader.dataset[0]
@@ -195,8 +195,8 @@ def train_model(logger, args):
     best_model_dir = 'checkpoints'
     if not os.path.exists(best_model_dir):
         os.makedirs(best_model_dir)
-    encode_schema_flag = '_schema' if args.encode_schema else ''
-    best_model_path = os.path.join(best_model_dir, f"{args.model}_{args.train_dataset}{encode_schema_flag}.pth")
+    encode_table_column_flag = '_encode_table_column' if args.encode_table_column else ''
+    best_model_path = os.path.join(best_model_dir, f"{args.model}_{'_'.join(args.train_dataset)}{encode_table_column_flag}.pth")
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
     if not args.skip_train:

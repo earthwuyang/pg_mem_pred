@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 
 class HeteroGraphRGCN(torch.nn.Module):
-    def __init__(self, hidden_channels, out_channels, num_layers, encode_schema, **kwargs):
+    def __init__(self, hidden_channels, out_channels, num_layers, encode_table_column, **kwargs):
         """
         Args:
             hidden_channels (int): Number of hidden units.
@@ -31,28 +31,27 @@ class HeteroGraphRGCN(torch.nn.Module):
                 ]  # Edge types
             )
         
-        if encode_schema:
+        if encode_table_column:
             metadata = (
                 ['operator', 'table', 'column'],  # Node types
                 [
                     ('operator', 'calledby', 'operator'),
                     ('table', 'scannedby', 'operator'),
                     ('column', 'outputby', 'operator'),
-                    ('column', 'referencedby', 'column'),
-                    ('column', 'containedby', 'table'),
+                    ('table', 'selfloop', 'table'),
                     ('column', 'selfloop', 'column')
                 ]  # Edge types
             )
         self.metadata = metadata
         self.num_layers = num_layers
-        self.encode_schema = encode_schema
+        self.encode_table_column = encode_table_column
         self.edge_type_mapping = {etype: idx for idx, etype in enumerate(metadata[1])}
         num_relations = len(self.edge_type_mapping)
 
         # Project node features to hidden_channels with separate linear layers
         kwargs = SimpleNamespace(**kwargs)
         self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    
-        if encode_schema:
+        if encode_table_column:
             self.lin_table = Linear(kwargs.num_table_features, hidden_channels)
             self.lin_column = Linear(kwargs.num_column_features, hidden_channels)
 
@@ -84,7 +83,7 @@ class HeteroGraphRGCN(torch.nn.Module):
 
         # Project node features
         operator = self.lin_operator(x_dict['operator'])
-        if self.encode_schema:
+        if self.encode_table_column:
             table = self.lin_table(x_dict['table'])
             column = self.lin_column(x_dict['column'])
         
@@ -92,7 +91,7 @@ class HeteroGraphRGCN(torch.nn.Module):
             operator
         ], dim=0)
 
-        if self.encode_schema:
+        if self.encode_table_column:
             x = torch.cat([
                 operator, 
                 table,
