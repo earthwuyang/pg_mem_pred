@@ -16,7 +16,7 @@ def get_raw_plans(data_dir, dataset):
     }
     plan={}
     plan['query_list']=[]
-    plan['database_stats'] = collect_db_statistics()
+    plan['database_stats'] = collect_db_statistics(conn_params)
     plan['run_kwargs']={'hardware': 'qh1'}
     plan['total_time_secs']=0
 
@@ -85,5 +85,5 @@ def get_raw_plans(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch_sf1']:
+    for dataset in ['tpcds_sf1']:
         get_raw_plans(data_dir, dataset)

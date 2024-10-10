@@ -21,7 +21,7 @@ def one_hot_encode_data_type(data_type, data_type_mapping):
     else:
         # Assign 'unknown' category
         one_hot[-1] = 1
-    assert len(one_hot) == 6, "One-hot encoding should have 6 dimensions"
+    assert len(one_hot) == (len(data_type_mapping) + 1), "One-hot encoding should have 6 dimensions"
     return one_hot
 
 
