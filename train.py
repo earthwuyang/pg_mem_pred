@@ -75,7 +75,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     log_dir = 'logs/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, f"train_{'_'.join(args.train_dataset)}_test_{args.test_dataset}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    log_file = os.path.join(log_dir, f"train_{'_'.join(args.train_dataset)}_test_{'_'.join(args.test_dataset)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logger = get_logger(log_file)
     logger.info(f"Args: {args}")
 

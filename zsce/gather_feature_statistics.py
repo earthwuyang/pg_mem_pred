@@ -77,5 +77,5 @@ def gather_feature_statistics(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    dataset = 'tpch_sf1'
+    dataset = 'tpcds_sf1'
     gather_feature_statistics(data_dir, dataset)

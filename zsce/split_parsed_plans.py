@@ -5,7 +5,7 @@ def split(data_dir, dataset):
     source = os.path.join(data_dir, dataset, 'zsce', 'parsed_plan.json')
     with open(source, 'r') as f:
         plans = json.load(f)
-    print(f"""{len(plans)} plans loaded from {source}""")
+    print(f"""{len(plans['parsed_plans'])} plans loaded from {source}""")
     parsed_plans = plans['parsed_plans']
 
     train_size = int(0.8 * len(parsed_plans))
@@ -35,5 +35,5 @@ def split(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch_sf1']:
+    for dataset in ['tpcds_sf1']:
         split(data_dir, dataset)
