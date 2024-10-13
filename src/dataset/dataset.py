@@ -29,6 +29,9 @@ class QueryPlanDataset(Dataset):
         self.statistics = statistics
         self.encode_table_column = encode_table_column
 
+        database_stats_file_path = os.path.join(dataset_dir, dataset[0], 'database_stats.json')
+        with open(database_stats_file_path, 'r') as f:
+            self.database_stats = json.load(f)
 
         if debug:
             json_file_path = '/home/wuy/DB/pg_mem_data/tpch_sf1/tiny_plans.json' # for debug

@@ -14,7 +14,8 @@ class NodeTypeEncoder(FcOutModel):
 
     def __init__(self, features, feature_statistics, max_emb_dim=32, drop_whole_embeddings=False,
                  one_hot_embeddings=True, **kwargs):
-
+        # print(f"features {features}")
+        # print(f"feature_statistics {feature_statistics}")
         for f in features:
             if f not in feature_statistics:
                 raise ValueError(f"Did not find {f} in feature statistics")

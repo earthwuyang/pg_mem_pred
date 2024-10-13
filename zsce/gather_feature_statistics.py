@@ -41,6 +41,7 @@ def gather_feature_statistics(data_dir, dataset):
 
     run_stats = []
     parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'train_plans.json')
+    # parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'tiny_plans.json')
     with open(parsed_plan_file, 'r') as f:
         run_stats.append(json.load(f))
     value_dict = gather_values_recursively(run_stats)
@@ -77,5 +78,5 @@ def gather_feature_statistics(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    dataset = 'tpcds_sf1'
+    dataset = 'tpch_sf1'
     gather_feature_statistics(data_dir, dataset)

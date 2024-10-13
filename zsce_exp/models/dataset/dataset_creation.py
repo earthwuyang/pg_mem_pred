@@ -19,6 +19,7 @@ def read_workload_runs(logger, workload_run_paths, limit_queries=None, limit_que
         workload_run_paths = [workload_run_paths]
     for i, source in enumerate(workload_run_paths):
         try:
+            source = '/home/wuy/DB/pg_mem_data/tpch_sf1/zsce/tiny_plans.json'
             print(f"source {source}")
             run = load_json(source) # where SimpleNamespace is imported
         except JSONDecodeError:

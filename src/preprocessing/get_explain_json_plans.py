@@ -6,7 +6,7 @@ def get_explain_json_plans(data_dir, dataset):
     mem_list_file = os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv')
     query_dir = os.path.join(data_dir, dataset, 'raw_data','query_dir')
     plan_dir = os.path.join(data_dir, dataset, 'raw_data','plan_dir')
-    json_plan_file = os.path.join(data_dir, dataset, 'total_json_plans.json')
+    query_dir = os.path.join(data_dir, dataset, 'raw_data','query_dir')
 
     json_plans = []
     mem_df = pd.read_csv(mem_list_file, sep=',')
@@ -17,11 +17,40 @@ def get_explain_json_plans(data_dir, dataset):
             plan_json = json.load(f)
         plan_json['peakmem'] = int(row['peakmem']) 
         plan_json['time'] = float(row['time'])
+        query_file = os.path.join(query_dir, str(int(row['queryid']))+'.sql')
+        with open(query_file, 'r') as f:
+            query_str = f.read()
+        plan_json['sql'] = query_str
         json_plans.append(plan_json)
-    with open(json_plan_file, 'w') as f:
-        json.dump(json_plans, f)
+    # with open(json_plan_file, 'w') as f:
+    #     json.dump(json_plans, f)
+
+    plans = json_plans
+    train_size = int(0.8 * len(plans))
+    val_size = int(0.1 * len(plans))
+    test_size = len(plans) - train_size - val_size
+
+    train_plans = plans[:train_size]
+    val_plans = plans[train_size:train_size+val_size]
+    test_plans = plans[train_size+val_size:]
+    print(f"train size: {len(train_plans)}, val size: {len(val_plans)}, test size: {len(test_plans)}")
+
+    # save data to files
+    with open( os.path.join(data_dir, dataset, 'train_plans.json'), 'w') as f:
+        json.dump(train_plans, f)
+    print(f"train plans saved to {os.path.join(data_dir, dataset, 'train_plans.json')}")
+
+    # save data to files
+    with open( os.path.join(data_dir, dataset, 'val_plans.json'), 'w') as f:
+        json.dump(val_plans, f)
+    print(f"val plans saved to {os.path.join(data_dir, dataset, 'val_plans.json')}")
+
+    # save data to files
+    with open( os.path.join(data_dir, dataset, 'test_plans.json'), 'w') as f:
+        json.dump(test_plans, f)
+    print(f"test plans saved to {os.path.join(data_dir, dataset, 'test_plans.json')}")
 
 
 data_dir = '/home/wuy/DB/pg_mem_data'
-for dataset in ['tpcds_sf1']:
+for dataset in ['tpch_sf1']:
     get_explain_json_plans(data_dir, dataset)

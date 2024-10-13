@@ -322,6 +322,7 @@ if __name__ == '__main__':
     parser.add_argument("--train_dataset", type=str, help="Dataset to use for training", default='tpch_sf1')
     parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default='tpch_sf1')
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
+    parser.add_argument('--debug', action='store_true', help="Debug mode")
     args = parser.parse_args()
 
     hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
@@ -401,6 +402,10 @@ if __name__ == '__main__':
     train_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'train_plans.json')
     val_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'val_plans.json')
     test_workload_runs = os.path.join(data_dir, args.test_dataset, 'zsce', 'test_plans.json')
+    if args.debug:
+        train_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'tiny_plans.json')
+        val_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'tiny_plans.json')
+        test_workload_runs = os.path.join(data_dir, args.test_dataset, 'zsce', 'tiny_plans.json')
     # train_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # val_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # test_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'

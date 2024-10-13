@@ -7,6 +7,8 @@ import numpy as np
 import json
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, FunctionTransformer
 from torch_geometric.loader import DataLoader
+from torch.utils.data import DataLoader as TorchDataLoader
+import functools
 
 from src.dataset.dataset import load_json
 from src.models.GIN import GIN
@@ -19,8 +21,11 @@ from src.models.HeteroGraphRGCN import HeteroGraphRGCN
 from src.models.HeteroGraphHGT import HeteroGraphHGT
 from src.models.HeteroGraphConv import HeteroGraphConv
 from src.models.HeteroGraphSAGE import HeteroGraphSAGE
+# from src.models.zero_shot_models.specific_models.postgres_zero_shot import PostgresZeroShotModel
 from src.training.metrics import compute_metrics
 from src.dataset.dataset import QueryPlanDataset
+from src.dataset.zsce_plan_dataset import ZSCEPlanDataset
+from src.dataset.zsce_plan_collator import plan_collator
 
 MODELS = {
     'GIN': GIN,
@@ -32,7 +37,8 @@ MODELS = {
     'HeteroGraphRGCN': HeteroGraphRGCN,
     'HeteroGraphHGT': HeteroGraphHGT,
     'HeteroGraphConv': HeteroGraphConv,
-    'HeteroGraphSAGE': HeteroGraphSAGE
+    'HeteroGraphSAGE': HeteroGraphSAGE,
+    # 'zsce': PostgresZeroShotModel
 }
 
 # Define the early stopping class (redefined for clarity)
@@ -158,14 +164,31 @@ def train_model(logger, args):
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
 
+    database_stats_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'database_stats.json')  # CAUTION
+    with open(database_stats_file_path) as f:
+        db_statistics = json.load(f)
+
+    if args.model == 'zsce':
+        args.batch_size = 1
+
     # Load the dataset
     if not args.skip_train:
-        traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug)
-        logger.info('Train dataset size: {}'.format(len(traindataset)))
-        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'val', statistics, args.debug)
-        logger.info('Val dataset size: {}'.format(len(valdataset)))
-        train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        if args.model == 'zsce':
+            traindataset = ZSCEPlanDataset(dataset_dir, train_dataset, 'train', args.debug)
+            collate_fn = functools.partial(plan_collator, feature_statistics=statistics, db_statistics=db_statistics)
+            train_loader = TorchDataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn)
+            for batch in train_loader:
+                print(batch)
+                while 1:pass
+            while 1:pass
+        else:
+            traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug)
+            logger.info('Train dataset size: {}'.format(len(traindataset)))
+            valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'val', statistics, args.debug)
+            logger.info('Val dataset size: {}'.format(len(valdataset)))
+        
+            train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+            val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     testdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, test_dataset, 'test', statistics, args.debug)  
 
