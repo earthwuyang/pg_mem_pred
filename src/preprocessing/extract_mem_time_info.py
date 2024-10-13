@@ -13,18 +13,18 @@ import json
 def extract_mem_info(data_dir, dataset):
     log_dir = os.path.join(data_dir, 'pg_log', dataset)
     mem_csv = os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv')
-    query_dir = os.path.join(data_dir, dataset, 'raw_data','query_dir')
     plan_dir = os.path.join(data_dir, dataset, 'raw_data','plan_dir')
-    os.makedirs(query_dir, exist_ok=True)
     os.makedirs(plan_dir, exist_ok=True)
 
-    database_name = dataset
 
+    with open(os.path.join(os.path.dirname(__file__), '../../conn.json')) as f:
+        conn_params = json.load(f)
     conn_params = {
-        "dbname": database_name,
-        "user": "wuy",
-        "password": "",
-        "host": "localhost"
+        "dbname": dataset,
+        "user": conn_params['user'],
+        "password": conn_params['password'],
+        "host": conn_params['host'],
+        "port": conn_params['port']
     }
     
     # 连接到数据库
@@ -53,35 +53,41 @@ def extract_mem_info(data_dir, dataset):
                     if 'STATEMENT:' in line:
                         statement = line.split('STATEMENT:')[1].strip()
                         start = False
-                        if statement.startswith('commit') or statement.startswith('set') or statement.startswith('explain') or statement.startswith('analyze') \
-                            or statement.startswith('COMMIT') or statement.startswith('SET') or statement.startswith('EXPLAIN') or statement.startswith('ANALYZE'):
+                        # if statement.startswith('commit') or statement.startswith('set') or statement.startswith('explain') or statement.startswith('analyze') \
+                        #     or statement.startswith('COMMIT') or statement.startswith('SET') or statement.startswith('EXPLAIN') or statement.startswith('ANALYZE'):
+                        #     continue
+                        if not statement.startswith('/*'):
                             continue
-                        
+                        statement_dataset = statement.split(' ')[0].split('/*')[1].strip()
+                        if statement_dataset != dataset:
+                            continue
+                        queryid = statement.split('*/')[0].split('No.')[1].strip()
+                        sql = statement.split('*/')[1].split('explain analyze')[1].strip()
+
                         cur = conn.cursor()
-                        cur.execute('EXPLAIN (verbose, format json)' + statement)
+                        cur.execute('EXPLAIN (verbose, format json) ' + sql)
                         plan = cur.fetchone()
 
                         cur.close()
 
                         count += 1
-
-                        plan_file = os.path.join(plan_dir, str(count) + '.json')
+                        # print(f"queryid: {queryid}, mem: {mem}, time: {time}, statement_dataset: {statement_dataset}, sql: {sql}")
+                        # while 1:pass
+                        plan_file = os.path.join(plan_dir, queryid + '.json')
                         with open(plan_file, 'w') as f:
                             json.dump(plan[0][0], f)
 
                         with open(mem_csv, 'a') as f:
-                            f.write(str(count) + ',' + mem + ',' + time  + '\n')
-                        query_file = os.path.join(query_dir, str(count) + '.sql')
-                        with open(query_file, 'w') as f:
-                            f.write(statement)
+                            f.write(queryid + ',' + mem + ',' + time  + '\n')
+                       
                 except Exception as e:
                     print('Error:', e)
                     continue
 
     conn.close()
-
+    print(f"Number of queries with memory info: {count}")
 
 if __name__ == '__main__':
     data_dir='/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpcds_sf1']:
+    for dataset in ['tpch_sf1']:
         extract_mem_info(data_dir, dataset)

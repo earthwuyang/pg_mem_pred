@@ -96,6 +96,9 @@ def generate_stats(data_dir, dataset, force=True):
         df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs))
 
         for column in df_table.columns:
+            # print(f"column {column}")
+            # print(f"df_table:\n {df_table}")
+            # print(f"column_type {column_type}")
             column_stats_table[column] = column_stats(df_table[column], columntype = column_type[t][column])
 
         joint_column_stats[t] = column_stats_table

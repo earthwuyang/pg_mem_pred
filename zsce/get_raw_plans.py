@@ -7,12 +7,14 @@ import json
 import pandas as pd
 
 def get_raw_plans(data_dir, dataset):
-    database = dataset
+    with open(os.path.join(os.path.dirname(__file__), '../conn.json')) as f:
+        conn_params = json.load(f)
     conn_params = {
-        "dbname": database,
-        "user": "wuy",
-        "password": "",
-        "host": "localhost"
+        "dbname": dataset,
+        "user": conn_params['user'],
+        "password": conn_params['password'],
+        "host": conn_params['host'],
+        "port": conn_params['port']
     }
     plan={}
     plan['query_list']=[]
@@ -20,18 +22,13 @@ def get_raw_plans(data_dir, dataset):
     plan['run_kwargs']={'hardware': 'qh1'}
     plan['total_time_secs']=0
 
-    def get_result_analyze(query):
-        conn = psycopg2.connect(**conn_params)
-        cur = conn.cursor()
-        cur.execute('set statement_timeout = 0;')
-        cur.execute(query)
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        result=[]
-        for row in rows:
-            result.append([row[0]])
-        return [result]
+    def get_result_analyze(queryid, analyzed_plan_dir):
+        file_name = os.path.join(analyzed_plan_dir, str(queryid) + '.txt')
+        with open(file_name, 'r') as f:
+            analyzed_plan = f.readlines()
+        analyzed_plan = [[plan] for plan in analyzed_plan]
+        return [analyzed_plan]
+    
 
     def get_result_verbose(query):
         conn = psycopg2.connect(**conn_params)
@@ -45,36 +42,34 @@ def get_raw_plans(data_dir, dataset):
             result.append([row[0]])
         return result
 
-    # new_mem_csv = os.path.join(data_dir, dataset, 'raw_data', 'new_mem_info.csv')
-    # csv_header = 'queryid,peakmem,time'
-    # with open(new_mem_csv, 'w') as f:
-    #     f.write(csv_header+'\n')
 
     df=pd.read_csv(os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv'))
     number=df.shape[0]
-    # if dataset == 'tpcds':
-    #     number = round(number *0.711) # to make the number of queries roughly equal to TPC-H
 
     dir = os.path.join(data_dir, dataset, 'raw_data', 'query_dir')
-    for i in tqdm(range(1, number+1)):
-        file_name = os.path.join(dir, str(i) + '.sql')
+    analyzed_plan_dir = os.path.join(data_dir, dataset, 'raw_data', 'analyzed_plan_dir')
+    for i in tqdm(range(number)):
+        queryid = int(df.loc[i, 'queryid'])
+        peakmem = int(df.loc[i, 'peakmem'])
+        time = float(df.loc[i, 'time'])
+        file_name = os.path.join(dir, str(queryid) + '.sql')
         with open(file_name, 'r') as f:
             sql = f.read().strip()
         try:
             plan_tuple = {}
-            analyze_query = "explain analyze " + sql
             verbose_query = "explain verbose " + sql
-            plan_tuple['analyze_plans']=get_result_analyze(analyze_query)
+            plan_tuple['analyze_plans']=get_result_analyze(queryid, analyzed_plan_dir)
             plan_tuple['verbose_plan']=get_result_verbose(verbose_query)
             plan_tuple['sql'] = sql
-            plan_tuple['peakmem'] = int(df.loc[i-1, 'peakmem'])
-            plan_tuple['queryid'] = int(df.loc[i-1, 'queryid'])
+            plan_tuple['peakmem'] = peakmem
+            plan_tuple['time'] = time
+            plan_tuple['queryid'] = queryid
             plan['query_list'].append(plan_tuple)
-            assert i == df.loc[i-1, 'queryid'], f"queryid {i} does not match with the index in mem_info.csv"
+            # assert i == df.loc[i-1, 'queryid'], f"queryid {i} does not match with the index in mem_info.csv"
             # with open(new_mem_csv, 'a') as f:
             #     f.write(f"{i},{df.loc[i-1, 'peakmem']}\n")
         except Exception as e:
-            print(f"Error in query {i}: {e}")
+            print(f"Error in query {queryid}: {e}")
 
 
     raw_plan_path = os.path.join(data_dir, dataset, 'zsce', 'raw_plan.json')
@@ -85,5 +80,5 @@ def get_raw_plans(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpcds_sf1']:
+    for dataset in ['tpch_sf1']:
         get_raw_plans(data_dir, dataset)
