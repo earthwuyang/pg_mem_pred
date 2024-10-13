@@ -19,6 +19,16 @@ def generate_string_stats(data_dir, dataset, force=True, max_sample_vals=100000,
     schema = load_schema_json(dataset)
     column_stats = load_column_statistics(dataset)
 
+    column_type_file = f'cross_db_benchmark/datasets/{dataset}/column_type.json'
+    if not os.path.exists(column_type_file):
+        print(f"column types not extracted, {column_type_file} does not exist. See cross_db_benchmark/datasets/tpc_ds/scripts/script_to_get_column_type.py first.")
+        exit()
+    with open(column_type_file) as f:
+        column_type = json.load(f)
+    tables = {}
+    for table, columns in column_type.items():
+        tables[table] = columns.keys()
+
     cols_with_freq_words = 0
     string_stats = dict()
     for table, cols in vars(column_stats).items():
@@ -29,7 +39,7 @@ def generate_string_stats(data_dir, dataset, force=True, max_sample_vals=100000,
         if verbose:
             print(f"Generating string statistics for {table}")
 
-        df_table = pd.read_csv(table_dir, nrows=max_sample_vals, **vars(schema.csv_kwargs))
+        df_table = pd.read_csv(table_dir, nrows=max_sample_vals, **vars(schema.csv_kwargs), names=tables[table])
 
         for c, col_stats in vars(cols).items():
             if col_stats.datatype in {str(Datatype.CATEGORICAL), str(Datatype.MISC)}:

@@ -5,14 +5,16 @@
 
 ## Usage: for each dataset, follow the steps below:
 
+create database, create tables, load data into tables(scripts/impor_data.py).
+
 run `python zsce/cross_db_benchmark/datasets/*/scripts/script_to_get_column_type.py` to get column type for each table in dataset, which outputs `column_type.json`.
 
-run `zsce/generate_column_stats.py` and `zsce/generate_string_stats.py`
+run `zsce/generate_column_stats.py` and `zsce/generate_string_stats.py`. need to modify the name of the dataset, e.g 'tpch_sf1'.
 
-run `zsce/generate_zsce_queries.py` to generate zsce queries (random sampling of joins and predicates).
+run `zsce/generate_zsce_queries.py` to generate zsce queries (random sampling of joins and predicates). need to modify the name of the dataset, e.g 'tpch_sf1'.
 
 
-run `python src/datasets/prepare_data/execute_workload.py` execute worklods and get mem info and time info as well as writing the output of explain analyze to analyzed_plan_dir (with queryid as filename). pass arguments `--dataset_dir` and `--dataset` to specify the dataset_dir and dataset correspondingly.
+run `python src/preprocessing/execute_workload.py` execute worklods and get mem info and time info as well as writing the output of explain analyze to analyzed_plan_dir (with queryid as filename). pass arguments `--dataset_dir` and `--dataset` to specify the dataset_dir and dataset correspondingly.
 `SET log_statement_stats = on` is needed to enable logging memory usage.
 
 copy those logs to pg_mem_data/pg_log, e.g. from /usr/local/pgsql/data/log.

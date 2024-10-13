@@ -32,7 +32,7 @@ if __name__ == '__main__':
         os.makedirs(args.workload_dir)
 
     workload_gen_setups = []
-    for dataset in ['tpch_sf1']:
+    for dataset in ['tpcds_sf1']:
         for workload_name, workload_args in workload_defs.items():
             workload_path = os.path.join(args.workload_dir, dataset, f'{workload_name}.sql')
             workload_gen_setups.append((dataset, workload_path, 5, workload_args))

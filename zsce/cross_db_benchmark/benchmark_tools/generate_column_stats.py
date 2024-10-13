@@ -84,6 +84,11 @@ def generate_stats(data_dir, dataset, force=True):
     with open(column_type_file) as f:
         column_type = json.load(f)
 
+    tables = {}
+    for table, columns in column_type.items():
+        tables[table] = columns.keys()
+    
+
     # read individual table csvs and derive statistics
     joint_column_stats = dict()
     for t in schema.tables:
@@ -93,7 +98,7 @@ def generate_stats(data_dir, dataset, force=True):
         assert os.path.exists(data_dir), f"Could not find table csv {table_dir}"
         print(f"Generating statistics for {t}")
 
-        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs))
+        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t])
 
         for column in df_table.columns:
             # print(f"column {column}")
