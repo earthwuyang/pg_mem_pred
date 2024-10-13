@@ -103,7 +103,7 @@ def get_database_stats(dataset):
 
 data_dir = '/home/wuy/DB/pg_mem_data'
 
-dataset_list = ['tpcds_sf1']
+dataset_list = ['tpch_sf10']
 for dataset in dataset_list:
     database_stats = get_database_stats(dataset)
     # print(json.dumps(database_stats))

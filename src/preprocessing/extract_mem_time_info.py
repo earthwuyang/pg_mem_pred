@@ -83,5 +83,5 @@ def extract_mem_info(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir='/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpcds_sf1']:
+    for dataset in ['tpch_sf10']:
         extract_mem_info(data_dir, dataset)

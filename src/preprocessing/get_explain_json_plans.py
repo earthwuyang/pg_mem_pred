@@ -52,5 +52,5 @@ def get_explain_json_plans(data_dir, dataset):
 
 
 data_dir = '/home/wuy/DB/pg_mem_data'
-for dataset in ['tpch_sf1']:
+for dataset in ['tpch_sf10']:
     get_explain_json_plans(data_dir, dataset)
