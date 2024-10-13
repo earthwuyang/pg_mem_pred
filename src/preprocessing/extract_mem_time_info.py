@@ -4,6 +4,8 @@ import psycopg2
 from tqdm import tqdm
 import argparse
 import json
+import argparse
+
 # os.makedirs('pg_log', exist_ok=True)
 # os.system('sudo cp -r /usr/local/pgsql/data/log/* pg_log')
 # cp -r /usr/local/pgsql/data/log/* /home/wuy/DB/pg_mem_pred/pg_log
@@ -89,5 +91,9 @@ def extract_mem_info(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir='/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch_sf1']:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', nargs='+', type=str, default=['tpch_sf1'])
+    args = argparser.parse_args()
+
+    for dataset in args.dataset:
         extract_mem_info(data_dir, dataset)

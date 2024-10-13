@@ -3,8 +3,9 @@
 `pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113`
 `pip install -r requirements.txt`
 
-## Usage
-run `python zsce/cross_db_benchmark/datasets/tpc_h/scripts/script_to_get_column_type.py` to get column type for each table in TPC-H dataset, which outputs `column_type.json`.
+## Usage: for each dataset, follow the steps below:
+
+run `python zsce/cross_db_benchmark/datasets/*/scripts/script_to_get_column_type.py` to get column type for each table in dataset, which outputs `column_type.json`.
 
 run `zsce/generate_column_stats.py` and `zsce/generate_string_stats.py`
 
