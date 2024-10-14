@@ -11,16 +11,16 @@ Example content: {"user":"wuy", "password":"wuy","host":"localhost", "port":5432
 
 ### create databases from mysql relational database server
 create database, create tables, load data into tables(scripts/impor_data.py).
-run `python src/preprocessing/export_data_2.py` to download data from relational database mariadb server.
-run `python src/preprocessing/import_data_2.py` to import data into local postgresql database.
+run `python src/preprocessing/export_data.py` to download data from relational database mariadb server.
+run `python src/preprocessing/import_data.py` to import data into local postgresql database.
 
 ### create tpch and tpcds
 put tpch data csv files in /data/datasets/tpch_sf1
 put tpdcs data csv files in /data/datasets/tpcds_sf1
 `/data/datasets/tpch-kit/import_data.sh` to import data into local postgresql database.
 `/data/datasets/tpcds-kit/import_data.sh` to import data into local postgresql database.
-analyze tpch dataset, and tpdcs dataset.
 
+run `python src/preprocessing/analyze_datasets.py` to analyze datasets
 
 run `python src/preprocessing/get_column_type_for_databases.py` to get column type for dataset, which outputs `column_type.json` in each dataset directory.
 
@@ -49,7 +49,7 @@ The script also write explain verbose format json of each plan to plan_dir (with
 
 
 ### for zsce method:
-run `python zsce/get_raw_plans_2.py --dataset tpch_sf1 tpcds_sf1` that gets raw_plans.json for zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'.   Note that this will take a long time.
+run `python zsce/get_raw_plans.py --dataset tpch_sf1 tpcds_sf1` that gets raw_plans.json for zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'.   Note that this will take a long time.
 
 run `python zsce/parse_plans.py --dataset tpch_sf1 tpcds_sf1` to parse 'raw_plans.json' into 'parsed_plans.json'. Need to modify the name of the dataset, e.g 'tpch_sf1'
 

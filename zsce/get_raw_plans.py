@@ -6,6 +6,48 @@ from tqdm import tqdm
 import json
 import pandas as pd
 import argparse
+from multiprocessing import Pool, cpu_count
+from functools import partial
+
+def get_result_analyze(queryid, analyzed_plan_dir):
+    file_name = os.path.join(analyzed_plan_dir, str(queryid) + '.txt')
+    with open(file_name, 'r') as f:
+        analyzed_plan = f.readlines()
+    analyzed_plan = [[plan] for plan in analyzed_plan]
+    return [analyzed_plan]
+
+def get_result_verbose(query, conn_params):
+    conn = psycopg2.connect(**conn_params)
+    cur = conn.cursor()
+    cur.execute(query)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    result = []
+    for row in rows:
+        result.append([row[0]])
+    return result
+
+def process_query(i, df, dir, analyzed_plan_dir, conn_params):
+    queryid = int(df.loc[i, 'queryid'])
+    peakmem = int(df.loc[i, 'peakmem'])
+    time = float(df.loc[i, 'time'])
+    file_name = os.path.join(dir, str(queryid) + '.sql')
+    with open(file_name, 'r') as f:
+        sql = f.read().strip()
+    try:
+        plan_tuple = {}
+        verbose_query = "explain verbose " + sql
+        plan_tuple['analyze_plans'] = get_result_analyze(queryid, analyzed_plan_dir)
+        plan_tuple['verbose_plan'] = get_result_verbose(verbose_query, conn_params)
+        plan_tuple['sql'] = sql
+        plan_tuple['peakmem'] = peakmem
+        plan_tuple['time'] = time
+        plan_tuple['queryid'] = queryid
+        return plan_tuple
+    except Exception as e:
+        print(f"Error in query {queryid}: {e}")
+        return None
 
 def get_raw_plans(data_dir, dataset):
     with open(os.path.join(os.path.dirname(__file__), '../conn.json')) as f:
@@ -17,61 +59,27 @@ def get_raw_plans(data_dir, dataset):
         "host": conn_params['host'],
         "port": conn_params['port']
     }
-    plan={}
-    plan['query_list']=[]
+    plan = {}
+    plan['query_list'] = []
     plan['database_stats'] = collect_db_statistics(conn_params)
-    plan['run_kwargs']={'hardware': 'qh1'}
-    plan['total_time_secs']=0
+    plan['run_kwargs'] = {'hardware': 'qh1'}
+    plan['total_time_secs'] = 0
 
-    def get_result_analyze(queryid, analyzed_plan_dir):
-        file_name = os.path.join(analyzed_plan_dir, str(queryid) + '.txt')
-        with open(file_name, 'r') as f:
-            analyzed_plan = f.readlines()
-        analyzed_plan = [[plan] for plan in analyzed_plan]
-        return [analyzed_plan]
-    
-
-    def get_result_verbose(query):
-        conn = psycopg2.connect(**conn_params)
-        cur = conn.cursor()
-        cur.execute(query)
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        result=[]
-        for row in rows:
-            result.append([row[0]])
-        return result
-
-
-    df=pd.read_csv(os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv'))
-    number=df.shape[0]
+    df = pd.read_csv(os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv'))
+    number = df.shape[0]
 
     dir = os.path.join(data_dir, dataset, 'raw_data', 'query_dir')
     analyzed_plan_dir = os.path.join(data_dir, dataset, 'raw_data', 'analyzed_plan_dir')
-    for i in tqdm(range(number)):
-        queryid = int(df.loc[i, 'queryid'])
-        peakmem = int(df.loc[i, 'peakmem'])
-        time = float(df.loc[i, 'time'])
-        file_name = os.path.join(dir, str(queryid) + '.sql')
-        with open(file_name, 'r') as f:
-            sql = f.read().strip()
-        try:
-            plan_tuple = {}
-            verbose_query = "explain verbose " + sql
-            plan_tuple['analyze_plans']=get_result_analyze(queryid, analyzed_plan_dir)
-            plan_tuple['verbose_plan']=get_result_verbose(verbose_query)
-            plan_tuple['sql'] = sql
-            plan_tuple['peakmem'] = peakmem
-            plan_tuple['time'] = time
-            plan_tuple['queryid'] = queryid
-            plan['query_list'].append(plan_tuple)
-            # assert i == df.loc[i-1, 'queryid'], f"queryid {i} does not match with the index in mem_info.csv"
-            # with open(new_mem_csv, 'a') as f:
-            #     f.write(f"{i},{df.loc[i-1, 'peakmem']}\n")
-        except Exception as e:
-            print(f"Error in query {queryid}: {e}")
 
+    # Create a partial function to pass arguments to process_query
+    process_query_partial = partial(process_query, df=df, dir=dir, analyzed_plan_dir=analyzed_plan_dir, conn_params=conn_params)
+
+    # Use multiprocessing to process queries in parallel
+    with Pool(processes=cpu_count()) as pool:
+        query_plans = list(tqdm(pool.imap(process_query_partial, range(number)), total=number))
+
+    # Filter out None values in case of errors
+    plan['query_list'] = [qp for qp in query_plans if qp is not None]
 
     raw_plan_path = os.path.join(data_dir, dataset, 'zsce', 'raw_plan.json')
     if not os.path.exists(os.path.dirname(raw_plan_path)):
