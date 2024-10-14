@@ -1,0 +1,159 @@
+{
+  "l_airline_id": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_airport": {
+    "code": "char",
+    "description": "char"
+  },
+  "l_airport_id": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_airport_seq_id": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_cancellation": {
+    "code": "char",
+    "description": "char"
+  },
+  "l_city_market_id": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_deparrblk": {
+    "code": "char",
+    "description": "char"
+  },
+  "l_distance_group_250": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_diversions": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_months": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_ontime_delay_groups": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_quarters": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_state_abr_aviation": {
+    "code": "char",
+    "description": "char"
+  },
+  "l_state_fips": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_unique_carriers": {
+    "code": "char",
+    "description": "char"
+  },
+  "l_weekdays": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_world_area_codes": {
+    "code": "int",
+    "description": "char"
+  },
+  "l_yesno_resp": {
+    "code": "int",
+    "description": "char"
+  },
+  "on_time_on_time_performance_2016_1": {
+    "year": "int",
+    "quarter": "int",
+    "month": "int",
+    "dayofmonth": "int",
+    "dayofweek": "int",
+    "flightdate": "date",
+    "uniquecarrier": "char",
+    "airlineid": "int",
+    "carrier": "char",
+    "tailnum": "char",
+    "flightnum": "int",
+    "originairportid": "int",
+    "originairportseqid": "int",
+    "origincitymarketid": "int",
+    "origin": "char",
+    "origincityname": "char",
+    "originstate": "char",
+    "originstatefips": "int",
+    "originstatename": "char",
+    "originwac": "int",
+    "destairportid": "int",
+    "destairportseqid": "int",
+    "destcitymarketid": "int",
+    "dest": "char",
+    "destcityname": "char",
+    "deststate": "char",
+    "deststatefips": "int",
+    "deststatename": "char",
+    "destwac": "int",
+    "crsdeptime": "int",
+    "deptime": "int",
+    "depdelay": "float",
+    "depdelayminutes": null,
+    "depdel15": "int",
+    "departuredelaygroups": "int",
+    "deptimeblk": "char",
+    "taxiout": null,
+    "wheelsoff": "int",
+    "wheelson": "int",
+    "taxiin": null,
+    "crsarrtime": "int",
+    "arrtime": "int",
+    "arrdelay": "float",
+    "arrdelayminutes": null,
+    "arrdel15": "int",
+    "arrivaldelaygroups": "int",
+    "arrtimeblk": "char",
+    "cancelled": "int",
+    "cancellationcode": "char",
+    "diverted": "int",
+    "crselapsedtime": null,
+    "actualelapsedtime": null,
+    "airtime": null,
+    "flights": null,
+    "distance": null,
+    "distancegroup": "int",
+    "carrierdelay": "float",
+    "weatherdelay": "float",
+    "nasdelay": "float",
+    "securitydelay": "float",
+    "lateaircraftdelay": "float",
+    "firstdeptime": "float",
+    "totaladdgtime": "float",
+    "longestaddgtime": "float",
+    "divairportlandings": "int",
+    "divreacheddest": "float",
+    "divactualelapsedtime": "float",
+    "divarrdelay": "float",
+    "divdistance": "float",
+    "div1airport": "char",
+    "div1airportid": "int",
+    "div1airportseqid": "int",
+    "div1wheelson": "float",
+    "div1totalgtime": "float",
+    "div1longestgtime": "float",
+    "div1wheelsoff": "float",
+    "div1tailnum": "char",
+    "div2airport": "char",
+    "div2airportid": "int",
+    "div2airportseqid": "int",
+    "div2wheelson": "float",
+    "div2totalgtime": "float",
+    "div2longestgtime": "float"
+  }
+}

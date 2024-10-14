@@ -34,7 +34,7 @@ def main(data_dir, dataset):
                     conn = psycopg2.connect(**conn_params)
                     cur = conn.cursor()
                     cur.execute("SET log_statement_stats = on")
-                    cur.execute("SET statement_timeout = 300000")
+                    cur.execute("SET statement_timeout = 30000")
                     analyze_query = f"/*{dataset} No.{queryid}*/ explain analyze " + query
                     cur.execute(analyze_query)
                     rows = cur.fetchall()
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data')    
 
-    argparser.add_argument('--dataset', type=str, default='tpch_sf1')
+    argparser.add_argument('--dataset', type=str, required=True)
 
     args = argparser.parse_args()
     main(args.data_dir, args.dataset)

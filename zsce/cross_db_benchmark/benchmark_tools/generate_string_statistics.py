@@ -11,7 +11,7 @@ from cross_db_benchmark.benchmark_tools.utils import load_schema_json, load_colu
 def generate_string_stats(data_dir, dataset, force=True, max_sample_vals=100000, min_str_occ=0.01,
                           verbose=False):
     # read the schema file
-    string_stats_path = os.path.join('cross_db_benchmark/datasets/', dataset, 'string_statistics.json')
+    string_stats_path = os.path.join(os.path.dirname(__file__), '../../cross_db_benchmark/datasets/', dataset, 'string_statistics.json')
     if os.path.exists(string_stats_path) and not force:
         print("String stats already created")
         return
@@ -19,7 +19,7 @@ def generate_string_stats(data_dir, dataset, force=True, max_sample_vals=100000,
     schema = load_schema_json(dataset)
     column_stats = load_column_statistics(dataset)
 
-    column_type_file = f'cross_db_benchmark/datasets/{dataset}/column_type.json'
+    column_type_file = os.path.join(os.path.dirname(__file__), f'../../cross_db_benchmark/datasets/{dataset}/column_type.json')
     if not os.path.exists(column_type_file):
         print(f"column types not extracted, {column_type_file} does not exist. See cross_db_benchmark/datasets/tpc_ds/scripts/script_to_get_column_type.py first.")
         exit()
@@ -39,7 +39,7 @@ def generate_string_stats(data_dir, dataset, force=True, max_sample_vals=100000,
         if verbose:
             print(f"Generating string statistics for {table}")
 
-        df_table = pd.read_csv(table_dir, nrows=max_sample_vals, **vars(schema.csv_kwargs), names=tables[table])
+        df_table = pd.read_csv(table_dir, nrows=max_sample_vals, **vars(schema.csv_kwargs), names=tables[table.lower()])
 
         for c, col_stats in vars(cols).items():
             if col_stats.datatype in {str(Datatype.CATEGORICAL), str(Datatype.MISC)}:

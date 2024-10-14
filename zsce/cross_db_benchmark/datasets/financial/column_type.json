@@ -1,0 +1,73 @@
+{
+  "account": {
+    "account_id": "int",
+    "district_id": "int",
+    "frequency": "char",
+    "date": "char"
+  },
+  "card": {
+    "card_id": "int",
+    "disp_id": "int",
+    "type": "char",
+    "issued": "char"
+  },
+  "client": {
+    "client_id": "int",
+    "gender": "char",
+    "birth_date": "char",
+    "district_id": "int"
+  },
+  "disp": {
+    "disp_id": "int",
+    "client_id": "int",
+    "account_id": "int",
+    "type": "char"
+  },
+  "district": {
+    "district_id": "int",
+    "a2": "char",
+    "a3": "char",
+    "a4": "int",
+    "a5": "int",
+    "a6": "int",
+    "a7": "int",
+    "a8": "int",
+    "a9": "int",
+    "a10": "float",
+    "a11": "int",
+    "a12": "float",
+    "a13": "float",
+    "a14": "int",
+    "a15": "int",
+    "a16": "int"
+  },
+  "loan": {
+    "loan_id": "int",
+    "account_id": "int",
+    "date": "char",
+    "amount": "int",
+    "duration": "int",
+    "payments": "float",
+    "status": "char"
+  },
+  "order": {
+    "order_id": "int",
+    "account_id": "int",
+    "bank_to": "char",
+    "account_to": "int",
+    "amount": "float",
+    "k_symbol": "char"
+  },
+  "trans": {
+    "trans_id": "int",
+    "account_id": "int",
+    "date": "char",
+    "type": "char",
+    "operation": "char",
+    "amount": "int",
+    "balance": "int",
+    "k_symbol": "char",
+    "bank": "char",
+    "account": "int"
+  }
+}

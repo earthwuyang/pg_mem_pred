@@ -70,14 +70,14 @@ def column_stats(column, columntype, categorical_threshold=10000):
 
 def generate_stats(data_dir, dataset, force=True):
     # read the schema file
-    column_stats_path = os.path.join('cross_db_benchmark/datasets/', dataset, 'column_statistics.json')
+    column_stats_path = os.path.join(os.path.dirname(__file__), f'../../cross_db_benchmark/datasets/{dataset}/column_statistics.json')
     if os.path.exists(column_stats_path) and not force:
         print("Column stats already created")
         return
 
     schema = load_schema_json(dataset)
 
-    column_type_file = f'cross_db_benchmark/datasets/{dataset}/column_type.json'
+    column_type_file = os.path.join(os.path.dirname(__file__), f'../../cross_db_benchmark/datasets/{dataset}/column_type.json')
     if not os.path.exists(column_type_file):
         print(f"column types not extracted, {column_type_file} does not exist. See cross_db_benchmark/datasets/tpc_ds/scripts/script_to_get_column_type.py first.")
         exit()
@@ -92,19 +92,18 @@ def generate_stats(data_dir, dataset, force=True):
     # read individual table csvs and derive statistics
     joint_column_stats = dict()
     for t in schema.tables:
-
         column_stats_table = dict()
         table_dir = os.path.join(data_dir, f'{t}.csv')
         assert os.path.exists(data_dir), f"Could not find table csv {table_dir}"
         print(f"Generating statistics for {t}")
-
-        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t])
+        # print(f"tables {tables}")
+        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t.lower()])
 
         for column in df_table.columns:
             # print(f"column {column}")
             # print(f"df_table:\n {df_table}")
             # print(f"column_type {column_type}")
-            column_stats_table[column] = column_stats(df_table[column], columntype = column_type[t][column])
+            column_stats_table[column] = column_stats(df_table[column], columntype = column_type[t.lower()][column])
 
         joint_column_stats[t] = column_stats_table
 

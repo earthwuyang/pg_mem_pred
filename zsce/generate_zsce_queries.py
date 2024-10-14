@@ -26,17 +26,23 @@ def workload_gen(input):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--workload_dir', type=str, default=os.path.join(os.path.dirname(__file__), '../../pg_mem_data/workloads'), help='Directory to store generated workloads')
+    # parser.add_argument('--dataset', nargs='+', default=['tpc_h'], help='Dataset to generate workloads for')
     args = parser.parse_args()
+
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+    from database_list import database_list
+
 
     if not os.path.exists(args.workload_dir):
         os.makedirs(args.workload_dir)
 
     workload_gen_setups = []
-    for dataset in ['tpcds_sf1']:
+    for dataset in database_list:
         for workload_name, workload_args in workload_defs.items():
             workload_path = os.path.join(args.workload_dir, dataset, f'{workload_name}.sql')
             workload_gen_setups.append((dataset, workload_path, 5, workload_args))
-            print(f"Generating workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5")
+            # print(f"Generating workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5")
 
     start_t = time.perf_counter()
     proc = mp.cpu_count() - 2
