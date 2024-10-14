@@ -2,7 +2,10 @@ import os
 import json
 import pandas as pd
 from tqdm import tqdm
+import argparse
+
 def get_explain_json_plans(data_dir, dataset):
+    print(f"Processing {dataset}:")
     mem_list_file = os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv')
     query_dir = os.path.join(data_dir, dataset, 'raw_data','query_dir')
     plan_dir = os.path.join(data_dir, dataset, 'raw_data','plan_dir')
@@ -26,6 +29,11 @@ def get_explain_json_plans(data_dir, dataset):
     #     json.dump(json_plans, f)
 
     plans = json_plans
+    print(f"dumping total {len(plans)} plans")
+    with open(os.path.join(data_dir, dataset, 'total_plans.json'), 'w') as f:
+        json.dump(plans, f)
+    print(f"{len(plans)} plans dumped to {os.path.join(data_dir, dataset, 'total_plans.json')}")
+
     train_size = int(0.8 * len(plans))
     val_size = int(0.1 * len(plans))
     test_size = len(plans) - train_size - val_size
@@ -50,7 +58,10 @@ def get_explain_json_plans(data_dir, dataset):
         json.dump(test_plans, f)
     print(f"test plans saved to {os.path.join(data_dir, dataset, 'test_plans.json')}")
 
-
-data_dir = '/home/wuy/DB/pg_mem_data'
-for dataset in ['tpch_sf1']:
-    get_explain_json_plans(data_dir, dataset)
+if __name__ == '__main__':
+    data_dir = '/home/wuy/DB/pg_mem_data'
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', nargs='+', help='dataset names', type=str, default=['tpch_sf1'])
+    args = argparser.parse_args()
+    for dataset in args.dataset:
+        get_explain_json_plans(data_dir, dataset)

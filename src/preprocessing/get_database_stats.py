@@ -1,16 +1,26 @@
 import psycopg2
 import json
 import os
+import argparse
 
 def get_database_stats(dataset):
     database = dataset
     
+    # Load connection information
+    with open(os.path.join(os.path.dirname(__file__), '../../conn.json')) as f:
+        conn_info = json.load(f)
+
+    conn_params = {
+        "user": conn_info['user'],
+        "password": conn_info['password'],
+        "host": conn_info['host'],
+        "port": conn_info['port'],
+        "dbname": database
+    }
+
     # Connect to PostgreSQL
     conn = psycopg2.connect(
-        dbname=f"{database}",
-        user="wuy",
-        password="",
-        host="localhost",
+        **conn_params
     )
     
     cur = conn.cursor()
@@ -101,13 +111,19 @@ def get_database_stats(dataset):
     # Convert the dictionary to a JSON string (if needed)
     return database_stats
 
-data_dir = '/home/wuy/DB/pg_mem_data'
 
-dataset_list = ['tpcds_sf1']
-for dataset in dataset_list:
-    database_stats = get_database_stats(dataset)
-    # print(json.dumps(database_stats))
-    json_file = os.path.join(data_dir, dataset, 'database_stats.json')
-    with open(json_file, 'w') as f:
-        json.dump(database_stats, f, indent=2)
+def main():
+    data_dir = '/home/wuy/DB/pg_mem_data'
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', nargs='+', type=str, default=['tpch_sf1'])
+    args = argparser.parse_args()
+    dataset_list = args.dataset
+    for dataset in dataset_list:
+        database_stats = get_database_stats(dataset)
+        # print(json.dumps(database_stats))
+        json_file = os.path.join(data_dir, dataset, 'database_stats.json')
+        with open(json_file, 'w') as f:
+            json.dump(database_stats, f, indent=2)
 
+if __name__ == '__main__':
+    main()

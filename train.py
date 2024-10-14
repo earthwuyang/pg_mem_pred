@@ -41,6 +41,7 @@ def get_logger(logfile):
 if __name__ == "__main__":# Set random seed for reproducibility
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--db_config', type=str, default='conn.json', help='database configuration file')
     parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
     parser.add_argument('--train_dataset', type=str, nargs='+', default=['tpch_sf1'], help='dataset name. train and validation will use the same dataset')
     parser.add_argument('--test_dataset', type=str, nargs='+', default=['tpch_sf1'], help='dataset name. test will use the same dataset')

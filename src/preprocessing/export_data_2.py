@@ -46,6 +46,7 @@ def export_table(dataset, mysql_dataset, table, sep, data_dir):
             print(f"Exporting {table} of {dataset}, total rows: {num_rows}")
             for row in tqdm(all_rows, total=num_rows, desc=f"Exporting {table} of {dataset}"):
                 f.write(sep.join(map(str, row)) + '\n')
+        print(f"Exported {table} of {dataset} to {output_file}")
 
         cursor.close()
     except Exception as e:

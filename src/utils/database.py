@@ -99,10 +99,10 @@ def get_tables(conn):
         return []
 
 
-def get_db_stats(dataset):
+def get_db_stats(dataset, conn_info):
     database = dataset
     db_stats = {}
-    conn = psycopg2.connect(database=database, user="wuy", password='', host='localhost')
+    conn = psycopg2.connect(**conn_info)
 
     unique_data_types = get_unique_data_types(conn)
     db_stats['unique_data_types'] = unique_data_types

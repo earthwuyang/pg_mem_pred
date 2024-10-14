@@ -5,7 +5,7 @@ from tqdm import tqdm
 import argparse
 import json
 
-def main(data_dir, dataset):
+def execute_workload(data_dir, dataset, cap_queries):
     with open(os.path.join(os.path.dirname(__file__), '../../conn.json')) as f:
         conn_params = json.load(f)
     conn_params = {
@@ -22,6 +22,7 @@ def main(data_dir, dataset):
     os.makedirs(query_dir, exist_ok=True)
     os.makedirs(analyzed_plan_dir, exist_ok=True)
 
+    count = 0
     with open(workload_file, 'r') as f:
         queries = f.read().split('\n')
         for queryid, query in tqdm(enumerate(queries), total=len(queries)):
@@ -44,16 +45,23 @@ def main(data_dir, dataset):
                             f.write(str(row[0]) + '\n')
                     cur.close()     
                     conn.close()
+                    count += 1
+                    if count >= cap_queries:
+                        print(f"Cap of {cap_queries} queries reached. Exiting.")
+                        break
                 except Exception as e:
                     print(e)
                     continue
-    conn.close()
 
-if __name__ == '__main__':
+def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data')    
 
     argparser.add_argument('--dataset', type=str, required=True)
+    argparser.add_argument('--cap_queries', type=int, default=50000)
 
     args = argparser.parse_args()
-    main(args.data_dir, args.dataset)
+    execute_workload(args.data_dir, args.dataset, args.cap_queries)
+
+if __name__ == '__main__':
+    main()

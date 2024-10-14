@@ -9,6 +9,7 @@ from sklearn.preprocessing import RobustScaler, MinMaxScaler, FunctionTransforme
 from torch_geometric.loader import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 import functools
+from time import time
 
 from src.dataset.dataset import load_json
 from src.models.GIN import GIN
@@ -24,8 +25,8 @@ from src.models.HeteroGraphSAGE import HeteroGraphSAGE
 # from src.models.zero_shot_models.specific_models.postgres_zero_shot import PostgresZeroShotModel
 from src.training.metrics import compute_metrics
 from src.dataset.dataset import QueryPlanDataset
-from src.dataset.zsce_plan_dataset import ZSCEPlanDataset
-from src.dataset.zsce_plan_collator import plan_collator
+# from src.dataset.zsce_plan_dataset import ZSCEPlanDataset
+# from src.dataset.zsce_plan_collator import plan_collator
 
 MODELS = {
     'GIN': GIN,
@@ -164,33 +165,27 @@ def train_model(logger, args):
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
 
-    database_stats_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'database_stats.json')  # CAUTION
-    with open(database_stats_file_path) as f:
-        db_statistics = json.load(f)
+    # database_stats_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'database_stats.json')  # CAUTION
+    # with open(database_stats_file_path) as f:
+    #     db_statistics = json.load(f)
+
+    with open(args.db_config) as f:
+        conn_info = json.load(f)
 
     if args.model == 'zsce':
         args.batch_size = 1
 
     # Load the dataset
     if not args.skip_train:
-        if args.model == 'zsce':
-            traindataset = ZSCEPlanDataset(dataset_dir, train_dataset, 'train', args.debug)
-            collate_fn = functools.partial(plan_collator, feature_statistics=statistics, db_statistics=db_statistics)
-            train_loader = TorchDataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=collate_fn)
-            for batch in train_loader:
-                print(batch)
-                while 1:pass
-            while 1:pass
-        else:
-            traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug)
-            logger.info('Train dataset size: {}'.format(len(traindataset)))
-            valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'val', statistics, args.debug)
-            logger.info('Val dataset size: {}'.format(len(valdataset)))
-        
-            train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-            val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug, conn_info)
+        logger.info('Train dataset size: {}'.format(len(traindataset)))
+        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'val', statistics, args.debug, conn_info)
+        logger.info('Val dataset size: {}'.format(len(valdataset)))
+    
+        train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-    testdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, test_dataset, 'test', statistics, args.debug)  
+    testdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, test_dataset, 'test', statistics, args.debug, conn_info)  
 
     logger.info('Test dataset size: {}'.format(len(testdataset)))
     
@@ -223,8 +218,11 @@ def train_model(logger, args):
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
     if not args.skip_train:
+        begin = time()
         train_epoch(logger, args.model, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs, args.device, statistics, 
                     args.mem_pred, args.time_pred)
+        time_elapse = time()-begin
+        print(f"training takes {time_elapse} seconds, equivalent to {time_elapse/3600:.4f} hours")
 
     model.load_state_dict(torch.load(best_model_path))
     avg_test_loss, metrics = validate_model(args.model, model, test_loader, criterion, statistics, args.device, args.mem_pred, args.time_pred)

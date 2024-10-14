@@ -122,12 +122,17 @@ def import_dataset(dataset, conn_params):
         conn.commit()
         print(f"Table creation SQL executed for dataset {database_name}.")
 
-    conn.close()
-
     # Use multiprocessing to process tables in parallel
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         pool.starmap(process_table, [(conn_params, dataset, table, sep) for table in tables])
 
+    # analyze the dataset after loading
+    with conn.cursor() as cur:
+        try:
+            cur.execute(f"ANALYZE;")
+            print(f"Dataset {database_name} analyzed successfully.")
+        except Exception as e:
+            print(f"Failed to analyze dataset {database_name}: {e}")
 
 def main():
     import sys

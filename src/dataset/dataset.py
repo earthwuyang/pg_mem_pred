@@ -22,12 +22,13 @@ def load_json(json_file):
 
     
 class QueryPlanDataset(Dataset):
-    def __init__(self, logger, model, encode_table_column, dataset_dir, dataset, mode, statistics, debug):
+    def __init__(self, logger, model, encode_table_column, dataset_dir, dataset, mode, statistics, debug, conn_info):
         super(QueryPlanDataset, self).__init__()
         self.logger = logger
         self.model = model
         self.statistics = statistics
         self.encode_table_column = encode_table_column
+        self.conn_info = conn_info
 
         database_stats_file_path = os.path.join(dataset_dir, dataset[0], 'database_stats.json')
         with open(database_stats_file_path, 'r') as f:
@@ -72,22 +73,15 @@ class QueryPlanDataset(Dataset):
         # logger.info(f"Processing query plans from {json_file_path}")
         plans = load_json(json_file_path)
     
-        # Database connection details
-        DB_CONFIG = {
-            'dbname': dataset,
-            'user': 'wuy',
-            'password': '',
-            'host': 'localhost',  # e.g., 'localhost'
-        }
         # Connect to PostgreSQL
-        conn = connect_to_db(DB_CONFIG)
+        conn = connect_to_db(self.conn_info)
         if not conn:
             raise Exception("Failed to connect to the database")
             exit(1)  # Exit if connection failed
         # Parse all query plans and create graphs
         graph_list = []
         if self.model.startswith('Hetero'):
-            db_stats = get_db_stats(dataset)
+            db_stats = get_db_stats(dataset, self.conn_info)
         for idx, plan in tqdm(enumerate(plans), total=len(plans)):
             peakmem = (plan['peakmem'] - self.statistics['peakmem']['center']) / self.statistics['peakmem']['scale']
             time = (plan['time'] - self.statistics['time']['center']) / self.statistics['time']['scale']

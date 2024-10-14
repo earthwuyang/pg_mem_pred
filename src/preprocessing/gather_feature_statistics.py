@@ -6,7 +6,7 @@ from tqdm import tqdm
 from sklearn.preprocessing import RobustScaler
 import numpy as np
 import collections
-
+import argparse
 
 def gather_feature_statistics(data_dir, dataset):
     def gather_values_recursively(json_dict, value_dict=None):
@@ -77,5 +77,8 @@ def gather_feature_statistics(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    dataset = 'tpcds_sf1'
-    gather_feature_statistics(data_dir, dataset)
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', nargs='+', type=str, default=['tpch_data'])
+    args = argparser.parse_args()
+    for dataset in args.dataset:
+        gather_feature_statistics(data_dir, dataset)
