@@ -18,6 +18,8 @@ class CustomEncoder(json.JSONEncoder):
             return obj.tolist()
         elif isinstance(obj, Datatype):
             return str(obj)
+        elif isinstance(obj, pd._libs.missing.NAType):
+            return None
         else:
             return super(CustomEncoder, self).default(obj)
 
@@ -77,7 +79,7 @@ def generate_stats(data_dir, dataset, force=True):
 
     schema = load_schema_json(dataset)
 
-    column_type_file = os.path.join(os.path.dirname(__file__), f'../../cross_db_benchmark/datasets/{dataset}/column_type.json')
+    column_type_file = os.path.join(os.path.dirname(__file__), f'../datasets/{dataset}/column_type.json')
     if not os.path.exists(column_type_file):
         print(f"column types not extracted, {column_type_file} does not exist. See cross_db_benchmark/datasets/tpc_ds/scripts/script_to_get_column_type.py first.")
         exit()
@@ -87,7 +89,19 @@ def generate_stats(data_dir, dataset, force=True):
     tables = {}
     for table, columns in column_type.items():
         tables[table] = columns.keys()
-    
+
+    # Define a mapping of the types in column_type to pandas dtypes
+    type_mapping = {
+        'char': 'str',   # Treat 'char' as string
+        'int': 'Int64',  # Use pandas' nullable integer type
+        'float': 'float', # Standard float type
+        'date': 'str'
+    }
+
+    # Generate the dtype argument for read_csv based on column_type
+    def get_dtypes_for_table(table, column_type):
+        return {col: type_mapping.get(col_type, 'str') for col, col_type in column_type[table].items()}
+
 
     # read individual table csvs and derive statistics
     joint_column_stats = dict()
@@ -96,14 +110,27 @@ def generate_stats(data_dir, dataset, force=True):
         table_dir = os.path.join(data_dir, f'{t}.csv')
         assert os.path.exists(data_dir), f"Could not find table csv {table_dir}"
         print(f"Generating statistics for {t}")
-        # print(f"tables {tables}")
-        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t.lower()])
+        # Get the dtype mapping for the current table
+        dtype_mapping = get_dtypes_for_table(t, column_type)
+        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t], dtype=dtype_mapping)
+
+        # # Function to check if a column has mixed types
+        # def has_mixed_types(series):
+        #     # Check if the column has more than one unique dtype (excluding NaNs)
+        #     return len(set(series.dropna().map(type))) > 1
+
+        # # Iterate over each column and convert columns with mixed types to string
+        # for col in df_table.columns:
+        #     if has_mixed_types(df_table[col]):
+        #         print(f"!!! Column '{col}' has mixed types. Converting to string.")
+        #         # Convert the entire column to string
+        #         df_table[col] = df_table[col].astype(str)
 
         for column in df_table.columns:
             # print(f"column {column}")
             # print(f"df_table:\n {df_table}")
             # print(f"column_type {column_type}")
-            column_stats_table[column] = column_stats(df_table[column], columntype = column_type[t.lower()][column])
+            column_stats_table[column] = column_stats(df_table[column], columntype = column_type[t][column])
 
         joint_column_stats[t] = column_stats_table
 

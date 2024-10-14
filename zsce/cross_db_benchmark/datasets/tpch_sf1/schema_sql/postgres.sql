@@ -1,5 +1,5 @@
 drop table if exists nation;
-create table nation
+CREATE TABLE nation
 (
     n_nationkey integer  not null,
     n_name      char(25) not null,
@@ -8,7 +8,7 @@ create table nation
 );
 
 drop table if exists region;
-create table region
+CREATE TABLE region
 (
     r_regionkey integer  not null,
     r_name      char(25) not null,
@@ -16,7 +16,7 @@ create table region
 );
 
 drop table if exists part;
-create table part
+CREATE TABLE part
 (
     p_partkey     integer        not null,
     p_name        varchar(55)    not null,
@@ -30,7 +30,7 @@ create table part
 );
 
 drop table if exists supplier;
-create table supplier
+CREATE TABLE supplier
 (
     s_suppkey   integer        not null,
     s_name      char(25)       not null,
@@ -42,7 +42,7 @@ create table supplier
 );
 
 drop table if exists partsupp;
-create table partsupp
+CREATE TABLE partsupp
 (
     ps_partkey    integer        not null,
     ps_suppkey    integer        not null,
@@ -52,7 +52,7 @@ create table partsupp
 );
 
 drop table if exists customer;
-create table customer
+CREATE TABLE customer
 (
     c_custkey    integer        not null,
     c_name       varchar(25)    not null,
@@ -65,7 +65,7 @@ create table customer
 );
 
 drop table if exists orders;
-create table orders
+CREATE TABLE orders
 (
     o_orderkey      integer        not null,
     o_custkey       integer        not null,
@@ -79,7 +79,7 @@ create table orders
 );
 
 drop table if exists lineitem;
-create table lineitem
+CREATE TABLE lineitem
 (
     l_orderkey      integer        not null,
     l_partkey       integer        not null,

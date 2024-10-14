@@ -5,6 +5,7 @@ import psycopg2
 from tqdm import tqdm
 import json
 import pandas as pd
+import argparse
 
 def get_raw_plans(data_dir, dataset):
     with open(os.path.join(os.path.dirname(__file__), '../conn.json')) as f:
@@ -80,5 +81,8 @@ def get_raw_plans(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch_sf1']:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', type=str, default=['tpch_sf1'], nargs='+')
+    args = argparser.parse_args()
+    for dataset in args.dataset:
         get_raw_plans(data_dir, dataset)

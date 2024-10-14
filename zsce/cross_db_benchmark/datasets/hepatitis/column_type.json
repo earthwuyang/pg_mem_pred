@@ -1,5 +1,5 @@
 {
-  "bio": {
+  "Bio": {
     "fibros": "char",
     "activity": "char",
     "b_id": "int"
@@ -8,7 +8,7 @@
     "m_id": "int",
     "sex": "char",
     "age": "char",
-    "type": "char"
+    "Type": "char"
   },
   "indis": {
     "got": "char",

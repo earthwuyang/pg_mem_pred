@@ -276,10 +276,18 @@ class PlanOperator(dict):
         return col_id
 
     def merge_recursively(self, node):
-        assert self.plan_parameters['op_name'] == node.plan_parameters['op_name']
-        assert len(self.children) == len(node.children)
+        print()
+        print(f"self.children {self.children}")
+        print()
+        print(f"node.children {node.children}")
+        print()
+        # assert self.plan_parameters['op_name'] == node.plan_parameters['op_name'], f"{self.plan_parameters['op_name']} != {node.plan_parameters['op_name']}"
+        if self.plan_parameters['op_name'] != node.plan_parameters['op_name']:
+            print(f"warning: in merging different operators {self.plan_parameters['op_name']} != {node.plan_parameters['op_name']}")
+        assert len(self.children) == len(node.children), f"children length mismatch {len(self.children)} != {len(node.children)}"
 
         self.plan_parameters.update(node.plan_parameters)
+        
         for self_c, c in zip(self.children, node.children):
             self_c.merge_recursively(c)
 

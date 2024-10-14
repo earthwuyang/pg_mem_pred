@@ -83,7 +83,8 @@ def sample_acyclic_aggregation_query(column_stats, string_stats, group_by_thresh
     if randstate.rand() < groupby_having_prob:
         idx = randstate.randint(0, len(aggregations))
         _, cols = aggregations[idx]
-        literal = sum([vars(vars(column_stats)[col[0]])[col[1]].mean for col in cols])
+        literal = sum([mean for col in cols 
+               if (mean := vars(vars(column_stats)[col[0]])[col[1]].mean) is not None])
         op = rand_choice(randstate, [Operator.LEQ, Operator.GEQ, Operator.NEQ])
         having_clause = (idx, literal, op)
 
@@ -256,7 +257,7 @@ def generate_workload(dataset, target_path, num_queries=100, max_no_joins=3, max
         relationships_table[table_r].append([column_r, table_l, column_l])
 
     queries = []
-    for i in tqdm(range(num_queries)):
+    for i in tqdm(range(num_queries), desc=f"{dataset}"):
         # sample query as long as it does not meet requirements
         tries = 0
         desired_query = False
@@ -679,6 +680,8 @@ def sample_predicates(column_stats, int_neq_predicate_threshold, no_predicates, 
     weights /= np.sum(weights)
     # we cannot sample more predicates than available columns
     no_predicates = min(no_predicates, len(possible_columns))
+    # print(f"len(possible_columns) {len(possible_columns)}")
+    # print(f"sum(weights) {np.sum(weights)}")
     predicate_col_idx = randstate.choice(range(len(possible_columns)), no_predicates, p=weights, replace=False)
     predicate_columns = [possible_columns[i] for i in predicate_col_idx]
     predicates = []
@@ -724,6 +727,8 @@ def analyze_columns(column_stats, group_by_treshold, join_tables, string_stats, 
 
 def sample_literal_from_percentiles(percentiles, randstate, round=False):
     start_idx = randstate.randint(0, len(percentiles) - 1)
+    if all(p is None for p in percentiles):
+        return 0
     if np.all(np.isnan(percentiles)):
         return np.nan
     literal = randstate.uniform(percentiles[start_idx], percentiles[start_idx + 1])

@@ -18,7 +18,7 @@
   },
   "probehnuto_mimo_penezenku": {
     "client_id": "int",
-    "month/year": "char",
+    "Month/Year": "char",
     "probehla_inzerce_mimo_penezenku": "char"
   }
 }

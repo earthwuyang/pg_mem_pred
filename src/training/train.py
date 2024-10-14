@@ -214,7 +214,7 @@ def train_model(logger, args):
     if not os.path.exists(best_model_dir):
         os.makedirs(best_model_dir)
     encode_table_column_flag = '_encode_table_column' if args.encode_table_column else ''
-    best_model_path = os.path.join(best_model_dir, f"{args.model}_{'_'.join(args.train_dataset)}{encode_table_column_flag}.pth")
+    best_model_path = os.path.join(best_model_dir, f"{args.model}_{'_'.join(args.train_dataset)}{encode_table_column_flag}_{'mem' if args.mem_pred else ''}_{'time' if args.time_pred else ''}_best.pth")
     early_stopping = EarlyStopping(logger, args.patience, best_model_path, verbose=True)
 
     if not args.skip_train:

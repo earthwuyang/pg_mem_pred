@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 
 def split(data_dir, dataset):
     source = os.path.join(data_dir, dataset, 'zsce', 'parsed_plan.json')
@@ -35,5 +36,8 @@ def split(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    for dataset in ['tpch_sf1']:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', type=str, default=['tpch_sf1'], nargs='+', help='datasets to split')
+    args = argparser.parse_args()
+    for dataset in args.dataset:
         split(data_dir, dataset)

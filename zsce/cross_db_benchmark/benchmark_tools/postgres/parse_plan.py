@@ -136,6 +136,13 @@ def parse_plans(run_stats, min_runtime=0, max_runtime=30000, parse_baseline=Fals
     no_filters = []
     op_perc = collections.defaultdict(int)
     for q in tqdm(run_stats.query_list): # query_list is a list of {'analyzed_plans', 'verbose_plan', 'sql'}
+        print()
+        print(f"analyzed_plans: {q.analyze_plans}")
+        print()
+        print(f"verbose_plan: {q.verbose_plan}")
+        print()
+        print(f"sql: {q.sql}")
+        print()
         # try:
         # either only parse explain part of query or skip entirely
         curr_explain_only = explain_only

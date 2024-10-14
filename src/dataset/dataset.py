@@ -30,10 +30,6 @@ class QueryPlanDataset(Dataset):
         self.encode_table_column = encode_table_column
         self.conn_info = conn_info
 
-        database_stats_file_path = os.path.join(dataset_dir, dataset[0], 'database_stats.json')
-        with open(database_stats_file_path, 'r') as f:
-            self.database_stats = json.load(f)
-
         if debug:
             json_file_path = '/home/wuy/DB/pg_mem_data/tpch_sf1/tiny_plans.json' # for debug
             self.dataset_list = self.get_dataset(logger, json_file_path, dataset)

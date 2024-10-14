@@ -78,7 +78,7 @@ def extract_features(plan, statistics):
 
 
 
-def prepare_dataset(dataset_dir, datasets, mode, statistics, debug):
+def prepare_dataset(dataset_dir, datasets, mode, statistics, debug, mem_pred, time_pred):
     """
     Prepare a dataset by extracting features and collecting labels.
 
@@ -105,8 +105,12 @@ def prepare_dataset(dataset_dir, datasets, mode, statistics, debug):
     for plan in tqdm(plans):
         features = extract_features(plan, statistics)
         feature_dicts.append(features)
-        peakmem = plan.get('peakmem', 0.0)
-        labels.append(peakmem)  # Assuming 'peakmem' is the target
+        if mem_pred:
+            label = plan.get('peakmem', 0.0)
+        elif time_pred:
+            label = plan.get('time', 0.0)
+  
+        labels.append(label)  
 
     # Convert to DataFrame
     df_features = pd.DataFrame(feature_dicts)
@@ -127,10 +131,10 @@ def train_XGBoost(args):
         statistics = json.load(f)
 
     # Prepare training and validation datasets
-    X_train, y_train = prepare_dataset(args.dataset_dir, args.train_dataset, 'train', statistics, args.debug)
-    X_val, y_val = prepare_dataset(args.dataset_dir, args.train_dataset, 'val', statistics, args.debug)
+    X_train, y_train = prepare_dataset(args.dataset_dir, args.train_dataset, 'train', statistics, args.debug, args.mem_pred, args.time_pred)
+    X_val, y_val = prepare_dataset(args.dataset_dir, args.train_dataset, 'val', statistics, args.debug, args.mem_pred, args.time_pred)
     X_val = X_val[X_train.columns]
-    X_test, y_test = prepare_dataset(args.dataset_dir, args.test_dataset, 'test', statistics, args.debug)
+    X_test, y_test = prepare_dataset(args.dataset_dir, args.test_dataset, 'test', statistics, args.debug, args.mem_pred, args.time_pred)
     X_test = X_test[X_train.columns]
 
     print("Training features shape:", X_train.shape)
@@ -156,15 +160,19 @@ def train_XGBoost(args):
     # Predict on test set
     y_pred = xgb_reg.predict(X_test)
 
-    y_pred = np.array(y_pred) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
-    y_test = np.array(y_test) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+    if args.mem_pred:
+        y_pred = np.array(y_pred) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+        y_test = np.array(y_test) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+    elif args.time_pred:
+        y_pred = np.array(y_pred) * statistics['time']['scale'] + statistics['time']['center']
+        y_test = np.array(y_test) * statistics['time']['scale'] + statistics['time']['center']
 
-    # Evaluate
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+    # # Evaluate
+    # mse = mean_squared_error(y_test, y_pred)
+    # r2 = r2_score(y_test, y_pred)
 
-    print(f"Test MSE: {mse:.2f}")
-    print(f"Test R² Score: {r2:.2f}")
+    # print(f"Test MSE: {mse:.2f}")
+    # print(f"Test R² Score: {r2:.2f}")
 
     metrics = compute_metrics(y_test, y_pred)
     for metric, value in metrics.items():

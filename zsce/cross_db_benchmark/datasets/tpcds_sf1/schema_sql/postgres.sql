@@ -1,5 +1,5 @@
 
-create table dbgen_version
+CREATE TABLE dbgen_version
 (
     dv_version                varchar(16)                   ,
     dv_create_date            date                          ,
@@ -7,7 +7,7 @@ create table dbgen_version
     dv_cmdline_args           varchar(200)                  
 );
 
-create table customer_address
+CREATE TABLE customer_address
 (
     ca_address_sk             integer               not null,
     ca_address_id             char(16)              not null,
@@ -22,10 +22,10 @@ create table customer_address
     ca_country                varchar(20)                   ,
     ca_gmt_offset             decimal(5,2)                  ,
     ca_location_type          char(20)                      ,
-    primary key (ca_address_sk)
+    PRIMARY KEY (ca_address_sk)
 );
 
-create table customer_demographics
+CREATE TABLE customer_demographics
 (
     cd_demo_sk                integer               not null,
     cd_gender                 char(1)                       ,
@@ -36,10 +36,10 @@ create table customer_demographics
     cd_dep_count              integer                       ,
     cd_dep_employed_count     integer                       ,
     cd_dep_college_count      integer                       ,
-    primary key (cd_demo_sk)
+    PRIMARY KEY (cd_demo_sk)
 );
 
-create table date_dim
+CREATE TABLE date_dim
 (
     d_date_sk                 integer               not null,
     d_date_id                 char(16)              not null,
@@ -69,10 +69,10 @@ create table date_dim
     d_current_month           char(1)                       ,
     d_current_quarter         char(1)                       ,
     d_current_year            char(1)                       ,
-    primary key (d_date_sk)
+    PRIMARY KEY (d_date_sk)
 );
 
-create table warehouse
+CREATE TABLE warehouse
 (
     w_warehouse_sk            integer               not null,
     w_warehouse_id            char(16)              not null,
@@ -88,10 +88,10 @@ create table warehouse
     w_zip                     char(10)                      ,
     w_country                 varchar(20)                   ,
     w_gmt_offset              decimal(5,2)                  ,
-    primary key (w_warehouse_sk)
+    PRIMARY KEY (w_warehouse_sk)
 );
 
-create table ship_mode
+CREATE TABLE ship_mode
 (
     sm_ship_mode_sk           integer               not null,
     sm_ship_mode_id           char(16)              not null,
@@ -99,10 +99,10 @@ create table ship_mode
     sm_code                   char(10)                      ,
     sm_carrier                char(20)                      ,
     sm_contract               char(20)                      ,
-    primary key (sm_ship_mode_sk)
+    PRIMARY KEY (sm_ship_mode_sk)
 );
 
-create table time_dim
+CREATE TABLE time_dim
 (
     t_time_sk                 integer               not null,
     t_time_id                 char(16)              not null,
@@ -114,26 +114,26 @@ create table time_dim
     t_shift                   char(20)                      ,
     t_sub_shift               char(20)                      ,
     t_meal_time               char(20)                      ,
-    primary key (t_time_sk)
+    PRIMARY KEY (t_time_sk)
 );
 
-create table reason
+CREATE TABLE reason
 (
     r_reason_sk               integer               not null,
     r_reason_id               char(16)              not null,
     r_reason_desc             char(100)                     ,
-    primary key (r_reason_sk)
+    PRIMARY KEY (r_reason_sk)
 );
 
-create table income_band
+CREATE TABLE income_band
 (
     ib_income_band_sk         integer               not null,
     ib_lower_bound            integer                       ,
     ib_upper_bound            integer                       ,
-    primary key (ib_income_band_sk)
+    PRIMARY KEY (ib_income_band_sk)
 );
 
-create table item
+CREATE TABLE item
 (
     i_item_sk                 integer               not null,
     i_item_id                 char(16)              not null,
@@ -157,10 +157,10 @@ create table item
     i_container               char(10)                      ,
     i_manager_id              integer                       ,
     i_product_name            char(50)                      ,
-    primary key (i_item_sk)
+    PRIMARY KEY (i_item_sk)
 );
 
-create table store
+CREATE TABLE store
 (
     s_store_sk                integer               not null,
     s_store_id                char(16)              not null,
@@ -191,10 +191,10 @@ create table store
     s_country                 varchar(20)                   ,
     s_gmt_offset              decimal(5,2)                  ,
     s_tax_precentage          decimal(5,2)                  ,
-    primary key (s_store_sk)
+    PRIMARY KEY (s_store_sk)
 );
 
-create table call_center
+CREATE TABLE call_center
 (
     cc_call_center_sk         integer               not null,
     cc_call_center_id         char(16)              not null,
@@ -227,10 +227,10 @@ create table call_center
     cc_country                varchar(20)                   ,
     cc_gmt_offset             decimal(5,2)                  ,
     cc_tax_percentage         decimal(5,2)                  ,
-    primary key (cc_call_center_sk)
+    PRIMARY KEY (cc_call_center_sk)
 );
 
-create table customer
+CREATE TABLE customer
 (
     c_customer_sk             integer               not null,
     c_customer_id             char(16)              not null,
@@ -250,10 +250,10 @@ create table customer
     c_login                   char(13)                      ,
     c_email_address           char(50)                      ,
     c_last_review_date_sk     integer                       ,
-    primary key (c_customer_sk)
+    PRIMARY KEY (c_customer_sk)
 );
 
-create table web_site
+CREATE TABLE web_site
 (
     web_site_sk               integer               not null,
     web_site_id               char(16)              not null,
@@ -281,10 +281,10 @@ create table web_site
     web_country               varchar(20)                   ,
     web_gmt_offset            decimal(5,2)                  ,
     web_tax_percentage        decimal(5,2)                  ,
-    primary key (web_site_sk)
+    PRIMARY KEY (web_site_sk)
 );
 
-create table store_returns
+CREATE TABLE store_returns
 (
     sr_returned_date_sk       integer                       ,
     sr_return_time_sk         integer                       ,
@@ -306,20 +306,20 @@ create table store_returns
     sr_reversed_charge        decimal(7,2)                  ,
     sr_store_credit           decimal(7,2)                  ,
     sr_net_loss               decimal(7,2)                  ,
-    primary key (sr_item_sk, sr_ticket_number)
+    PRIMARY KEY (sr_item_sk, sr_ticket_number)
 );
 
-create table household_demographics
+CREATE TABLE household_demographics
 (
     hd_demo_sk                integer               not null,
     hd_income_band_sk         integer                       ,
     hd_buy_potential          char(15)                      ,
     hd_dep_count              integer                       ,
     hd_vehicle_count          integer                       ,
-    primary key (hd_demo_sk)
+    PRIMARY KEY (hd_demo_sk)
 );
 
-create table web_page
+CREATE TABLE web_page
 (
     wp_web_page_sk            integer               not null,
     wp_web_page_id            char(16)              not null,
@@ -335,10 +335,10 @@ create table web_page
     wp_link_count             integer                       ,
     wp_image_count            integer                       ,
     wp_max_ad_count           integer                       ,
-    primary key (wp_web_page_sk)
+    PRIMARY KEY (wp_web_page_sk)
 );
 
-create table promotion
+CREATE TABLE promotion
 (
     p_promo_sk                integer               not null,
     p_promo_id                char(16)              not null,
@@ -359,10 +359,10 @@ create table promotion
     p_channel_details         varchar(100)                  ,
     p_purpose                 char(15)                      ,
     p_discount_active         char(1)                       ,
-    primary key (p_promo_sk)
+    PRIMARY KEY (p_promo_sk)
 );
 
-create table catalog_page
+CREATE TABLE catalog_page
 (
     cp_catalog_page_sk        integer               not null,
     cp_catalog_page_id        char(16)              not null,
@@ -373,19 +373,19 @@ create table catalog_page
     cp_catalog_page_number    integer                       ,
     cp_description            varchar(100)                  ,
     cp_type                   varchar(100)                  ,
-    primary key (cp_catalog_page_sk)
+    PRIMARY KEY (cp_catalog_page_sk)
 );
 
-create table inventory
+CREATE TABLE inventory
 (
     inv_date_sk               integer               not null,
     inv_item_sk               integer               not null,
     inv_warehouse_sk          integer               not null,
     inv_quantity_on_hand      integer                       ,
-    primary key (inv_date_sk, inv_item_sk, inv_warehouse_sk)
+    PRIMARY KEY (inv_date_sk, inv_item_sk, inv_warehouse_sk)
 );
 
-create table catalog_returns
+CREATE TABLE catalog_returns
 (
     cr_returned_date_sk       integer                       ,
     cr_returned_time_sk       integer                       ,
@@ -414,10 +414,10 @@ create table catalog_returns
     cr_reversed_charge        decimal(7,2)                  ,
     cr_store_credit           decimal(7,2)                  ,
     cr_net_loss               decimal(7,2)                  ,
-    primary key (cr_item_sk, cr_order_number)
+    PRIMARY KEY (cr_item_sk, cr_order_number)
 );
 
-create table web_returns
+CREATE TABLE web_returns
 (
     wr_returned_date_sk       integer                       ,
     wr_returned_time_sk       integer                       ,
@@ -443,10 +443,10 @@ create table web_returns
     wr_reversed_charge        decimal(7,2)                  ,
     wr_account_credit         decimal(7,2)                  ,
     wr_net_loss               decimal(7,2)                  ,
-    primary key (wr_item_sk, wr_order_number)
+    PRIMARY KEY (wr_item_sk, wr_order_number)
 );
 
-create table web_sales
+CREATE TABLE web_sales
 (
     ws_sold_date_sk           integer                       ,
     ws_sold_time_sk           integer                       ,
@@ -482,10 +482,10 @@ create table web_sales
     ws_net_paid_inc_ship      decimal(7,2)                  ,
     ws_net_paid_inc_ship_tax  decimal(7,2)                  ,
     ws_net_profit             decimal(7,2)                  ,
-    primary key (ws_item_sk, ws_order_number)
+    PRIMARY KEY (ws_item_sk, ws_order_number)
 );
 
-create table catalog_sales
+CREATE TABLE catalog_sales
 (
     cs_sold_date_sk           integer                       ,
     cs_sold_time_sk           integer                       ,
@@ -521,10 +521,10 @@ create table catalog_sales
     cs_net_paid_inc_ship      decimal(7,2)                  ,
     cs_net_paid_inc_ship_tax  decimal(7,2)                  ,
     cs_net_profit             decimal(7,2)                  ,
-    primary key (cs_item_sk, cs_order_number)
+    PRIMARY KEY (cs_item_sk, cs_order_number)
 );
 
-create table store_sales
+CREATE TABLE store_sales
 (
     ss_sold_date_sk           integer                       ,
     ss_sold_time_sk           integer                       ,
@@ -549,6 +549,6 @@ create table store_sales
     ss_net_paid               decimal(7,2)                  ,
     ss_net_paid_inc_tax       decimal(7,2)                  ,
     ss_net_profit             decimal(7,2)                  ,
-    primary key (ss_item_sk, ss_ticket_number)
+    PRIMARY KEY (ss_item_sk, ss_ticket_number)
 );
 

@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 from cross_db_benchmark.benchmark_tools.database import DatabaseSystem
 from cross_db_benchmark.benchmark_tools.postgres.parse_plan import parse_plans
 from cross_db_benchmark.benchmark_tools.utils import load_json
@@ -31,5 +32,8 @@ def parse_raw(data_dir, dataset):
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
-    dataset = 'tpch_sf1'
-    parse_raw(data_dir, dataset)
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', type=str, default=['tpch_sf1'], nargs='+')
+    args = argparser.parse_args()
+    for dataset in args.dataset:
+        parse_raw(data_dir, dataset)

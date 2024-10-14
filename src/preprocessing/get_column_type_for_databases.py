@@ -2,17 +2,21 @@ import os
 import json
 import re
 
+import re
+
 def get_column_type(table_defs):
     columns_type = {}
     # Split each table definition by "CREATE TABLE"
-    single_table_defs = table_defs.split("create table")
-    
+    single_table_defs = table_defs.split("CREATE TABLE")
+
     for single_table in single_table_defs:
         # Extract the table name correctly (match between CREATE TABLE and '(')
-        table_match = re.search(r'\s*"(.*?)"\s*\(', single_table)
+        # This regex matches table names with or without double quotes
+        table_match = re.search(r'\s*(?:"(.*?)"|(\w+))\s*\(', single_table)
         if not table_match:
             continue
-        table_name = table_match.group(1)
+        # Extract the table name, giving priority to the quoted group
+        table_name = table_match.group(1) if table_match.group(1) else table_match.group(2)
 
         columns_type[table_name] = {}
         # Extract the columns part of the table definition
@@ -21,7 +25,7 @@ def get_column_type(table_defs):
         
         for column in columns:
             # Skip primary key or constraints definitions
-            if 'primary key' in column or 'foreign key' in column:
+            if 'PRIMARY KEY' in column or 'FOREIGN KEY' in column:
                 continue
 
             cs = column.split()
@@ -46,6 +50,7 @@ def get_column_type(table_defs):
 
     return columns_type
 
+
 def main(dataset):
     print(f"Getting column_type for {dataset}")
     # File paths
@@ -54,7 +59,7 @@ def main(dataset):
 
     # Read and parse the SQL DDL
     with open(sql_ddl_path, 'r') as file:
-        table_defs = file.read().lower()
+        table_defs = file.read()
         columns_type = get_column_type(table_defs)
 
     # Save the parsed column definitions as JSON
@@ -67,7 +72,7 @@ def main(dataset):
 if __name__ == '__main__':
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
-    from database_list import database_list
+    from database_list import full_database_list
 
-    for dataset in database_list:
+    for dataset in full_database_list:
         main(dataset)

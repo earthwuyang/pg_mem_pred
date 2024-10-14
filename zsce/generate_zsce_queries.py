@@ -31,14 +31,14 @@ if __name__ == '__main__':
 
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-    from database_list import database_list
+    from database_list import full_database_list
 
 
     if not os.path.exists(args.workload_dir):
         os.makedirs(args.workload_dir)
 
     workload_gen_setups = []
-    for dataset in database_list:
+    for dataset in full_database_list:
         for workload_name, workload_args in workload_defs.items():
             workload_path = os.path.join(args.workload_dir, dataset, f'{workload_name}.sql')
             workload_gen_setups.append((dataset, workload_path, 5, workload_args))
