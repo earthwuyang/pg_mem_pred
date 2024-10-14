@@ -45,9 +45,6 @@ peakmem in KB, time in seconds.
 The script also write explain verbose format json of each plan to plan_dir (with queryid as filename)
 
 
-<!-- run `psql`, connect to the database, run `analyze` to collect statistics for each table. -->
-
-
 ### for zsce method:
 run `python zsce/get_raw_plans.py --dataset tpch_sf1 tpcds_sf1` that gets raw_plans.json for zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'.   Note that this will take a long time.
 

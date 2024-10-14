@@ -325,7 +325,8 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', help="Debug mode")
     args = parser.parse_args()
 
-    hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
+    hyperparameter_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'setup/tuned_hyperparameters/tune_est_best_config.json')
+    # hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
     hyperparams = load_json(hyperparameter_path, namespace=False)
 
     # loss_class_name='QLoss'
