@@ -9,26 +9,15 @@ import argparse
 from multiprocessing import Pool, cpu_count
 from functools import partial
 
-def get_result_analyze(queryid, analyzed_plan_dir):
-    file_name = os.path.join(analyzed_plan_dir, str(queryid) + '.txt')
+def get_result_from_file(queryid, plan_dir):
+    file_name = os.path.join(plan_dir, str(queryid) + '.txt')
     with open(file_name, 'r') as f:
-        analyzed_plan = f.readlines()
-    analyzed_plan = [[plan] for plan in analyzed_plan]
-    return [analyzed_plan]
+        plans = f.readlines()
+    plans = [[plan] for plan in plans]
+    return plans
 
-def get_result_verbose(query, conn_params):
-    conn = psycopg2.connect(**conn_params)
-    cur = conn.cursor()
-    cur.execute(query)
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    result = []
-    for row in rows:
-        result.append([row[0]])
-    return result
 
-def process_query(i, df, dir, analyzed_plan_dir, conn_params):
+def process_query(i, df, dir, analyzed_plan_dir, verbose_plan_dir, conn_params):
     queryid = int(df.loc[i, 'queryid'])
     peakmem = int(df.loc[i, 'peakmem'])
     time = float(df.loc[i, 'time'])
@@ -38,8 +27,8 @@ def process_query(i, df, dir, analyzed_plan_dir, conn_params):
     try:
         plan_tuple = {}
         verbose_query = "explain verbose " + sql
-        plan_tuple['analyze_plans'] = get_result_analyze(queryid, analyzed_plan_dir)
-        plan_tuple['verbose_plan'] = get_result_verbose(verbose_query, conn_params)
+        plan_tuple['analyze_plans'] = [get_result_from_file(queryid, analyzed_plan_dir)]
+        plan_tuple['verbose_plan'] = get_result_from_file(queryid, verbose_plan_dir)
         plan_tuple['sql'] = sql
         plan_tuple['peakmem'] = peakmem
         plan_tuple['time'] = time
@@ -70,9 +59,11 @@ def get_raw_plans(data_dir, dataset):
 
     dir = os.path.join(data_dir, dataset, 'raw_data', 'query_dir')
     analyzed_plan_dir = os.path.join(data_dir, dataset, 'raw_data', 'analyzed_plan_dir')
+    verbose_plan_dir = os.path.join(data_dir, dataset, 'raw_data', 'verbose_plan_dir')
 
     # Create a partial function to pass arguments to process_query
-    process_query_partial = partial(process_query, df=df, dir=dir, analyzed_plan_dir=analyzed_plan_dir, conn_params=conn_params)
+    process_query_partial = partial(process_query, df=df, dir=dir, analyzed_plan_dir=analyzed_plan_dir, 
+                                    verbose_plan_dir=verbose_plan_dir, conn_params=conn_params)
 
     # Use multiprocessing to process queries in parallel
     with Pool(processes=cpu_count()) as pool:

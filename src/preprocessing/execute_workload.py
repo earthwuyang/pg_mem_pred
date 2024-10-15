@@ -18,9 +18,11 @@ def execute_workload(data_dir, dataset, cap_queries):
     
     workload_file = os.path.join(data_dir, 'workloads', dataset, 'workload_100k_s1_group_order_by.sql')
     query_dir = os.path.join(data_dir, dataset, 'raw_data','query_dir')
+    verbose_plan_dir = os.path.join(data_dir, dataset, 'raw_data','verbose_plan_dir')
     analyzed_plan_dir = os.path.join(data_dir, dataset, 'raw_data','analyzed_plan_dir')
     os.makedirs(query_dir, exist_ok=True)
     os.makedirs(analyzed_plan_dir, exist_ok=True)
+    os.makedirs(verbose_plan_dir, exist_ok=True)
 
     count = 0
     with open(workload_file, 'r') as f:
@@ -45,6 +47,18 @@ def execute_workload(data_dir, dataset, cap_queries):
                             f.write(str(row[0]) + '\n')
                     cur.close()     
                     conn.close()
+
+                    conn = psycopg2.connect(**conn_params)
+                    cur = conn.cursor()
+                    cur.execute("explain verbose " + query)
+                    rows = cur.fetchall()
+                    verbose_plan_file = os.path.join(verbose_plan_dir, f'{queryid}.txt')
+                    with open(verbose_plan_file, 'w') as f:
+                        for row in rows:
+                            f.write(str(row[0]) + '\n')
+                    cur.close()     
+                    conn.close()
+
                     count += 1
                     if count >= cap_queries:
                         print(f"Cap of {cap_queries} queries reached. Exiting.")

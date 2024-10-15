@@ -142,6 +142,13 @@ def parse_plans(run_stats, min_runtime=0, max_runtime=30000, parse_baseline=Fals
         # do not parse timeout queries
         # if hasattr(q, 'timeout') and q.timeout:
         #     continue
+        # print()
+        # print(f"analyzed_plan {q.analyze_plans}")
+        # print()
+        # print(f"verbose_plan {q.verbose_plan}")
+        # print()
+        # print(f"sql {q.sql}")
+        # print()
 
         alias_dict = dict()
         if not curr_explain_only:
