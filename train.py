@@ -15,8 +15,8 @@ from datetime import datetime
 
 from src.training.train import train_model
 from src.training.train_xgboost import train_XGBoost
-from src.preprocessing import extract_mem_time_info
-from src.preprocessing import gather_feature_statistics
+from src.preprocessing.extract_mem_time_info import extract_mem_info
+from src.preprocessing.gather_feature_statistics import gather_feature_statistics
 
 
 def get_logger(logfile):
@@ -43,7 +43,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--db_config', type=str, default='conn.json', help='database configuration file')
-    parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
+    parser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
     parser.add_argument('--dataset', type=str, default='tpch_sf1', help='dataset name. train and validation will use the same dataset')
     parser.add_argument('--test_dataset', type=str, default=None, help='dataset name. test will use the same dataset')
     parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
@@ -86,15 +86,15 @@ if __name__ == "__main__":# Set random seed for reproducibility
     logger = get_logger(log_file)
     logger.info(f"Args: {args}")
 
-    logger.info(f"extracting memory and time information from logs...")
-    if args.force or not os.path.exists(os.path.join(args.dataset_dir, args.dataset, 'raw_data','mem_info.csv')):
-        extract_mem_info(args.data_dir, args.dataset)
-    else:
-        logger.info(f"mem_info.csv already exists, skipping extraction")
+    # logger.info(f"extracting memory and time information from logs...")
+    # if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'raw_data','mem_info.csv')):
+    #     extract_mem_info(args.data_dir, args.dataset)
+    # else:
+    #     logger.info(f"mem_info.csv already exists, skipping extraction")
 
     logger.info(f"gathering feature statistics...")
-    if args.force or not os.path.exists(os.path.join(args.dataset_dir, args.dataset, 'statistics_workload_combined.json')):
-        gather_feature_statistics(args.dataset_dir, args.dataset)
+    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'statistics_workload_combined.json')):
+        gather_feature_statistics(args.data_dir, args.dataset)
     else:
         logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
 

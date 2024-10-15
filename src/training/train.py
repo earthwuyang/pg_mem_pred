@@ -155,13 +155,13 @@ def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, v
 # Define training function (redefined for clarity)
 def train_model(logger, args):
 
-    dataset_dir = args.dataset_dir
+    dataset_dir = args.data_dir
     train_dataset = args.train_dataset
     test_dataset = args.test_dataset
     batch_size = args.batch_size
     num_workers = args.num_workers
 
-    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset, 'statistics_workload_combined.json')  # CAUTION
+    statistics_file_path = os.path.join(args.data_dir, args.train_dataset, 'statistics_workload_combined.json')  # CAUTION
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
 

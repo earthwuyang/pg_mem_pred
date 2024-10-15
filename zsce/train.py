@@ -24,7 +24,7 @@ from models.zero_shot_models.specific_models.model import zero_shot_models
 from cross_db_benchmark.benchmark_tools.database import DatabaseSystem
 
 from get_raw_plans import get_raw_plans
-from parse_plans import parse_plans
+from parse_plans import parse_raw
 from split_parsed_plans import split_dataset
 from gather_feature_statistics import gather_feature_statistics
 
@@ -432,11 +432,11 @@ if __name__ == '__main__':
     logfile = os.path.join(logfilepath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log")
     logger = get_logger(logfile)
 
-    logger.info(f"extracting mem time info...")
-    if not os.path.exists(os.path.join(args.data_dir, args.dataset, 'raw_data', 'mem_info.csv')):
-        extract_mem_info(args.data_dir, args.dataset)
-    else:
-        logger.info(f"mem_info.csv already exists, skipping extraction")
+    # logger.info(f"extracting mem time info...")
+    # if not os.path.exists(os.path.join(args.data_dir, args.dataset, 'raw_data', 'mem_info.csv')):
+    #     extract_mem_info(args.data_dir, args.dataset)
+    # else:
+    #     logger.info(f"mem_info.csv already exists, skipping extraction")
 
     logger.info(f"get raw plans...")
     if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'raw_plan.json')):
@@ -446,7 +446,7 @@ if __name__ == '__main__':
 
     logger.info(f"parsing plans...")
     if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'parsed_plan.json')):
-        parse_plans(args.data_dir, args.dataset)
+        parse_raw(args.data_dir, args.dataset)
     else:
         logger.info(f"parsed_plan.json already exists, skipping parsing")
 
