@@ -126,6 +126,7 @@ def compute_metrics(y_test, y_pred):
     y_test_safe = np.where(y_test == 0, epsilon, y_test)
     y_pred_safe = np.where(y_pred <= 0, epsilon, y_pred)
 
+    qerror_0 = QError(percentile=0, min_val=0.1).evaluate_metric(y_test_safe, y_pred_safe)
     qerror_50 = QError(percentile=50, min_val=0.1).evaluate_metric(y_test_safe, y_pred_safe)
     qerror_95 = QError(percentile=95, min_val=0.1).evaluate_metric(y_test_safe, y_pred_safe)
     qerror_max = QError(percentile=100, min_val=0.1).evaluate_metric(y_test_safe, y_pred_safe)
@@ -139,6 +140,7 @@ def compute_metrics(y_test, y_pred):
         'qerror_95': qerror_95,
         'qerror_max': qerror_max,
         'mean_qerror': mean_qerror,
+        'qerror_0': qerror_0,
         'mre': mre,
         'rmse': rmse
     }

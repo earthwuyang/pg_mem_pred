@@ -15,6 +15,7 @@ from datetime import datetime
 
 from src.training.train import train_model
 from src.training.train_xgboost import train_XGBoost
+from src.preprocessing.get_explain_json_plans import get_explain_json_plans
 from src.preprocessing.extract_mem_time_info import extract_mem_info
 from src.preprocessing.gather_feature_statistics import gather_feature_statistics
 
@@ -91,6 +92,12 @@ if __name__ == "__main__":# Set random seed for reproducibility
     #     extract_mem_info(args.data_dir, args.dataset)
     # else:
     #     logger.info(f"mem_info.csv already exists, skipping extraction")
+
+    logger.info(f"getting explain json plans...")
+    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'total_plans.json')):
+        get_explain_json_plans(args.data_dir, args.dataset)
+    else:
+        logger.info(f"explain json plans already exist, skipping getting explain json plans")
 
     logger.info(f"gathering feature statistics...")
     if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'statistics_workload_combined.json')):
