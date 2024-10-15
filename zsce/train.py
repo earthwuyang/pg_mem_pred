@@ -325,6 +325,7 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+    torch.backends.cudnn.benchmark = False
 
     # parse arguments
     parser = argparse.ArgumentParser()
