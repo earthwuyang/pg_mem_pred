@@ -39,6 +39,7 @@ def export_table(dataset, mysql_dataset, table, sep, data_dir, overwrite):
         # Output CSV file path
         output_file = os.path.join(data_dir, dataset, f"{table}.csv")
         if not overwrite and os.path.exists(output_file):
+            print(f"Skipping {table} of {dataset}, file already exists")
             cursor.close()
             conn.close()
             return
@@ -93,12 +94,18 @@ def main():
     argparser.add_argument('--overwrite', action='store_true', help='Whether to overwrite existing data', default=False)
     args = argparser.parse_args()
 
+    
     if args.dataset is not None:
-        database_list = args.dataset
-    # Process each dataset sequentially, but export tables in parallel within each dataset
-    for i, dataset in enumerate(database_list):
-        mysql_dataset = mysql_database_list[i]
-        export_dataset(data_dir, dataset, mysql_dataset, args.overwrite)
+        mysql_database_index = None
+        for i,ds in enumerate(mysql_database_list):
+            if ds.lower() == args.dataset[0]:
+                mysql_database_index = i
+        export_dataset(data_dir, args.dataset[0], mysql_database_list[mysql_database_index], args.overwrite)
+    else:
+        # Process each dataset sequentially, but export tables in parallel within each dataset
+        for i, dataset in enumerate(database_list):
+            mysql_dataset = mysql_database_list[i]
+            export_dataset(data_dir, dataset, mysql_dataset, args.overwrite)
 
 
 if __name__ == '__main__':
