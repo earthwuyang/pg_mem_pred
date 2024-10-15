@@ -161,13 +161,9 @@ def train_model(logger, args):
     batch_size = args.batch_size
     num_workers = args.num_workers
 
-    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'statistics_workload_combined.json')  # CAUTION
+    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset, 'statistics_workload_combined.json')  # CAUTION
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
-
-    # database_stats_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'database_stats.json')  # CAUTION
-    # with open(database_stats_file_path) as f:
-    #     db_statistics = json.load(f)
 
     with open(args.db_config) as f:
         conn_info = json.load(f)

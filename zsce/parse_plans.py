@@ -18,7 +18,7 @@ def parse_raw(data_dir, dataset):
 
 
     run_stats = load_json(source)
-    print(f"json loaded")
+    # print(f"json loaded")
 
 
     parsed_runs, stats = parse_plans(run_stats, min_runtime=0, max_runtime=100000000,
@@ -26,7 +26,7 @@ def parse_raw(data_dir, dataset):
                                         parse_join_conds=True,
                                         include_zero_card=True, explain_only=False)
 
-    print(f"json dumping...")
+    # print(f"json dumping...")
     with open(target, 'w') as outfile:
         json.dump(parsed_runs, outfile, default=dumper)
 

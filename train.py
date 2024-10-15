@@ -15,7 +15,8 @@ from datetime import datetime
 
 from src.training.train import train_model
 from src.training.train_xgboost import train_XGBoost
-
+from src.preprocessing import extract_mem_time_info
+from src.preprocessing import gather_feature_statistics
 
 
 def get_logger(logfile):
@@ -43,8 +44,8 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser = argparse.ArgumentParser()
     parser.add_argument('--db_config', type=str, default='conn.json', help='database configuration file')
     parser.add_argument('--dataset_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
-    parser.add_argument('--train_dataset', type=str, nargs='+', default=['tpch_sf1'], help='dataset name. train and validation will use the same dataset')
-    parser.add_argument('--test_dataset', type=str, nargs='+', default=['tpch_sf1'], help='dataset name. test will use the same dataset')
+    parser.add_argument('--dataset', type=str, default='tpch_sf1', help='dataset name. train and validation will use the same dataset')
+    parser.add_argument('--test_dataset', type=str, default=None, help='dataset name. test will use the same dataset')
     parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
     parser.add_argument('--encode_table_column', action='store_true', default=False, help='encode table and column nodes')
     parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
@@ -62,9 +63,13 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--no_mem_pred', action='store_false', dest='mem_pred', help='do not predict memory')
     parser.add_argument('--time_pred', action='store_true', default=False, help='predict time')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
+    parser.add_argument('--force', action='store_true', default=False, help='force overwrite existing files')
     parser.add_argument('--debug', action='store_true', default=False, help='debug mode')
     args = parser.parse_args()
 
+    if args.test_dataset is None:
+        args.test_dataset = args.dataset
+    args.train_dataset = args.dataset
 
     assert args.mem_pred or args.time_pred, "At least one of --mem_pred (default True) and --time_pred (default False) should be set"
 
@@ -80,6 +85,19 @@ if __name__ == "__main__":# Set random seed for reproducibility
     log_file = os.path.join(log_dir, f"train_{'_'.join(args.train_dataset)}_test_{'_'.join(args.test_dataset)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logger = get_logger(log_file)
     logger.info(f"Args: {args}")
+
+    logger.info(f"extracting memory and time information from logs...")
+    if args.force or not os.path.exists(os.path.join(args.dataset_dir, args.dataset, 'raw_data','mem_info.csv')):
+        extract_mem_info(args.data_dir, args.dataset)
+    else:
+        logger.info(f"mem_info.csv already exists, skipping extraction")
+
+    logger.info(f"gathering feature statistics...")
+    if args.force or not os.path.exists(os.path.join(args.dataset_dir, args.dataset, 'statistics_workload_combined.json')):
+        gather_feature_statistics(args.dataset_dir, args.dataset)
+    else:
+        logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
+
 
     # Train the model
     if args.model == 'XGBoost':

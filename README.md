@@ -44,14 +44,14 @@ The script also write explain verbose format json of each plan to plan_dir (with
 
 
 ### for zsce method:
-run `python zsce/get_raw_plans.py --dataset tpch_sf1 tpcds_sf1` that gets raw_plans.json for zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'.   Note that this will take a long time.
+<!-- run `python zsce/get_raw_plans.py --dataset tpch_sf1 tpcds_sf1` that gets raw_plans.json for zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'.   Note that this will take a long time.
 
 run `python zsce/parse_plans.py --dataset tpch_sf1 tpcds_sf1` to parse 'raw_plans.json' into 'parsed_plans.json'. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
 run `python zsce/split_parsed_plans.py --dataset tpch_sf1 tpcds_sf1` to split 'parsed_plans.json' into train, val, test splits. Need to modify the name of the dataset, e.g 'tpch_sf1' 
 
 
-run `python zsce/gather_feature_statistics.py --dataset tpch_sf1 tpcds_sf1` for zsce method to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1'
+run `python zsce/gather_feature_statistics.py --dataset tpch_sf1 tpcds_sf1` for zsce method to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1' -->
 
 run `python zsce/train.py` to train the zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'
 

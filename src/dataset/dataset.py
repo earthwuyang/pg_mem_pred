@@ -47,6 +47,8 @@ class QueryPlanDataset(Dataset):
                         self.dataset_list = pickle.load(f)
                 else:
                     self.dataset_list = []
+                    if not isinstance(dataset, list):
+                        dataset = [dataset]
                     for ds in dataset:
                         json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
                   

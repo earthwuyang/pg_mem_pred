@@ -6,6 +6,7 @@ import argparse
 import json
 import argparse
 
+
 # os.makedirs('pg_log', exist_ok=True)
 # os.system('sudo cp -r /usr/local/pgsql/data/log/* pg_log')
 # cp -r /usr/local/pgsql/data/log/* /home/wuy/DB/pg_mem_pred/pg_log

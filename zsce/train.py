@@ -12,6 +12,7 @@ import argparse
 import json
 import random
 import pandas as pd
+import sys
 
 from cross_db_benchmark.benchmark_tools.utils import load_json
 
@@ -21,6 +22,14 @@ from models.training.metrics import MRE, RMSE, QError, MeanQError
 from models.training.utils import batch_to, flatten_dict, find_early_stopping_metric
 from models.zero_shot_models.specific_models.model import zero_shot_models
 from cross_db_benchmark.benchmark_tools.database import DatabaseSystem
+
+from get_raw_plans import get_raw_plans
+from parse_plans import parse_plans
+from split_parsed_plans import split_dataset
+from gather_feature_statistics import gather_feature_statistics
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+from src.preprocessing.extract_mem_time_info import extract_mem_info
 
 def get_logger(logfile):
 
@@ -319,11 +328,17 @@ if __name__ == '__main__':
 
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_dataset", type=str, help="Dataset to use for training", default='tpch_sf1')
-    parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default='tpch_sf1')
+    parser.add_argument("--data_dir", type=str, help="Directory where the data is stored", default='/home/wuy/DB/pg_mem_data/')
+    parser.add_argument("--dataset", type=str, help="Dataset to use for training", default='tpch_sf1')
+    parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default=None)
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
+    parser.add_argument("--force", action='store_true', help="Force overwrite of existing files")
     parser.add_argument('--debug', action='store_true', help="Debug mode")
     args = parser.parse_args()
+
+    if args.test_dataset is None:
+        args.test_dataset = args.dataset
+    args.train_dataset = args.dataset
 
     hyperparameter_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'setup/tuned_hyperparameters/tune_est_best_config.json')
     # hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
@@ -417,6 +432,37 @@ if __name__ == '__main__':
     logfile = os.path.join(logfilepath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log")
     logger = get_logger(logfile)
 
+    logger.info(f"extracting mem time info...")
+    if not os.path.exists(os.path.join(args.data_dir, args.dataset, 'raw_data', 'mem_info.csv')):
+        extract_mem_info(args.data_dir, args.dataset)
+    else:
+        logger.info(f"mem_info.csv already exists, skipping extraction")
+
+    logger.info(f"get raw plans...")
+    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'raw_plan.json')):
+        get_raw_plans(args.data_dir, args.dataset)
+    else:
+        logger.info(f"raw_plan.json already exists, skipping extraction")
+
+    logger.info(f"parsing plans...")
+    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'parsed_plan.json')):
+        parse_plans(args.data_dir, args.dataset)
+    else:
+        logger.info(f"parsed_plan.json already exists, skipping parsing")
+
+    logger.info(f"spliting parsed plans...")
+    if args.force or not (os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'train_plans.json')) 
+        and os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'val_plans.json')) 
+        and os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'test_plans.json'))):
+        split_dataset(args.data_dir, args.dataset)
+    else:
+        logger.info(f"train_plans.json, val_plans.json, test_plans.json already exists, skipping splitting")
+
+    logger.info(f"gathering faeture statistics from train_plans.json...")
+    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce','statistics_workload_combined.json')):
+        gather_feature_statistics(args.data_dir, args.dataset)
+    else:
+        logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
     
     train_model(logger, train_workload_runs, val_workload_runs, test_workload_runs, statistics_file, target_dir, filename_model,
                 param_dict=param_dict, database=database, **train_kwargs)
