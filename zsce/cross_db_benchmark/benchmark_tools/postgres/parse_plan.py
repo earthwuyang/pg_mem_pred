@@ -346,7 +346,8 @@ def normalize_join_condition(p_join_str):
 
 
 def normalize_single_join_condition(p_join_str):
-    join_cond = p_join_str.split('=')
+    join_cond = p_join_str.split(' = ') # ' = ' is modified by wuy to exclude '<=' etc.
+    # print(f"p_join_str: {p_join_str}, join_cond: {join_cond}")
     assert len(join_cond) == 2
     for i in [0, 1]:
         join_cond[i] = join_cond[i].strip()
