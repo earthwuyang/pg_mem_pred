@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2 import sql
 import json
 import multiprocessing
-
+import argparse
 
 def connect_db(conn_params):
     try:
@@ -41,7 +41,7 @@ def import_data(conn_params, table_name, csv_file, sep):
         with conn.cursor() as cur:
             # Correct SQL COPY command construction
             copy_sql = sql.SQL("""
-                COPY {table} FROM STDIN WITH CSV HEADER DELIMITER '{sep}' NULL AS '';
+                COPY {table} FROM STDIN WITH CSV DELIMITER '{sep}' NULL AS '';
                 """
             ).format(
                 table=sql.Identifier(table_name),
@@ -155,6 +155,13 @@ def main():
         "host": conn_info['host'],
         "port": conn_info['port']
     }
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', nargs='+', default=None, type=str, help='Name of the dataset to load.')
+    args = argparser.parse_args()
+
+    if args.dataset is not None:
+        database_list = args.dataset
 
     # Process each dataset one by one and use multiprocessing for tables
     for dataset in database_list:

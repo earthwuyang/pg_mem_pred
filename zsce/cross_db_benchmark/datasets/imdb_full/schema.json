@@ -4,10 +4,11 @@
     "escapechar": "\\",
     "encoding": "utf-8",
     "quotechar": "\"",
-    "error_bad_lines": false
+    "error_bad_lines": false,
+    "sep": "|"
   },
   "db_load_kwargs": {
-    "postgres": "DELIMITER ',' QUOTE '\"' ESCAPE '\\' NULL '' CSV HEADER;"
+    "postgres": "DELIMITER '|' QUOTE '\"' ESCAPE '\\' NULL '' CSV HEADER;"
   },
   "tables": [
     "movie_link",

@@ -19,20 +19,23 @@ workload_defs = {
 }
 
 def workload_gen(input):
-    source_dataset, workload_path, max_no_joins, workload_args = input
-    generate_workload(source_dataset, workload_path, max_no_joins=max_no_joins, **workload_args)
+    source_dataset, workload_path, max_no_joins, workload_args, overwrite = input
+    generate_workload(source_dataset, workload_path, max_no_joins=max_no_joins, force=overwrite, **workload_args)
     return 0
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--workload_dir', type=str, default=os.path.join(os.path.dirname(__file__), '../../pg_mem_data/workloads'), help='Directory to store generated workloads')
-    # parser.add_argument('--dataset', nargs='+', default=['tpc_h'], help='Dataset to generate workloads for')
+    parser.add_argument('--dataset', nargs='+', default=None, type=str, help='Dataset to generate workloads for')
+    parser.add_argument('--overwrite', action='store_true', help='Whether to overwrite existing workloads')
     args = parser.parse_args()
 
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
     from database_list import full_database_list
 
+    if args.dataset is not None:
+        full_database_list = args.dataset
 
     if not os.path.exists(args.workload_dir):
         os.makedirs(args.workload_dir)
@@ -41,7 +44,7 @@ if __name__ == '__main__':
     for dataset in full_database_list:
         for workload_name, workload_args in workload_defs.items():
             workload_path = os.path.join(args.workload_dir, dataset, f'{workload_name}.sql')
-            workload_gen_setups.append((dataset, workload_path, 5, workload_args))
+            workload_gen_setups.append((dataset, workload_path, 5, workload_args, args.overwrite))
             # print(f"Generating workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5")
 
     start_t = time.perf_counter()

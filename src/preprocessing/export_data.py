@@ -4,8 +4,12 @@ import json
 import os
 import multiprocessing
 
+import os
+import mysql.connector
+from tqdm import tqdm
+import argparse
 
-def export_table(dataset, mysql_dataset, table, sep, data_dir):
+def export_table(dataset, mysql_dataset, table, sep, data_dir, overwrite):
     print(f"Exporting table {table} from dataset {dataset}...")
 
     # Create a new MySQL connection for each table process
@@ -23,17 +27,18 @@ def export_table(dataset, mysql_dataset, table, sep, data_dir):
         # Get row count for progress bar
         cursor.execute(f"SELECT COUNT(*) FROM {mysql_dataset}.{table}")
         num_rows = cursor.fetchone()[0]
+        print(f"Table {table} of {dataset} has {num_rows} rows")
 
         # Fetch all data from the table
         cursor.execute(f"SELECT * FROM {mysql_dataset}.{table}")
         
         # Fetch all rows before starting to write to avoid unread result errors
         all_rows = cursor.fetchall()
+        print(f"fetched {len(all_rows)} rows from {table} of {dataset}")
 
         # Output CSV file path
         output_file = os.path.join(data_dir, dataset, f"{table}.csv")
-        if os.path.exists(output_file):
-            # print(f"{output_file} already exists, skipping")
+        if not overwrite and os.path.exists(output_file):
             cursor.close()
             conn.close()
             return
@@ -44,8 +49,10 @@ def export_table(dataset, mysql_dataset, table, sep, data_dir):
         # Write to CSV file
         with open(output_file, 'w') as f:
             print(f"Exporting {table} of {dataset}, total rows: {num_rows}")
-            for row in tqdm(all_rows, total=num_rows, desc=f"Exporting {table} of {dataset}"):
-                f.write(sep.join(map(str, row)) + '\n')
+            for row in all_rows:
+                # Replace None with empty string and join with separator
+                row_data = [str(col) if col is not None else '' for col in row]
+                f.write(sep.join(row_data) + '\n')
         print(f"Exported {table} of {dataset} to {output_file}")
 
         cursor.close()
@@ -55,7 +62,8 @@ def export_table(dataset, mysql_dataset, table, sep, data_dir):
         conn.close()
 
 
-def export_dataset(dataset, mysql_dataset):
+
+def export_dataset(data_dir, dataset, mysql_dataset, overwrite):
     # print(f"Exporting dataset {dataset} from {mysql_dataset}...")
 
     # Load schema file
@@ -65,11 +73,11 @@ def export_dataset(dataset, mysql_dataset):
     database_name = schema['name']
     tables = schema['tables']
     sep = schema['csv_kwargs']['sep']
-    data_dir = '/home/wuy/DB/pg_mem_data/datasets'
+    
 
     # Use multiprocessing to export tables in parallel
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        pool.starmap(export_table, [(dataset, mysql_dataset, table, sep, data_dir) for table in tables])
+        pool.starmap(export_table, [(dataset, mysql_dataset, table, sep, data_dir, overwrite) for table in tables])
 
 
 def main():
@@ -77,10 +85,20 @@ def main():
     sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
     from database_list import database_list, mysql_database_list
 
+    data_dir = '/home/wuy/DB/pg_mem_data/datasets'
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--data_dir', type=str, default=data_dir, help='Directory to store exported data')
+    argparser.add_argument('--dataset', nargs='+', type=str, help='Dataset to export', default=None)
+    argparser.add_argument('--overwrite', action='store_true', help='Whether to overwrite existing data', default=False)
+    args = argparser.parse_args()
+
+    if args.dataset is not None:
+        database_list = args.dataset
     # Process each dataset sequentially, but export tables in parallel within each dataset
     for i, dataset in enumerate(database_list):
         mysql_dataset = mysql_database_list[i]
-        export_dataset(dataset, mysql_dataset)
+        export_dataset(data_dir, dataset, mysql_dataset, args.overwrite)
 
 
 if __name__ == '__main__':
