@@ -61,6 +61,8 @@ class QueryPlanDataset(Dataset):
 
             else:   # homogeneous graph
                 self.dataset_list = []
+                if not isinstance(dataset, list):
+                    dataset = [dataset]
                 for ds in dataset:
                     json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
                     self.logger.info(f"Creating dataset from {json_file_path} for {ds}")
