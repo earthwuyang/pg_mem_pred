@@ -35,8 +35,6 @@ run `python src/preprocessing/execute_workload.py` execute worklosds and get mem
 copy those logs to pg_mem_data/pg_log, e.g. from /usr/local/pgsql/data/log.
 chmod +r of these logs.
 
-I currently will use three database: tpch_sf1, tpcds_sf1, and tpch_sf10.
-
 
 First run `python src/preprocessing/extract_mem_time_info.py --dataset tpch_sf1 tpcds_sf1` to extract the memory usage information from the logs. 
 You need to modify the data_dir to where you put the pg_log. Also modify the name of the dataset, e.g 'tpch_sf1' or the dataset you want to extract.

@@ -72,6 +72,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
+    torch.backends.cudnn.benchmark = False
 
     log_dir = 'logs/'
     if not os.path.exists(log_dir):

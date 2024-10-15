@@ -78,7 +78,7 @@ def gather_feature_statistics(data_dir, dataset):
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--dataset', nargs='+', type=str, default=['tpch_data'])
+    argparser.add_argument('--dataset', nargs='+', type=str, default=['tpch_sf1'])
     args = argparser.parse_args()
     for dataset in args.dataset:
         gather_feature_statistics(data_dir, dataset)
