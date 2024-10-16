@@ -411,7 +411,7 @@ if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data/'
     statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
     # statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
-    target_dir = f'evaluation_train_{args.train_dataset}_test_{args.test_dataset}'
+    target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'evaluation_train_{args.train_dataset}_test_{args.test_dataset}')
     filename_model = f'{args.train_dataset}'
     database = DatabaseSystem.POSTGRES
 
