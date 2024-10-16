@@ -78,7 +78,7 @@ def extract_features(plan, statistics):
 
 
 
-def prepare_dataset(dataset_dir, datasets, mode, statistics, debug, mem_pred, time_pred):
+def prepare_dataset(data_dir, datasets, mode, statistics, debug, mem_pred, time_pred):
     """
     Prepare a dataset by extracting features and collecting labels.
 
@@ -90,10 +90,12 @@ def prepare_dataset(dataset_dir, datasets, mode, statistics, debug, mem_pred, ti
         pd.Series: Series containing labels (peak memory).
     """
     plans = []
+    if not isinstance(datasets, list):
+        datasets = [datasets]
     for ds in datasets:
-        plan_file = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+        plan_file = os.path.join(data_dir, ds, f'{mode}_plans.json')
         if debug:
-            plan_file = os.path.join(dataset_dir, 'tpch_sf1', 'tiny_plans.json')
+            plan_file = os.path.join(data_dir, 'tpch_sf1', 'tiny_plans.json')
         plan = load_plans(plan_file)
         plans.extend(plan)
     print(f"number of {mode} plans: {len(plans)}")
@@ -126,15 +128,15 @@ def prepare_dataset(dataset_dir, datasets, mode, statistics, debug, mem_pred, ti
 
 def train_XGBoost(args):
 
-    statistics_file_path = os.path.join(args.dataset_dir, args.train_dataset[0], 'statistics_workload_combined.json')  # CAUTION
+    statistics_file_path = os.path.join(args.data_dir, args.train_dataset, 'statistics_workload_combined.json')  # CAUTION
     with open(statistics_file_path, 'r') as f:
         statistics = json.load(f)
 
     # Prepare training and validation datasets
-    X_train, y_train = prepare_dataset(args.dataset_dir, args.train_dataset, 'train', statistics, args.debug, args.mem_pred, args.time_pred)
-    X_val, y_val = prepare_dataset(args.dataset_dir, args.train_dataset, 'val', statistics, args.debug, args.mem_pred, args.time_pred)
+    X_train, y_train = prepare_dataset(args.data_dir, args.train_dataset, 'train', statistics, args.debug, args.mem_pred, args.time_pred)
+    X_val, y_val = prepare_dataset(args.data_dir, args.train_dataset, 'val', statistics, args.debug, args.mem_pred, args.time_pred)
     X_val = X_val[X_train.columns]
-    X_test, y_test = prepare_dataset(args.dataset_dir, args.test_dataset, 'test', statistics, args.debug, args.mem_pred, args.time_pred)
+    X_test, y_test = prepare_dataset(args.data_dir, args.test_dataset, 'test', statistics, args.debug, args.mem_pred, args.time_pred)
     X_test = X_test[X_train.columns]
 
     print("Training features shape:", X_train.shape)
