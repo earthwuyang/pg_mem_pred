@@ -38,7 +38,7 @@ class Prediction(nn.Module):
         
 class FeatureEmbed(nn.Module):
     def __init__(self, embed_size=32, tables = 10, types=20, joins = 40, columns= 30, \
-                 ops=4, use_sample = True, use_hist = True, bin_number = 50):
+                 ops=8, use_sample = True, use_hist = True, bin_number = 50):
         super(FeatureEmbed, self).__init__()
         
         self.use_sample = use_sample
@@ -47,10 +47,10 @@ class FeatureEmbed(nn.Module):
         self.use_hist = use_hist
         self.bin_number = bin_number
         
-        self.typeEmbed = nn.Embedding(types, embed_size)
-        self.tableEmbed = nn.Embedding(tables, embed_size)
+        self.typeEmbed = nn.Embedding(types + 1, embed_size)
+        self.tableEmbed = nn.Embedding(tables + 1, embed_size)
         
-        self.columnEmbed = nn.Embedding(columns, embed_size)
+        self.columnEmbed = nn.Embedding(columns + 1, embed_size)
         self.opEmbed = nn.Embedding(ops + 1, embed_size//8)
 
         self.linearFilter2 = nn.Linear(embed_size+embed_size//8+1, embed_size+embed_size//8+1)
@@ -64,7 +64,7 @@ class FeatureEmbed(nn.Module):
         
         self.linearHist = nn.Linear(bin_number, embed_size)
 
-        self.joinEmbed = nn.Embedding(joins, embed_size)
+        self.joinEmbed = nn.Embedding(joins + 1, embed_size)
         
         if use_hist:
             self.project = nn.Linear(embed_size*5 + embed_size//8+1, embed_size*5 + embed_size//8+1)
@@ -163,7 +163,7 @@ class QueryFormer(nn.Module):
     def __init__(self, emb_size = 32 ,ffn_dim = 32, head_size = 8, \
                  dropout = 0.1, attention_dropout_rate = 0.1, n_layers = 8, \
                  use_sample = True, use_hist = True, bin_number = 50, \
-                 pred_hid = 256
+                 pred_hid = 256, joins = 200, tables = 100, types = 20, columns = 30, ops = 8
                 ):
         
         super(QueryFormer,self).__init__()
@@ -190,8 +190,8 @@ class QueryFormer(nn.Module):
         self.super_token = nn.Embedding(1, hidden_dim)
         self.super_token_virtual_distance = nn.Embedding(1, head_size)
         
-        
-        self.embbed_layer = FeatureEmbed(emb_size, use_sample = use_sample, use_hist = use_hist, bin_number = bin_number)
+        print(f"########## in init of queryformer joins {joins}")
+        self.embbed_layer = FeatureEmbed(emb_size, use_sample = use_sample, use_hist = use_hist, bin_number = bin_number, joins = joins, tables=tables, types=types, columns=columns, ops=ops)
         
         self.pred = Prediction(hidden_dim, pred_hid)
 

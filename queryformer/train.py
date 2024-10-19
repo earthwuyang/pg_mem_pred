@@ -8,6 +8,7 @@ from scipy.stats import pearsonr
 import logging
 import json
 from tqdm import tqdm
+import re
 
 import ast  # Needed for literal_eval
 
@@ -45,25 +46,12 @@ def load_column_min_max(file_path):
         column_min_max_vals[row['name']] = (row['min'], row['max'])
     return column_min_max_vals
 
-
 def extract_query_info_from_plan(row, query_id, alias2t):
-    """
-    Extract tables, joins, predicates, and cardinality from a query plan in JSON format.
-
-    Args:
-        json_plan (dict): A query plan in JSON format.
-        query_id (int): The ID of the query being processed.
-        alias2t (dict): Mapping from table aliases to table names.
-
-    Returns:
-        str: A formatted string similar to synthetic.csv
-    """
     json_plan = row['Plan']
     # Extract tables
     tables = set()
     joins = []
     predicates = []
-    
 
     def parse_plan_node(node, parent_alias=None):
         alias = node.get('Alias', parent_alias)
@@ -88,9 +76,8 @@ def extract_query_info_from_plan(row, query_id, alias2t):
 
         # Include full table name in predicates
         for cond in conditions:
-           
-            # Replace parentheses and split conditions
-            cond_clean = cond.replace('(', '').replace(')', '').replace('::numeric', '').replace('::text', '').strip()
+            # Remove type casts using regex and clean the condition
+            cond_clean = re.sub(r"::\w+", "", cond).replace('(', '').replace(')', '').strip()
             preds = cond_clean.split(' AND ')
             for pred in preds:
                 # print(f"pred {pred}")
@@ -100,7 +87,6 @@ def extract_query_info_from_plan(row, query_id, alias2t):
                     # Check if 'val' is a column name (contains '.')
                     if '.' in val:
                         # This is a join predicate, skip adding to predicates
-                        # logging.warning(f"Predicate '{pred}' in query_id={query_id} could be a join condition. Skipping.")
                         continue
                     if '.' not in col:
                         if alias:
@@ -113,7 +99,13 @@ def extract_query_info_from_plan(row, query_id, alias2t):
                         else:
                             logging.warning(f"Cannot determine alias for column '{col}' in query_id={query_id}. Skipping predicate.")
                             continue
-                    predicates.append(f"({col} {op} {val})")
+                    # Attempt to convert val to float; if it fails, skip the predicate
+                    try:
+                        val = float(val)
+                        predicates.append(f"({col} {op} {val})")
+                    except ValueError:
+                        logging.warning(f"Non-numeric value '{val}' in predicate '{pred}' for query_id={query_id}. Skipping predicate.")
+                        continue
                 else:
                     logging.warning(f"Incomplete predicate: '{pred}' in query_id={query_id}. Skipping.")
 
@@ -303,6 +295,14 @@ sampled_data = generate_query_bitmaps(
     sample_dir=sample_dir
 )
 
+# # After generating table_sample_bitmaps
+# print(f"Type of table_sample: {type(sampled_data)}")  # Should be list
+# print(f"Number of queries: {len(sampled_data)}")
+# if len(sampled_data) > 0:
+#     print(f"Type of first entry: {type(sampled_data[0])}")  # Should be dict
+#     print(f"Keys in first entry: {list(sampled_data[0].keys())}")
+
+
 logging.info("Completed generating table sample bitmaps for all queries.")
 
 # Generate histograms based on entire tables
@@ -359,7 +359,10 @@ model = QueryFormer(
     n_layers=args.n_layers,
     use_sample=True,
     use_hist=True,
-    pred_hid=args.pred_hid
+    pred_hid=args.pred_hid,
+    joins = len(encoding.join2idx), 
+    tables = len(encoding.table2idx),
+    types = len(encoding.type2idx),
 ).to(args.device)
 
 logging.info("Initialized QueryFormer model.")

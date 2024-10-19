@@ -87,8 +87,8 @@ def evaluate(model, ds, bs, norm, device, prints=False):
             cost_preds = cost_preds.squeeze()
 
             cost_predss = np.append(cost_predss, cost_preds.cpu().detach().numpy())
-    scores = print_qerror(norm.unnormalize_labels(cost_predss), ds.costs, prints)
-    corr = get_corr(norm.unnormalize_labels(cost_predss), ds.costs)
+    scores = print_qerror(norm.unnormalize_labels(cost_predss), ds.labels, prints)
+    corr = get_corr(norm.unnormalize_labels(cost_predss), ds.labels)
     if prints:
         print('Corr: ',corr)
     return scores, corr
@@ -120,16 +120,15 @@ def train(model, train_ds, val_ds, crit, \
 
         train_idxs = rng.permutation(len(train_ds))
 
-        cost_labelss = np.array(train_ds.costs)[train_idxs]
+        labels = np.array(train_ds.labels)[train_idxs]
 
         for idxs in chunks(train_idxs, bs):
             optimizer.zero_grad()
 
             batch, batch_labels = collator([train_ds[j] for j in idxs])
-            
-            l, r = zip(*batch_labels)
 
-            batch_cost_label = torch.FloatTensor(l).to(device)
+
+            batch_cost_label = torch.FloatTensor(batch_labels).to(device)
             batch = batch.to(device)
 
             cost_preds, _ = model(batch)
@@ -159,7 +158,7 @@ def train(model, train_ds, val_ds, crit, \
 
         if epoch % 20 == 0:
             print('Epoch: {}  Avg Loss: {:.4f}, Time: {:.2f}s'.format(epoch, losses/len(train_ds), time.time()-t0))
-            train_scores = print_qerror(cost_norm.unnormalize_labels(cost_predss),cost_labelss, True)
+            train_scores = print_qerror(cost_norm.unnormalize_labels(cost_predss),labels, True)
 
         scheduler.step()   
 

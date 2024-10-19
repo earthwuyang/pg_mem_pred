@@ -37,7 +37,7 @@ class PlanTreeDataset(Dataset):
         return self.length
     
     def __getitem__(self, idx):
-        return self.collated_dicts[idx], (self.cost_labels[idx], self.card_labels[idx])
+        return self.collated_dicts[idx], self.labels[idx]
     
     def pre_collate(self, the_dict, max_node=30, rel_pos_max=20):
         x = pad_2d_unsqueeze(the_dict['features'], max_node)
@@ -121,6 +121,9 @@ class PlanTreeDataset(Dataset):
         filters, alias = formatFilter(plan)
         join = formatJoin(plan)
         joinId = encoding.encode_join(join)
+        # print(f"encoding.join2idx: {len(encoding.join2idx)}, joinId: {joinId}")
+        if joinId >= len(encoding.join2idx):
+            print(f"joinId: {joinId}, encoding.join2idx: {len(encoding.join2idx)}")
         filters_encoded = encoding.encode_filters(filters, alias)
         
         root = TreeNode(nodeType, typeId, filters, card, joinId, join, filters_encoded)
@@ -175,10 +178,12 @@ def node2feature(node, encoding, hist_file, table_sample, alias2t):
     type_join = np.array([node.typeId, node.join])
 
     # Filters
-    filter_cols = node.filterDict.get('colId', [])
-    filter_ops = node.filterDict.get('opId', [])
-    filter_vals = node.filterDict.get('val', [])
+    filter_cols = np.atleast_1d(node.filterDict.get('colId', []))
+    filter_ops = np.atleast_1d(node.filterDict.get('opId', []))
+    filter_vals = np.atleast_1d(node.filterDict.get('val', []))
+
     num_filters = len(filter_cols)
+
 
     # Map colIds and opIds back to column names and operators for histogram
     mapped_filterDict = {}
@@ -212,21 +217,27 @@ def node2feature(node, encoding, hist_file, table_sample, alias2t):
     # Histograms
     hists = filterDict2Hist(hist_file, mapped_filterDict, encoding)
 
-    # Prepare filters for inclusion in the feature vector
     # Pad filters to fixed size
     max_filters = MAX_FILTERS
     filter_pad_length = max_filters - num_filters
     pad_value_col = encoding.col2idx.get('NA', 0)
-    pad_value_op = encoding.op2idx.get('NA', 3)  # Updated to match new op2idx
+    pad_value_op = encoding.op2idx.get('NA', 3)
 
-    # Ensure filter arrays are numpy arrays
-    filter_cols = np.array(filter_cols)
-    filter_ops = np.array(filter_ops)
-    filter_vals = np.array(filter_vals)
-
+    if len(filter_cols) == 0:
+        print(f"filter_cols is empty")
+        while 1:pass
+    if len(filter_ops) == 0:    
+        print(f"filter_ops is empty")
+        while 1:pass
+    if len(filter_vals) == 0:
+        print(f"filter_vals is empty")
+        while 1:pass
+    
     filter_cols = np.pad(filter_cols, (0, filter_pad_length), 'constant', constant_values=pad_value_col)[:max_filters]
     filter_ops = np.pad(filter_ops, (0, filter_pad_length), 'constant', constant_values=pad_value_op)[:max_filters]
+
     filter_vals = np.pad(filter_vals, (0, filter_pad_length), 'constant', constant_values=0.0)[:max_filters]
+    
 
     # Create filter mask
     filter_mask = np.zeros(max_filters)
@@ -247,19 +258,15 @@ def node2feature(node, encoding, hist_file, table_sample, alias2t):
     else:
         sample = sample[:SAMPLE_SIZE]
 
-    # Concatenate all features
+    # Concatenate all features into one feature vector
     feature_vector = np.concatenate([type_join, filters, filter_mask, hists, table_id, sample])
 
-    # Debugging: Check the maximum opId
-    max_op_id = filter_ops.max() if len(filter_ops) > 0 else 0
-    # logging.debug(f"Max opId in node.feature: {max_op_id}")
-    if max_op_id >= len(encoding.op2idx):
-        logging.error(f"opId {max_op_id} exceeds embedding size {len(encoding.op2idx)}. Assigning 'NA'.")
-        exit()
-        # Optionally, set opId to 'NA' here if needed
+    # Ensure feature vector length is correct
+    expected_length = 2 + (3 * MAX_FILTERS) + MAX_FILTERS + (HIST_BINS * MAX_FILTERS) + 1 + SAMPLE_SIZE
+    actual_length = len(feature_vector)
+    assert actual_length == expected_length, f"Feature vector length {actual_length} does not match expected {expected_length}."
 
     return feature_vector
-
 
 
 

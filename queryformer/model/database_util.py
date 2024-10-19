@@ -241,76 +241,6 @@ def sample_all_tables(db_params, schema, sample_dir='./data/tpcds/sampled_data/'
     return sampled_data
 
 
-def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled_data/'):
-    """
-    Generates table sample bitmaps for each query based on pre-sampled table data.
-    
-    Args:
-        query_file (pd.DataFrame): DataFrame containing queries.
-        alias2t (dict): Mapping from table aliases to table names.
-        sample_dir (str): Directory where sampled table CSV files are stored.
-    
-    Returns:
-        list: List of dictionaries containing bitmaps for each query's tables.
-    """
-    table_sample_bitmaps = []
-    
-    for idx, row in tqdm(query_file.iterrows(), total=len(query_file)):
-        query_id = row['id']
-        tables_joins = row['tables_joins'].split(',')
-        predicates = row['predicate'].split(',')
-        
-        # Initialize bitmap dictionary for this query
-        bitmap_dict = {}
-        
-        # Parse tables and aliases from 'tables_joins'
-        involved_tables = set()
-        for tj in tables_joins:
-            alias, table = tj.split('.')
-            involved_tables.add(alias2t.get(alias, table))
-        
-        # Load sampled data for involved tables
-        sampled_tables = {}
-        for table in involved_tables:
-            sample_file = os.path.join(sample_dir, f"{table}_sampled.csv")
-            if os.path.exists(sample_file):
-                df = pd.read_csv(sample_file)
-                sampled_tables[table] = df
-            else:
-                logging.warning(f"Sample file '{sample_file}' does not exist for table '{table}'.")
-                sampled_tables[table] = pd.DataFrame()  # Empty DataFrame
-        
-        # Apply predicates to generate bitmaps
-        # Assuming predicates are in the format: "alias.column,operator,value"
-        # e.g., "t.production_year,<,2020"
-        num_tables = len(involved_tables)
-        for i in range(0, len(predicates), 3):
-            if i + 2 >= len(predicates):
-                break  # Incomplete predicate
-            left, op, right = predicates[i:i+3]
-            alias, column = left.split('.')
-            table = alias2t.get(alias, alias)  # Default to alias if not found
-            df = sampled_tables.get(table, pd.DataFrame())
-            if df.empty:
-                # If no data, default bitmap to all zeros
-                bitmap = np.zeros(len(df), dtype='uint8')
-            else:
-                if op == '=':
-                    bitmap = (df[column] == float(right)).astype('uint8').values
-                elif op == '<':
-                    bitmap = (df[column] < float(right)).astype('uint8').values
-                elif op == '>':
-                    bitmap = (df[column] > float(right)).astype('uint8').values
-                else:
-                    logging.warning(f"Unsupported operator '{op}' in predicate.")
-                    bitmap = np.zeros(len(df), dtype='uint8')
-            bitmap_dict[f"{table}.{column}"] = bitmap
-        
-        table_sample_bitmaps.append(bitmap_dict)
-    
-    return table_sample_bitmaps
-
-
 def generate_histogram_single(args):
     """
     Generates histogram for a single table-column pair.
@@ -586,81 +516,6 @@ def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled
 
 
 
-
-
-class Encoding:
-    def __init__(self, column_min_max_vals, col2idx, op2idx={'>':0, '=':1, '<':2, 'NA':3}):
-        self.column_min_max_vals = column_min_max_vals
-        self.col2idx = col2idx
-        self.op2idx = op2idx
-        
-        idx2col = {v: k for k, v in col2idx.items()}
-        self.idx2col = idx2col
-        self.idx2op = {0:'>', 1:'=', 2:'<', 3:'NA'}
-        
-        self.type2idx = {}
-        self.idx2type = {}
-        self.join2idx = {}
-        self.idx2join = {}
-        
-        self.table2idx = {'NA':0}
-        self.idx2table = {0:'NA'}
-    
-    def normalize_val(self, column, val, log=False):
-        mini, maxi = self.column_min_max_vals.get(column, (0,1))
-        val_norm = 0.0
-        if maxi > mini:
-            val_norm = (val - mini) / (maxi - mini)
-        return val_norm
-    
-    def encode_filters(self, filters=[], alias=None):
-        if len(filters) == 0:
-            return {'colId': [self.col2idx.get('NA', 0)],
-                    'opId': [self.op2idx.get('NA', 3)],
-                    'val': [0.0]}
-        res = {'colId': [], 'opId': [], 'val': []}
-        for filt in filters:
-            filt = ''.join(c for c in filt if c not in '()')
-            fs = filt.split(' AND ')
-            for f in fs:
-                try:
-                    col, op, num = f.split(' ')
-                    column = f"{alias}.{col}"
-                    if op not in self.op2idx:
-                        logging.warning(f"Operator '{op}' not found in op2idx mapping. filters {filters}")
-                        op_idx = self.op2idx.get('NA', 3)
-                    else:
-                        op_idx = self.op2idx[op]
-                    res['colId'].append(self.col2idx.get(column, self.col2idx.get('NA', 0)))
-                    res['opId'].append(op_idx)
-                    res['val'].append(self.normalize_val(column, float(num)))
-                except ValueError:
-                    logging.error(f"Error encoding filter '{f}'. Skipping.")
-                    continue
-        return res
-
-
-    
-    def encode_join(self, join):
-        if join not in self.join2idx:
-            self.join2idx[join] = len(self.join2idx)
-            self.idx2join[self.join2idx[join]] = join
-        return self.join2idx[join]
-    
-    def encode_table(self, table):
-        if table not in self.table2idx:
-            self.table2idx[table] = len(self.table2idx)
-            self.idx2table[self.table2idx[table]] = table
-        return self.table2idx[table]
-    
-    def encode_type(self, nodeType):
-        if nodeType not in self.type2idx:
-            self.type2idx[nodeType] = len(self.type2idx)
-            self.idx2type[self.type2idx[nodeType]] = nodeType
-        return self.type2idx[nodeType]
-    
-
-
 def formatJoin(json_node):
     """
     Formats join conditions from JSON plan nodes.
@@ -745,13 +600,13 @@ class Encoding:
         self.idx2col = idx2col
         self.idx2op = {v: k for k, v in op2idx.items()}
         
-        self.type2idx = {'Gather': 0, 'Hash Join': 1, 'Seq Scan': 2, 'Hash': 3, 'Bitmap Heap Scan': 4, 'Bitmap Index Scan': 5, 'Nested Loop': 6, 'Index Scan': 7, 'Merge Join': 8, 'Gather Merge': 9, 'Materialize': 10, 'BitmapAnd': 11, 'Sort': 12}
-        self.idx2type = {v: k for k, v in self.type2idx.items()}
-        self.join2idx = {None: 0, 'mi_idx.movie_id = t.id': 1, 'mc.movie_id = t.id': 2, 'mi.movie_id = t.id': 3, 'ci.movie_id = t.id': 4, 'mk.movie_id = t.id': 5, 'ci.movie_id = mk.movie_id': 6, 'mi.movie_id = mk.movie_id': 7, 'mi_idx.movie_id = mk.movie_id': 8, 'mc.movie_id = mk.movie_id': 9, 'ci.movie_id = mi_idx.movie_id': 10, 'ci.movie_id = mc.movie_id': 11, 'ci.movie_id = mi.movie_id': 12, 'mi.movie_id = mi_idx.movie_id': 13, 'mc.movie_id = mi_idx.movie_id': 14, 'mc.movie_id = mi.movie_id': 15}
-        self.idx2join = {v: k for k, v in self.join2idx.items()}
+        self.type2idx = {}
+        self.idx2type = {}
+        self.join2idx = {}
+        self.idx2join = {}
         
-        self.table2idx = {'NA': 0, 'title': 1, 'movie_info_idx': 2, 'movie_info': 3, 'movie_companies': 4, 'movie_keyword': 5, 'cast_info': 6}
-        self.idx2table = {0:'NA'}
+        self.table2idx = {}
+        self.idx2table = {}
     
     def normalize_val(self, column, val, log=False):
         mini, maxi = self.column_min_max_vals.get(column, (0,1))
@@ -771,13 +626,17 @@ class Encoding:
             fs = filt.split(' AND ')
             for f in fs:
                 try:
-                    col, op, num = f.split(' ')
+                    col, op, num = f.split(' ', maxsplit=2)
                     column = f"{alias}.{col}"
                     res['colId'].append(self.col2idx.get(column, self.col2idx.get('NA', 0)))
                     res['opId'].append(self.op2idx.get(op, self.op2idx.get('NA', 3)))
                     res['val'].append(self.normalize_val(column, float(num)))
-                except ValueError:
-                    logging.error(f"Error encoding filter '{f}'. Skipping.")
+                except ValueError as e:
+                    # logging.warning(f"Error encoding filter '{f}': {e}. Skipping.")
+                    if res['val'] == []:
+                        res['val'].append(0.0)
+                    if not isinstance(num, float):
+                        res['val'].append(0.0)
                     continue
         return res
     
@@ -803,6 +662,7 @@ HIST_BINS = 50  # Number of bins in each histogram
 MAX_FILTERS = 30  # Maximum number of filters to consider
 SAMPLE_SIZE = 1000  # Size of the sample data
 
+
 def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_filters=MAX_FILTERS):
     ress = []
     filter_count = 0
@@ -810,11 +670,6 @@ def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_fi
         if filter_count >= max_filters:
             break  # Only consider up to max_filters filters
         filter_count += 1
-
-        # logging.debug(f"Processing filter for column: {col}")
-        if 'table_column' not in hist_file.columns:
-            logging.error("Missing 'table_column' in hist_file DataFrame.")
-            continue
 
         # Retrieve histogram bins for the column
         matching_bins = hist_file.loc[hist_file['table_column'] == col, 'bins']
@@ -842,30 +697,29 @@ def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_fi
                 res[idx[0]] = 1
         elif op == '<':
             idx = np.digitize([val_unnorm], bins) - 1
-            res[:idx[0]] = 1
+            if 0 <= idx[0] < len(res):
+                res[:idx[0]] = 1
         elif op == '>':
             idx = np.digitize([val_unnorm], bins) - 1
-            res[idx[0]:] = 1
+            if 0 <= idx[0] < len(res):
+                res[idx[0]:] = 1
         elif op == '<=':
             idx = np.digitize([val_unnorm], bins) - 1
-            res[:idx[0]] = 1
-            res[idx[0]] = 1
+            if 0 <= idx[0] < len(res):
+                res[:idx[0]] = 1
+                res[idx[0]] = 1
         elif op == '>=':
             idx = np.digitize([val_unnorm], bins) - 1
-            res[idx[0]:] = 1
-            res[idx[0]] = 1
-        elif op == '!=':
+            if 0 <= idx[0] < len(res):
+                res[idx[0]:] = 1
+                res[idx[0]] = 1
+        elif op in ['!=', '<>']:
             idx = np.digitize([val_unnorm], bins) - 1
-            res[:idx[0]] = 1
-            # res[idx[0]] = 1
-            res[idx[0]+1:] = 1
-        elif op == '<>':
-            idx = np.digitize([val_unnorm], bins) - 1
-            res[:idx[0]] = 1
-            # res[idx[0]] = 1
-            res[idx[0]+1:] = 1
+            if 0 <= idx[0] < len(res):
+                res[:idx[0]] = 1
+                res[idx[0]+1:] = 1
         else:
-            logging.warning(f"Unsupported operator '{op}' in filter condition.")
+            # logging.warning(f"Unsupported operator '{op}' in filter condition.")
             res = np.zeros(hist_bins)
 
         ress.append(res)
@@ -878,6 +732,9 @@ def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_fi
 
     # Concatenate the histograms
     ress = np.concatenate(ress) if ress else np.zeros(hist_bins * max_filters)
+
+    # Ensure the length is correct
+    assert len(ress) == hist_bins * max_filters, f"Histograms concatenated length {len(ress)} does not match expected {hist_bins * max_filters}."
 
     return ress
 
