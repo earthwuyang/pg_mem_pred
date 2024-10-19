@@ -97,8 +97,8 @@ def evaluate(model, ds, bs, norm, device, prints=False):
 def train(model, train_ds, val_ds, crit, \
     label_norm, args, optimizer=None, scheduler=None):
     
-    to_pred, bs, device, epochs, clip_size = \
-        args.to_predict, args.bs, args.device, args.epochs, args.clip_size
+    bs, device, epochs, clip_size = \
+        args.bs, args.device, args.epochs, args.clip_size
     lr = args.lr
 
     if not optimizer:

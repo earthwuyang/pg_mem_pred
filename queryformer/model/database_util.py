@@ -9,8 +9,11 @@ import logging
 import os
 import ast
 import multiprocessing
+import multiprocessing as mp
 from tqdm import tqdm
 import pickle
+import json
+import re
 
 ## BFS should be enough
 def floyd_warshall_rewrite(adjacency_matrix):
@@ -29,6 +32,144 @@ def floyd_warshall_rewrite(adjacency_matrix):
             for j in range(nrows):
                 M[i][j] = min(M[i][j], M[i][k]+M[k][j])
     return M
+
+def get_column_min_max_vals(dataset, DB_PARAMS, schema, t2alias, max_workers):
+    column_min_max_file = f'./data/{dataset}/column_min_max_vals.csv'
+    if not os.path.exists(column_min_max_file):
+        logging.info(f"Generating column min-max values and saving to '{column_min_max_file}'.")
+        generate_column_min_max(
+            db_params=DB_PARAMS,
+            schema=schema,
+            output_file=column_min_max_file,
+            t2alias=t2alias,
+            max_workers=max_workers,
+            pool_minconn=1,
+        )
+
+    column_min_max_vals = load_column_min_max(column_min_max_file)
+    logging.info(f"Loaded column min-max values from '{column_min_max_file}'.")
+    return column_min_max_vals
+
+# Load column_min_max_vals from CSV
+def load_column_min_max(file_path):
+    """
+    Loads column min and max values from a CSV file.
+
+    Args:
+        file_path (str): Path to the CSV file.
+
+    Returns:
+        dict: Dictionary mapping column names to (min, max).
+    """
+    df = pd.read_csv(file_path)
+    column_min_max_vals = {}
+    for _, row in df.iterrows():
+        column_min_max_vals[row['name']] = (row['min'], row['max'])
+    return column_min_max_vals
+
+def extract_query_info_from_plan(row, query_id, alias2t):
+    json_plan = row['Plan']
+    # Extract tables
+    tables = set()
+    joins = []
+    predicates = []
+
+    def parse_plan_node(node, parent_alias=None):
+        alias = node.get('Alias', parent_alias)
+        # Extract tables
+        if 'Relation Name' in node:
+            tables.add(node['Relation Name'])
+            alias = node.get('Alias', node['Relation Name'])
+            logging.debug(f"Query_id={query_id}: Detected table '{node['Relation Name']}' with alias '{alias}'.")
+
+        # Process joins
+        if 'Hash Cond' in node or 'Join Filter' in node:
+            join_cond = node.get('Hash Cond', node.get('Join Filter'))
+            if join_cond:
+                joins.append(join_cond)
+                logging.debug(f"Query_id={query_id}: Detected join condition: {join_cond}")
+
+        # Process predicates
+        conditions = []
+        for cond_type in ['Filter', 'Index Cond', 'Recheck Cond']:
+            if cond_type in node:
+                conditions.append(node[cond_type])
+
+        # Include full table name in predicates
+        for cond in conditions:
+            # Remove type casts using regex and clean the condition
+            cond_clean = re.sub(r"::\w+", "", cond).replace('(', '').replace(')', '').strip()
+            preds = cond_clean.split(' AND ')
+            for pred in preds:
+                # print(f"pred {pred}")
+                parts = pred.strip().split(' ', 2)
+                if len(parts) == 3:
+                    col, op, val = parts
+                    # Check if 'val' is a column name (contains '.')
+                    if '.' in val:
+                        # This is a join predicate, skip adding to predicates
+                        continue
+                    if '.' not in col:
+                        if alias:
+                            table = alias2t.get(alias)
+                            if not table:
+                                logging.warning(f"Alias '{alias}' not found in alias2t mapping. Skipping predicate '{pred}'.")
+                                continue
+                            col = f"{table}.{col}"
+                            logging.debug(f"Query_id={query_id}: Prefixed column '{col}' with table '{table}'.")
+                        else:
+                            # logging.warning(f"Cannot determine alias for column '{col}' in query_id={query_id}. Skipping predicate.")
+                            continue
+                    # Attempt to convert val to float; if it fails, skip the predicate
+                    try:
+                        val = float(val)
+                        predicates.append(f"({col} {op} {val})")
+                    except ValueError:
+                        # logging.warning(f"Non-numeric value '{val}' in predicate '{pred}' for query_id={query_id}. Skipping predicate.")
+                        continue
+                else:
+                    logging.warning(f"Incomplete predicate: '{pred}' in query_id={query_id}. Skipping.")
+
+        # Recursively handle subplans
+        if 'Plans' in node:
+            for subplan in node['Plans']:
+                parse_plan_node(subplan, parent_alias=alias)
+
+    parse_plan_node(json_plan)
+
+    # Join tables, joins, and predicates into the desired format
+    table_str = ",".join(sorted(list(tables)))
+    join_str = ",".join(joins) if joins else ""
+    predicate_str = ",".join(predicates) if predicates else ""
+    mem = row['peakmem']
+    mem_str = str(mem)
+
+    logging.debug(f"Query_id={query_id}: Extracted query info: tables={table_str}, joins={join_str}, predicates={predicate_str}, cardinality={mem_str}")
+
+    return f"{table_str}#{join_str}#{predicate_str}#{mem_str}"
+
+
+def generate_for_samples(json_plans, output_path, alias2t):
+    
+    query_info_list = []
+    print(f"Extracting query information from {len(json_plans)} plans.")
+    for idx, row in tqdm(enumerate(json_plans), total=len(json_plans)):
+        try:
+            query_info = extract_query_info_from_plan(row, query_id=idx, alias2t=alias2t)
+            query_info_list.append(query_info)
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decoding error for query_id={idx}: {e}. Skipping this query.")
+            query_info_list.append("NA#NA#NA#0")  # Placeholder for failed parsing
+        except KeyError as e:
+            logging.error(f"Missing key {e} in query_id={idx}. Skipping this query.")
+            query_info_list.append("NA#NA#NA#0")  # Placeholder for failed parsing
+
+    # Save the query information to a CSV file
+    with open(output_path, 'w') as f:
+        for query_info in query_info_list:
+            f.write(f"{query_info}\n")
+
+    logging.info(f"extracted query information file saved to: {output_path}")
 
 
 def extract_column_stats(args):
@@ -82,7 +223,7 @@ def extract_column_stats(args):
             'num_unique_values': num_unique
         }
         
-        logging.info(f"Extracted stats for '{table}.{column}': min={min_val}, max={max_val}, cardinality={cardinality}, unique={num_unique}")
+        # logging.info(f"Extracted stats for '{table}.{column}': min={min_val}, max={max_val}, cardinality={cardinality}, unique={num_unique}")
         
         # Close the cursor and connection
         cur.close()
@@ -159,7 +300,7 @@ def sample_table(args):
     table, db_params, sample_dir, num_samples = args
     sample_file = os.path.join(sample_dir, f"{table}_sampled.csv")
     if os.path.exists(sample_file):
-        logging.info(f"Sample file '{sample_file}' already exists. Skipping.")
+        # logging.info(f"Sample file '{sample_file}' already exists. Skipping.")
         return sample_file
     
     try:
@@ -183,7 +324,7 @@ def sample_table(args):
         df = pd.DataFrame(sampled_rows, columns=column_names)
         df.to_csv(sample_file, index=False)
         
-        logging.info(f"Sampled {len(df)} rows from '{table}' and saved to '{sample_file}'.")
+        # logging.info(f"Sampled {len(df)} rows from '{table}' and saved to '{sample_file}'.")
         
         # Close the cursor and connection
         cur.close()
@@ -398,41 +539,34 @@ def load_entire_histograms(load_path='./data/tpcds/histogram_entire.csv'):
     return hist_file_df
 
 
-def sample_single_query(args):
-    """
-    This function is no longer needed in the two-step sampling approach.
-    Retained for reference but can be removed.
-    """
-    pass  # Implemented in 'generate_query_bitmaps'
+# Global variables for worker processes
+global_alias2t = {}
+global_sample_dir = ''
 
-
-def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled_data/'):
+def init_worker(alias2t, sample_dir):
     """
-    Generates table sample bitmaps for each query based on pre-sampled table data.
+    Initializer for worker processes to set global variables.
+    """
+    global global_alias2t
+    global global_sample_dir
+    global_alias2t = alias2t
+    global_sample_dir = sample_dir
+
+def process_query(row):
+    """
+    Processes a single query row to generate bitmap_dict.
 
     Args:
-        query_file (pd.DataFrame): DataFrame containing queries.
-        alias2t (dict): Mapping from table aliases to table names.
-        sample_dir (str): Directory where sampled table CSV files are stored.
+        row (pd.Series): A row from the query_file DataFrame.
 
     Returns:
-        list: List of dictionaries containing bitmaps for each query's tables.
+        dict: Dictionary containing bitmaps for the query's tables.
     """
-    # if table_sample_bitmaps exist, load them from file
-    table_sample_bitmaps_file = os.path.join(sample_dir, 'table_sample_bitmaps.pkl')
-    if os.path.exists(table_sample_bitmaps_file):
-        with open(table_sample_bitmaps_file, 'rb') as f:
-            table_sample_bitmaps = pickle.load(f)
-        logging.info(f"Loaded table sample bitmaps from '{table_sample_bitmaps_file}'.")
-        return table_sample_bitmaps
-    
-    table_sample_bitmaps = []
-
-    for idx, row in tqdm(query_file.iterrows(), total=len(query_file)):
-        query_id = idx
+    try:
+        query_id = row.name  # Assuming the index is the query_id
         tables = row['tables']
-        joins = row['joins'] if 'joins' in row and row['joins'] else ''
-        predicates_str = row['predicate'] if 'predicate' in row and row['predicate'] else ''
+        joins = row['joins'] if 'joins' in row and pd.notna(row['joins']) else ''
+        predicates_str = row['predicate'] if 'predicate' in row and pd.notna(row['predicate']) else ''
 
         # Initialize bitmap dictionary for this query
         bitmap_dict = {}
@@ -442,12 +576,12 @@ def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled
         # Load sampled data for involved tables
         sampled_tables = {}
         for table in involved_tables:
-            sample_file = os.path.join(sample_dir, f"{table}_sampled.csv")
+            sample_file = os.path.join(global_sample_dir, f"{table}_sampled.csv")
             if os.path.exists(sample_file):
                 df = pd.read_csv(sample_file)
                 sampled_tables[table] = df
             else:
-                logging.warning(f"Sample file '{sample_file}' does not exist for table '{table}'.")
+                print(f"Warning: Sample file '{sample_file}' does not exist for table '{table}'.")
                 sampled_tables[table] = pd.DataFrame()  # Empty DataFrame
 
         # Ensure predicates is a string before splitting
@@ -464,30 +598,34 @@ def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled
             if predicate.startswith('(') and predicate.endswith(')'):
                 predicate = predicate[1:-1]
             else:
-                logging.warning(f"Invalid predicate format '{predicate}' in query_id={query_id}.")
+                print(f"Warning: Invalid predicate format '{predicate}' in query_id={query_id}.")
                 continue
 
             try:
                 # Split predicate into parts
-                col, op, val = predicate.strip().split(' ', 2)
+                parts = predicate.strip().split(' ', 2)
+                if len(parts) != 3:
+                    print(f"Warning: Unable to parse predicate '{predicate}' in query_id={query_id}.")
+                    continue
+                col, op, val = parts
                 if '.' in col:
                     alias, column = col.split('.', 1)
                 else:
-                    logging.warning(f"Cannot determine alias for column '{col}' in query_id={query_id}. Skipping predicate.")
+                    print(f"Warning: Cannot determine alias for column '{col}' in query_id={query_id}. Skipping predicate.")
                     continue
 
-                table = alias2t.get(alias, alias)
+                table = global_alias2t.get(alias, alias)
                 df = sampled_tables.get(table, pd.DataFrame())
                 if df.empty:
                     # If no data, default bitmap to all zeros
                     bitmap = np.zeros(1000, dtype='uint8')  # Adjust size as needed
                 else:
                     if column not in df.columns:
-                        logging.warning(f"Column '{column}' not found in table '{table}' for query_id={query_id}.")
+                        print(f"Warning: Column '{column}' not found in table '{table}' for query_id={query_id}.")
                         bitmap = np.zeros(len(df), dtype='uint8')
                     else:
                         try:
-                            # Convert value to float for comparison
+                            # Attempt to convert value to numeric types
                             val_float = float(val)
                             if op == '=':
                                 bitmap = (df[column] == val_float).astype('uint8').values
@@ -495,25 +633,74 @@ def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled
                                 bitmap = (df[column] < val_float).astype('uint8').values
                             elif op == '>':
                                 bitmap = (df[column] > val_float).astype('uint8').values
+                            elif op == '<=':
+                                bitmap = (df[column] <= val_float).astype('uint8').values
+                            elif op == '>=':
+                                bitmap = (df[column] >= val_float).astype('uint8').values
+                            elif op in ['!=', '<>']:
+                                bitmap = (df[column] != val_float).astype('uint8').values
                             else:
-                                logging.warning(f"Unsupported operator '{op}' in predicate of query_id={query_id}. Skipping predicate.")
+                                print(f"Warning: Unsupported operator '{op}' in predicate of query_id={query_id}. Skipping predicate.")
                                 bitmap = np.zeros(len(df), dtype='uint8')
                         except ValueError:
-                            # logging.warning(f"Non-numeric value '{val}' in predicate '{predicate}' for query_id={query_id}. Skipping predicate.")
+                            # Handle non-numeric values
                             bitmap = np.zeros(len(df), dtype='uint8')
                 bitmap_dict[f"{table}.{column}"] = bitmap
             except Exception as e:
-                logging.error(f"Error parsing predicate '{predicate}' in query_id={query_id}: {e}")
+                print(f"Error parsing predicate '{predicate}' in query_id={query_id}: {e}")
                 continue
 
-        table_sample_bitmaps.append(bitmap_dict)
-    # save table_sample_bitmaps to file
+        return bitmap_dict
+
+    except Exception as e:
+        print(f"Error processing query_id={row.name}: {e}")
+        return {}
+
+def generate_query_bitmaps(query_file, alias2t, sample_dir='./data/tpcds/sampled_data/', num_workers=None):
+    """
+    Generates table sample bitmaps for each query based on pre-sampled table data using multiprocessing.
+
+    Args:
+        query_file (pd.DataFrame): DataFrame containing queries.
+        alias2t (dict): Mapping from table aliases to table names.
+        sample_dir (str): Directory where sampled table CSV files are stored.
+        num_workers (int, optional): Number of worker processes to use. Defaults to number of CPU cores.
+
+    Returns:
+        list: List of dictionaries containing bitmaps for each query's tables.
+    """
+    import os
+    import pickle
+
+    # Define the bitmap file path
+    table_sample_bitmaps_file = os.path.join(sample_dir, 'table_sample_bitmaps.pkl')
+    
+    # If bitmap file exists, load and return it
+    if os.path.exists(table_sample_bitmaps_file):
+        with open(table_sample_bitmaps_file, 'rb') as f:
+            table_sample_bitmaps = pickle.load(f)
+        logging.info(f"Loaded table sample bitmaps from '{table_sample_bitmaps_file}'.")
+        return table_sample_bitmaps
+
+    # Prepare for multiprocessing
+    num_workers = num_workers or mp.cpu_count()
+    logging.info(f"Starting multiprocessing with {num_workers} workers.")
+
+    # Initialize the pool with the initializer
+    with mp.Pool(processes=num_workers, initializer=init_worker, initargs=(alias2t, sample_dir)) as pool:
+        # Use imap for lazy evaluation and better memory usage
+        results = []
+        for bitmap_dict in tqdm(pool.imap(process_query, [row for _, row in query_file.iterrows()]), total=len(query_file)):
+            results.append(bitmap_dict)
+
+    table_sample_bitmaps = results
+
+    # Save the bitmap results to a file
     with open(table_sample_bitmaps_file, 'wb') as f:
         pickle.dump(table_sample_bitmaps, f)
     logging.info(f"Saved table sample bitmaps to '{table_sample_bitmaps_file}'.")
 
     return table_sample_bitmaps
-
 
 
 def formatJoin(json_node):

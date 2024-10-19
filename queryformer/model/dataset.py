@@ -9,23 +9,104 @@ from collections import deque
 from .database_util import formatFilter, formatJoin, TreeNode, filterDict2Hist
 from .database_util import *
 
+def process_node(args):
+            idx, node, obj = args
+            return obj.js_node2dict(idx, node)
+
 class PlanTreeDataset(Dataset):
-    def __init__(self, json_df: pd.DataFrame, workload_df: pd.DataFrame, encoding, hist_file, table_sample, alias2t):
-        self.table_sample = table_sample  # List of dicts indexed by query_id
-        self.encoding = encoding
-        self.hist_file = hist_file
-        self.length = len(json_df)
+    def __init__(self, data_dir, dataset, mode, alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, max_workers):
+        self.data_dir = data_dir
+        self.dataset = dataset
+        self.mode = mode
         self.alias2t = alias2t
+        self.t2alias = t2alias
+        self.schema = schema
+        self.sample_dir = sample_dir
+        self.DB_PARAMS = DB_PARAMS
+        self.encoding = encoding
+
+        plan_file = os.path.join(data_dir, dataset, f'{mode}_plans.json')
         
-        nodes = [plan['Plan'] for plan in json_df]
-        self.labels = [plan['peakmem'] for plan in json_df]
+        with open(plan_file, 'r') as f:
+            plans = json.load(f)
+
+        generated_queries_path = f'./data/{dataset}/generated_queries.csv'
+        
+
+        if os.path.exists(generated_queries_path):
+            logging.info(f"Generated CSV file '{generated_queries_path}' already exists. Skipping generation.")
+        else:
+            generate_for_samples(plans, generated_queries_path, alias2t)
+            logging.info(f"Generated CSV file for training queries saved to: {generated_queries_path}")
+
+
+        # Load all queries from the generated CSV
+        column_names = ['tables', 'joins', 'predicate', 'cardinality']
+        try:
+            query_file = pd.read_csv(
+                generated_queries_path,
+                sep='#',
+                header=None,
+                names=column_names,
+                keep_default_na=False,   # Do not convert empty strings to NaN
+                na_values=['']           # Treat empty strings as empty, not NaN
+            )
+
+        except pd.errors.ParserError as e:
+            logging.error(f"Error reading generated_queries.csv: {e}")
+            exit(1)
+
+        # Generate bitmaps for each query based on pre-sampled table data
+        logging.info("Generating table sample bitmaps for each query.")
+
+        self.sampled_data = generate_query_bitmaps(
+            query_file=query_file,
+            alias2t=alias2t,
+            sample_dir=sample_dir
+        )
+
+
+        logging.info("Completed generating table sample bitmaps for all queries.")
+
+        # Generate histograms based on entire tables
+        hist_dir = f'./data/{dataset}/histograms/'
+        histogram_file_path = f'./data/{dataset}/histogram_entire.csv'
+
+        if not os.path.exists(histogram_file_path):
+            hist_file_df = generate_histograms_entire_db(
+                db_params=DB_PARAMS,
+                schema=schema,
+                hist_dir=hist_dir,
+                bin_number=50,
+                t2alias=t2alias,
+                max_workers=max_workers
+            )
+            # Save histograms with comma-separated bins
+            save_histograms(hist_file_df, save_path=histogram_file_path)
+        else:
+            hist_file_df = load_entire_histograms(load_path=histogram_file_path)
+        
+        self.hist_file = hist_file_df
+        self.length = len(plans)
+
+        nodes = [plan['Plan'] for plan in plans]
+        self.labels = [plan['peakmem'] for plan in plans]
     
         
         idxs = np.arange(self.length).tolist()
-
+        # print(f"idxs length {len(idxs)}")
+        print(f"self.sampled_data length {len(self.sampled_data)}")
 
         self.treeNodes = []
-        self.collated_dicts = [self.js_node2dict(i, node) for i, node in zip(idxs, nodes)]
+
+        
+
+        logging.info(f"traversing tree and getting collated dicts for {len(nodes)} plans")
+        # Wrap it with tqdm and multiprocessing
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
+        
+        
     
     def js_node2dict(self, idx, node):
         treeNode = self.traversePlan(node, idx, self.encoding)
@@ -132,8 +213,8 @@ class PlanTreeDataset(Dataset):
             root.table = plan['Relation Name']
             root.table_id = encoding.encode_table(plan['Relation Name'])
         root.query_id = idx
-        
-        root.feature = node2feature(root, encoding, self.hist_file, self.table_sample[root.query_id], self.alias2t)  # Pass the correct sample data
+
+        root.feature = node2feature(root, encoding, self.hist_file, self.sampled_data[root.query_id], self.alias2t)  # Pass the correct sample data
         if 'Plans' in plan:
             for subplan in plan['Plans']:
                 subplan['parent'] = plan

@@ -31,11 +31,11 @@ class Normalizer():
 
 
 
-def seed_everything():
-    torch.manual_seed(0)
+def seed_everything(seed):
+    torch.manual_seed(seed)
     import random
-    random.seed(0)
-    np.random.seed(0)
+    random.seed(seed)
+    np.random.seed(seed)
     torch.backends.cudnn.benchmark = False
 
 
