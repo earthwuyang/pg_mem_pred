@@ -1,9 +1,9 @@
 import collections
 import os
 from enum import Enum
-from tqdm import tqdm
-import numpy as np
 
+import numpy as np
+from tqdm import tqdm
 from cross_db_benchmark.benchmark_tools.column_types import Datatype
 from cross_db_benchmark.benchmark_tools.utils import load_schema_json, load_column_statistics, load_string_statistics
 
@@ -82,7 +82,7 @@ def sample_acyclic_aggregation_query(column_stats, string_stats, group_by_thresh
     if randstate.rand() < groupby_having_prob:
         idx = randstate.randint(0, len(aggregations))
         _, cols = aggregations[idx]
-        literal = sum([vars(vars(column_stats)[col[0]])[col[1]].mean for col in cols])
+        literal = sum(x for x in[vars(vars(column_stats)[col[0]])[col[1]].mean for col in cols] if x is not None)
         op = rand_choice(randstate, [Operator.LEQ, Operator.GEQ, Operator.NEQ])
         having_clause = (idx, literal, op)
 
@@ -222,7 +222,7 @@ class GenQuery:
             sql_query += ';'
 
         return sql_query
-    
+
 
 def generate_workload(dataset, target_path, num_queries=100, max_no_joins=3, max_no_predicates=3, max_no_aggregates=3,
                       max_no_group_by=3, max_cols_per_agg=2, group_by_threshold=10000, int_neq_predicate_threshold=100,
@@ -233,11 +233,9 @@ def generate_workload(dataset, target_path, num_queries=100, max_no_joins=3, max
     randstate = np.random.RandomState(seed)
 
     if os.path.exists(target_path) and not force:
-        print(f"Workload {dataset} already generated, workload_path: {target_path}")
+        print("Workload already generated")
         return
 
-    print(f"Generating workload for {dataset}, num_queries: {num_queries}, max_no_joins: {max_no_joins}, max_no_predicates: {max_no_predicates}, max_no_aggregates: {max_no_aggregates} "
-          f"max_no_group_by: {max_no_group_by}, max_cols_per_agg: {max_cols_per_agg}, group_by_threshold: {group_by_threshold}, int_neq_predicate_threshold: {int_neq_predicate_threshold}")
     # read the schema file
     column_stats = load_column_statistics(dataset)
     string_stats = load_string_statistics(dataset)
@@ -423,12 +421,11 @@ def sample_aggregations(max_cols_per_agg, no_aggregates, numerical_aggregation_c
 
 
 class ColumnPredicate:
-    def __init__(self, table, col_name, operator, literal, column_type=None):
+    def __init__(self, table, col_name, operator, literal):
         self.table = table
         self.col_name = col_name
         self.operator = operator
         self.literal = literal
-        self.column_type = column_type
 
     def __str__(self):
         return self.to_sql(top_operator=True)
@@ -439,10 +436,7 @@ class ColumnPredicate:
         elif self.operator == Operator.IS_NULL:
             predicates_str = f'"{self.table}"."{self.col_name}" IS NULL'
         else:
-            if self.column_type == str(Datatype.STRING_FLOAT):
-                predicates_str = f'cast("{self.table}"."{self.col_name}" as float) {str(self.operator)} {self.literal}'
-            else:
-                predicates_str = f'"{self.table}"."{self.col_name}" {str(self.operator)} {self.literal}'
+            predicates_str = f'"{self.table}"."{self.col_name}" {str(self.operator)} {self.literal}'
 
         if top_operator:
             predicates_str = f' WHERE {predicates_str}'
@@ -569,6 +563,7 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
                      complex_predicate=False, p_like=0.5, p_is_not_null=0.1, p_in=0.5, p_between=0.3,
                      p_not_like=0.5, p_mid_string_whitespace=0.5):
     col_stats = vars(vars(column_stats)[t]).get(col_name)
+    
     str_stats = None
     if string_stats is not None:
         str_stats = vars(vars(string_stats)[t]).get(col_name)
@@ -630,7 +625,6 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
             literal = f'{min(l1, l2)} AND {max(l1, l2)}'
             return ColumnPredicate(t, col_name, Operator.BETWEEN, literal)
 
-    col_type = None
     # simple predicates
     if col_stats.datatype == str(Datatype.INT):
         reasonable_ops = [Operator.LEQ, Operator.GEQ]
@@ -647,14 +641,6 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
         # happens when column is all nan
         if np.isnan(literal):
             return None
-    elif col_stats.datatype == str(Datatype.STRING_FLOAT):
-        reasonable_ops = [Operator.LEQ, Operator.GEQ]
-        literal = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=False)
-        # nan comparisons only produce errors
-        # happens when column is all nan
-        if np.isnan(literal):
-            return None
-        col_type = col_stats.datatype
     elif col_stats.datatype == str(Datatype.CATEGORICAL):
         reasonable_ops = [Operator.EQ, Operator.NEQ]
         possible_literals = [v for v in col_stats.unique_vals if v is not None and
@@ -666,7 +652,7 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
     else:
         raise NotImplementedError
     operator = rand_choice(randstate, reasonable_ops)
-    return ColumnPredicate(t, col_name, operator, literal, col_type)
+    return ColumnPredicate(t, col_name, operator, literal)
 
 
 def sample_predicates(column_stats, int_neq_predicate_threshold, no_predicates, possible_columns, table_predicates,
@@ -701,7 +687,7 @@ def analyze_columns(column_stats, group_by_treshold, join_tables, string_stats, 
     string_table_predicates = collections.defaultdict(int)
     for t in join_tables:
         for col_name, col_stats in vars(vars(column_stats)[t]).items():
-            if col_stats.datatype in {str(d) for d in [Datatype.INT, Datatype.FLOAT, Datatype.CATEGORICAL, Datatype.STRING_FLOAT]}:
+            if col_stats.datatype in {str(d) for d in [Datatype.INT, Datatype.FLOAT, Datatype.CATEGORICAL]}:
                 possible_columns.append([t, col_name])
                 table_predicates[t] += 1
 
@@ -723,6 +709,8 @@ def analyze_columns(column_stats, group_by_treshold, join_tables, string_stats, 
 
 def sample_literal_from_percentiles(percentiles, randstate, round=False):
     start_idx = randstate.randint(0, len(percentiles) - 1)
+    if None in percentiles: # added by wuy
+        return np.nan
     if np.all(np.isnan(percentiles)):
         return np.nan
     literal = randstate.uniform(percentiles[start_idx], percentiles[start_idx + 1])
