@@ -190,7 +190,6 @@ class QueryFormer(nn.Module):
         self.super_token = nn.Embedding(1, hidden_dim)
         self.super_token_virtual_distance = nn.Embedding(1, head_size)
         
-        print(f"########## in init of queryformer joins {joins}")
         self.embbed_layer = FeatureEmbed(emb_size, use_sample = use_sample, use_hist = use_hist, bin_number = bin_number, joins = joins, tables=tables, types=types, columns=columns, ops=ops)
         
         self.pred = Prediction(hidden_dim, pred_hid)

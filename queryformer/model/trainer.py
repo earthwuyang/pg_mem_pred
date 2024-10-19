@@ -21,7 +21,7 @@ def print_qerror(preds_unnorm, labels_unnorm, prints=False):
     qerror = []
     for i in range(len(preds_unnorm)):
         if preds_unnorm[i] > float(labels_unnorm[i]):
-            qerror.append(preds_unnorm[i] / float(labels_unnorm[i]))
+            qerror.append(float(preds_unnorm[i]) / float(labels_unnorm[i]))
         else:
             qerror.append(float(labels_unnorm[i]) / float(preds_unnorm[i]))
 
@@ -75,7 +75,7 @@ def eval_workload(workload, methods):
 
 def evaluate(model, ds, bs, norm, device, prints=False):
     model.eval()
-    cost_predss = np.empty(0)
+    label_predss = np.empty(0)
 
     with torch.no_grad():
         for i in range(0, len(ds), bs):
@@ -83,19 +83,19 @@ def evaluate(model, ds, bs, norm, device, prints=False):
 
             batch = batch.to(device)
 
-            cost_preds, _ = model(batch)
-            cost_preds = cost_preds.squeeze()
+            label_preds, _ = model(batch)
+            label_preds = label_preds.squeeze()
 
-            cost_predss = np.append(cost_predss, cost_preds.cpu().detach().numpy())
-    scores = print_qerror(norm.unnormalize_labels(cost_predss), ds.labels, prints)
-    corr = get_corr(norm.unnormalize_labels(cost_predss), ds.labels)
+            label_predss = np.append(label_predss, label_preds.cpu().detach().numpy())
+    scores = print_qerror(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels, prints)
+    corr = get_corr(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels)
     if prints:
         print('Corr: ',corr)
     return scores, corr
 
 
 def train(model, train_ds, val_ds, crit, \
-    cost_norm, args, optimizer=None, scheduler=None):
+    label_norm, args, optimizer=None, scheduler=None):
     
     to_pred, bs, device, epochs, clip_size = \
         args.to_predict, args.bs, args.device, args.epochs, args.clip_size
@@ -114,7 +114,7 @@ def train(model, train_ds, val_ds, crit, \
 
     for epoch in range(epochs):
         losses = 0
-        cost_predss = np.empty(0)
+        label_predss = np.empty(0)
 
         model.train()
 
@@ -131,10 +131,10 @@ def train(model, train_ds, val_ds, crit, \
             batch_cost_label = torch.FloatTensor(batch_labels).to(device)
             batch = batch.to(device)
 
-            cost_preds, _ = model(batch)
-            cost_preds = cost_preds.squeeze()
+            label_preds, _ = model(batch)
+            label_preds = label_preds.squeeze()
 
-            loss = crit(cost_preds, batch_cost_label)
+            loss = crit(label_preds, batch_cost_label)
 
             loss.backward()
 
@@ -147,10 +147,10 @@ def train(model, train_ds, val_ds, crit, \
             torch.cuda.empty_cache()
 
             losses += loss.item()
-            cost_predss = np.append(cost_predss, cost_preds.detach().cpu().numpy())
+            label_predss = np.append(label_predss, label_preds.detach().cpu().numpy())
 
         if epoch > 40:
-            test_scores, corrs = evaluate(model, val_ds, bs, cost_norm, device, False)
+            test_scores, corrs = evaluate(model, val_ds, bs, label_norm, device, False)
 
             if test_scores['q_mean'] < best_prev: ## mean mse
                 best_model_path = logging_fn(args, epoch, test_scores, filename = 'log.txt', save_model = True, model = model)
@@ -158,7 +158,7 @@ def train(model, train_ds, val_ds, crit, \
 
         if epoch % 20 == 0:
             print('Epoch: {}  Avg Loss: {:.4f}, Time: {:.2f}s'.format(epoch, losses/len(train_ds), time.time()-t0))
-            train_scores = print_qerror(cost_norm.unnormalize_labels(cost_predss),labels, True)
+            train_scores = print_qerror(label_norm.inverse_transform(label_predss.reshape(-1,1)), labels, True)
 
         scheduler.step()   
 

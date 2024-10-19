@@ -10,6 +10,8 @@ import json
 from tqdm import tqdm
 import re
 
+from sklearn.preprocessing import RobustScaler
+
 import ast  # Needed for literal_eval
 
 from model.util import Normalizer, seed_everything
@@ -233,8 +235,15 @@ column_min_max_vals = load_column_min_max(column_min_max_file)
 logging.info(f"Loaded column min-max values from '{column_min_max_file}'.")
 
 # Initialize Normalizers
-cost_norm = Normalizer(-3.61192, 12.290855)  # Example values, adjust as needed
-card_norm = Normalizer(1, 100)  # Example values, adjust as needed
+with open(os.path.join(data_dir, dataset, 'statistics_workload_combined.json')) as f:
+    stats = json.load(f)
+max_label = stats['peakmem']['max']
+scale_label = stats['peakmem']['scale']
+center_label = stats['peakmem']['center']
+label_norm = RobustScaler()
+
+label_norm.scale_ = np.array([scale_label])
+label_norm.center_ = np.array([center_label])
 
 # Perform sampling per table
 sample_dir = f'./data/{dataset}/sampled_data/'
@@ -371,7 +380,7 @@ logging.info("Initialized QueryFormer model.")
 crit = nn.MSELoss()
 
 # Train the model
-model, best_path = train(model, train_ds, val_ds, crit, cost_norm, args)
+model, best_path = train(model, train_ds, val_ds, crit, label_norm, args)
 logging.info(f"Training completed. Best model saved at: {best_path}")
 
 # Define methods dictionary for evaluation
@@ -382,7 +391,7 @@ methods = {
         sample_dir=sample_dir
     ),
     'encoding': encoding,
-    'cost_norm': cost_norm,
+    'label_norm': label_norm,
     'hist_file': hist_file_df,
     'model': model,
     'device': args.device,
