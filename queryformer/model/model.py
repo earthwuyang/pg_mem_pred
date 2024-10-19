@@ -40,6 +40,12 @@ class FeatureEmbed(nn.Module):
     def __init__(self, embed_size=32, tables = 10, types=20, joins = 40, columns= 30, \
                  ops=8, use_sample = True, use_hist = True, bin_number = 50):
         super(FeatureEmbed, self).__init__()
+
+        self.tables_dim = tables
+        self.types_dim = types
+        self.joins_dim = joins
+        self.columns_dim = columns
+        self.ops_dim = ops
         
         self.use_sample = use_sample
         self.embed_size = embed_size        
@@ -94,13 +100,16 @@ class FeatureEmbed(nn.Module):
         return final
     
     def getType(self, typeId):
-        print(f"typeId max: {typeId.max()}")
+        device = typeId.device
+        typeId = torch.where(typeId >= self.types_dim, torch.tensor(0, device=device), typeId)
         emb = self.typeEmbed(typeId.long())
 
         return emb.squeeze(1)
     
     def getTable(self, table_sample):
         table, sample = torch.split(table_sample,(1,1000), dim = -1)
+        device = table.device
+        table = torch.where(table >= self.tables_dim, torch.tensor(0, device=device), table)
         emb = self.tableEmbed(table.long()).squeeze(1)
         
         if self.use_sample:
@@ -108,6 +117,8 @@ class FeatureEmbed(nn.Module):
         return emb
     
     def getJoin(self, joinId):
+        device = joinId.device
+        joinId = torch.where(joinId >= self.joins_dim, torch.tensor(0, device=device), joinId)
         emb = self.joinEmbed(joinId.long())
 
         return emb.squeeze(1)
@@ -168,7 +179,7 @@ class QueryFormer(nn.Module):
                 ):
         
         super(QueryFormer,self).__init__()
-        print(f"######## types: {types},    joins: {joins},    tables: {tables},    columns: {columns},    ops: {ops}")
+        # print(f"######## types: {types},    joins: {joins},    tables: {tables},    columns: {columns},    ops: {ops}")
         if use_hist:
             hidden_dim = emb_size * 5 + emb_size //8 + 1
         else:

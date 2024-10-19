@@ -30,7 +30,6 @@ class PlanTreeDataset(Dataset):
         with open(plan_file, 'r') as f:
             plans = json.load(f)
         plans = plans[:100]
-
         generated_queries_path = f'./data/{dataset}/{mode}_generated_queries.csv'
         
 
@@ -117,8 +116,10 @@ class PlanTreeDataset(Dataset):
     def collate(self, nodes, idxs):
         # Wrap it with tqdm and multiprocessing
         # with mp.Pool(processes=mp.cpu_count()) as pool:
-        with mp.Pool(processes=1) as pool:
-            self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
+        # with mp.Pool(processes=1) as pool:
+        #     self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
+        # self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
+        self.collated_dicts = [process_node((i, node, self)) for i, node in tqdm(zip(idxs, nodes), total=len(nodes))]
         
         
     
@@ -212,12 +213,12 @@ class PlanTreeDataset(Dataset):
 
         nodeType = plan['Node Type']
         typeId = encoding.encode_type(nodeType)
-        logging.info(f"encoding.type2idx: {len(encoding.type2idx)}, typeId: {typeId}")
+        # logging.info(f"encoding.type2idx: {len(encoding.type2idx)}, typeId: {typeId}")
         card = None # plan['Actual Rows'] if needed
         filters, alias = formatFilter(plan)
         join = formatJoin(plan)
         joinId = encoding.encode_join(join)
-        logging.info(f"encoding.join2idx: {len(encoding.join2idx)}, joinId: {joinId}")
+        # logging.info(f"encoding.join2idx: {len(encoding.join2idx)}, joinId: {joinId}")
         if joinId >= len(encoding.join2idx):
             print(f"joinId: {joinId}, encoding.join2idx: {len(encoding.join2idx)}")
         filters_encoded = encoding.encode_filters(filters, alias)

@@ -88,9 +88,10 @@ def evaluate(model, ds, bs, norm, device, prints=False):
 
             label_predss = np.append(label_predss, label_preds.cpu().detach().numpy())
     scores = print_qerror(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels, prints)
-    corr = get_corr(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels)
-    if prints:
-        print('Corr: ',corr)
+    # corr = get_corr(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels)
+    # if prints:
+    #     print('Corr: ',corr)
+    corr = None
     return scores, corr
 
 
@@ -149,7 +150,7 @@ def train(model, train_ds, val_ds, crit, \
             losses += loss.item()
             label_predss = np.append(label_predss, label_preds.detach().cpu().numpy())
 
-        if epoch > 40:
+        if epoch >= 0: # 40
             test_scores, corrs = evaluate(model, val_ds, bs, label_norm, device, False)
 
             if test_scores['q_mean'] < best_prev: ## mean mse

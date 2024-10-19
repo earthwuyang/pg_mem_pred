@@ -144,7 +144,7 @@ def main():
     seed_everything(seed)
 
     if not args.skip_train:
-        train_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
+        train_dataset = PlanTreeDataset(data_dir, dataset, 'train', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
         logging.info(f"Training dataset length = {len(train_dataset)}")
         val_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
         logging.info(f"Validation dataset length = {len(val_dataset)}")
@@ -153,9 +153,9 @@ def main():
 
     test_dataset = PlanTreeDataset(data_dir, dataset, 'test', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
     logging.info(f"Test dataset length = {len(test_dataset)}")
-    print("type2idx:", encoding.join2idx)
-    print("table2idx:", encoding.table2idx)
-    print(f"encoding.join2idx length = {len(encoding.join2idx)}")
+    # print("type2idx:", encoding.join2idx)
+    # print("table2idx:", encoding.table2idx)
+    # print(f"encoding.join2idx length = {len(encoding.join2idx)}")
    
 
     # Initialize the model
@@ -185,10 +185,12 @@ def main():
 
 
     # Load best model
-    model.load_state_dict(torch.load(best_path))
-    logging.info(f"Loaded best model from {best_path}")
+    full_best_path = os.path.join(args.newpath, best_path)
+    loaded_model = torch.load(full_best_path)
+    model.load_state_dict(loaded_model['model'])
+    logging.info(f"Loaded best model from {full_best_path}")
     # test on test_dataset
-    scores, corr = evaluate(model, test_dataset, args.bs, label_norm, args.device)
+    scores, corr = evaluate(model, test_dataset, args.bs, label_norm, args.device, prints=True)
 
 
 if __name__ == '__main__':
