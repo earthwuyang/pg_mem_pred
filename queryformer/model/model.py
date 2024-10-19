@@ -94,6 +94,7 @@ class FeatureEmbed(nn.Module):
         return final
     
     def getType(self, typeId):
+        print(f"typeId max: {typeId.max()}")
         emb = self.typeEmbed(typeId.long())
 
         return emb.squeeze(1)
@@ -167,6 +168,7 @@ class QueryFormer(nn.Module):
                 ):
         
         super(QueryFormer,self).__init__()
+        print(f"######## types: {types},    joins: {joins},    tables: {tables},    columns: {columns},    ops: {ops}")
         if use_hist:
             hidden_dim = emb_size * 5 + emb_size //8 + 1
         else:

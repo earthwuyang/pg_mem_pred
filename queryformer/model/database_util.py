@@ -14,24 +14,47 @@ from tqdm import tqdm
 import pickle
 import json
 import re
+from numba import njit, prange
 
-## BFS should be enough
-def floyd_warshall_rewrite(adjacency_matrix):
-    (nrows, ncols) = adjacency_matrix.shape
-    assert nrows == ncols
-    M = adjacency_matrix.copy().astype('long')
-    for i in range(nrows):
-        for j in range(ncols):
-            if i == j: 
-                M[i][j] = 0
-            elif M[i][j] == 0: 
-                M[i][j] = 60
+@njit
+def compute_shortest_paths_bfs_numba(adjacency_matrix, no_edge_weight=60):
+    """
+    Computes all-pairs shortest paths in a tree using BFS, accelerated with Numba.
     
-    for k in range(nrows):
-        for i in range(nrows):
-            for j in range(nrows):
-                M[i][j] = min(M[i][j], M[i][k]+M[k][j])
-    return M
+    Args:
+        adjacency_matrix (np.ndarray): Square adjacency matrix where 0 indicates no edge.
+        no_edge_weight (int, optional): Placeholder weight for non-edges. Defaults to 60.
+    
+    Returns:
+        np.ndarray: Matrix of shortest path distances.
+    """
+    n = adjacency_matrix.shape[0]
+    dist_matrix = np.full((n, n), no_edge_weight, dtype=np.int32)
+    
+    for i in prange(n):
+        # Initialize visited and queue
+        visited = np.zeros(n, dtype=np.int8)  # 0: not visited, 1: visited
+        queue = np.empty(n, dtype=np.int32)
+        head = 0
+        tail = 0
+        
+        # Start BFS from node i
+        queue[tail] = i
+        tail += 1
+        visited[i] = 1
+        dist_matrix[i, i] = 0
+        
+        while head < tail:
+            current = queue[head]
+            head += 1
+            # Iterate over neighbors
+            for j in range(n):
+                if adjacency_matrix[current, j] != 0 and not visited[j]:
+                    visited[j] = 1
+                    queue[tail] = j
+                    tail += 1
+                    dist_matrix[i, j] = dist_matrix[i, current] + 1
+    return dist_matrix
 
 def get_column_min_max_vals(dataset, DB_PARAMS, schema, t2alias, max_workers):
     column_min_max_file = f'./data/{dataset}/column_min_max_vals.csv'

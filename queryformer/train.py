@@ -41,6 +41,7 @@ def main():
     argparser.add_argument('--seed', type=int, default=1, help='Random seed')
     argparser.add_argument('--skip_train', action='store_true', help='Skip training')
     argparser.add_argument('--bs', type=int, default=36, help='Batch size')
+    argparser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     argparser.add_argument('--epochs', type=int, default=100, help='Number of epochs')
     argparser.add_argument('--clip_size', type=int, default=50, help='Clip size')
     argparser.add_argument('--embed_size', type=int, default=64, help='Embedding size')
@@ -133,8 +134,6 @@ def main():
     if not os.path.exists(encoding_file):
         logging.info("Encoding file not found. Generating encoding.")
         encoding = Encoding(column_min_max_vals=column_min_max_vals, col2idx=col2idx)
-        with open(encoding_file, 'wb') as f:
-            pickle.dump(encoding, f)
     else:
         logging.info("Loading encoding file.")
         with open(encoding_file, 'rb') as f:
@@ -145,14 +144,19 @@ def main():
     seed_everything(seed)
 
     if not args.skip_train:
-        train_dataset = PlanTreeDataset(data_dir, dataset, 'train', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
+        train_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
         logging.info(f"Training dataset length = {len(train_dataset)}")
         val_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
         logging.info(f"Validation dataset length = {len(val_dataset)}")
+        with open(encoding_file, 'wb') as f:
+            pickle.dump(encoding, f)
 
     test_dataset = PlanTreeDataset(data_dir, dataset, 'test', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
     logging.info(f"Test dataset length = {len(test_dataset)}")
-
+    print("type2idx:", encoding.join2idx)
+    print("table2idx:", encoding.table2idx)
+    print(f"encoding.join2idx length = {len(encoding.join2idx)}")
+   
 
     # Initialize the model
     model = QueryFormer(
@@ -185,40 +189,7 @@ def main():
     logging.info(f"Loaded best model from {best_path}")
     # test on test_dataset
     scores, corr = evaluate(model, test_dataset, args.bs, label_norm, args.device)
-    exit()
 
-
-    # Define methods dictionary for evaluation
-    methods = {
-        'get_sample': lambda workload_file: generate_query_bitmaps(
-            query_file=pd.read_csv(workload_file, sep='#', header=None, names=['tables', 'joins', 'predicate', 'cardinality'], keep_default_na=False, na_values=['']),
-            alias2t=alias2t,
-            sample_dir=sample_dir
-        ),
-        'encoding': encoding,
-        'label_norm': label_norm,
-        'hist_file': hist_file_df,
-        'model': model,
-        'device': args.device,
-        'bs': 512,
-    }
-
-    exit()
-    # Evaluate on 'job-light' workload
-    job_light_workload_file = './data/tpcds/workloads/job-light.csv'
-    if os.path.exists(job_light_workload_file):
-        job_light_scores, job_light_corr = eval_workload('job-light', methods)
-        logging.info(f"Job-Light Workload Evaluation: {job_light_scores}, Correlation: {job_light_corr}")
-    else:
-        logging.warning(f"Job-Light workload file '{job_light_workload_file}' does not exist. Skipping evaluation.")
-
-    # Evaluate on 'synthetic' workload
-    synthetic_workload_file = './data/tpcds/workloads/synthetic.csv'
-    if os.path.exists(synthetic_workload_file):
-        synthetic_scores, synthetic_corr = eval_workload('synthetic', methods)
-        logging.info(f"Synthetic Workload Evaluation: {synthetic_scores}, Correlation: {synthetic_corr}")
-    else:
-        logging.warning(f"Synthetic workload file '{synthetic_workload_file}' does not exist. Skipping evaluation.")
 
 if __name__ == '__main__':
     main()

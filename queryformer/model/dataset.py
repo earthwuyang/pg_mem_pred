@@ -29,8 +29,9 @@ class PlanTreeDataset(Dataset):
         
         with open(plan_file, 'r') as f:
             plans = json.load(f)
+        plans = plans[:100]
 
-        generated_queries_path = f'./data/{dataset}/generated_queries.csv'
+        generated_queries_path = f'./data/{dataset}/{mode}_generated_queries.csv'
         
 
         if os.path.exists(generated_queries_path):
@@ -95,15 +96,28 @@ class PlanTreeDataset(Dataset):
         
         idxs = np.arange(self.length).tolist()
         # print(f"idxs length {len(idxs)}")
-        print(f"self.sampled_data length {len(self.sampled_data)}")
+        # print(f"self.sampled_data length {len(self.sampled_data)}")
 
         self.treeNodes = []
 
         
 
         logging.info(f"traversing tree and getting collated dicts for {len(nodes)} plans")
+        # load if collated_dicts in file else process
+        collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
+        if os.path.exists(collated_dicts_file):
+            logging.info(f"Loading collated_dicts from {collated_dicts_file}")
+            self.collated_dicts = np.load(collated_dicts_file, allow_pickle=True)
+            logging.info(f"Loaded collated_dicts from {collated_dicts_file}")
+        else:
+            self.collate(nodes, idxs)
+            np.save(collated_dicts_file, self.collated_dicts)
+            logging.info(f"Saved collated_dicts to {collated_dicts_file}")
+
+    def collate(self, nodes, idxs):
         # Wrap it with tqdm and multiprocessing
-        with mp.Pool(processes=mp.cpu_count()) as pool:
+        # with mp.Pool(processes=mp.cpu_count()) as pool:
+        with mp.Pool(processes=1) as pool:
             self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
         
         
@@ -133,7 +147,7 @@ class PlanTreeDataset(Dataset):
         else:
             adj = torch.zeros([N, N], dtype=torch.bool)
             adj[edge_index[0, :], edge_index[1, :]] = True
-            shortest_path_result = floyd_warshall_rewrite(adj.numpy())
+            shortest_path_result = compute_shortest_paths_bfs_numba(adj.numpy())
         
         rel_pos = torch.from_numpy(shortest_path_result).long()
         attn_bias[1:, 1:][rel_pos >= rel_pos_max] = float('-inf')
@@ -198,11 +212,12 @@ class PlanTreeDataset(Dataset):
 
         nodeType = plan['Node Type']
         typeId = encoding.encode_type(nodeType)
+        logging.info(f"encoding.type2idx: {len(encoding.type2idx)}, typeId: {typeId}")
         card = None # plan['Actual Rows'] if needed
         filters, alias = formatFilter(plan)
         join = formatJoin(plan)
         joinId = encoding.encode_join(join)
-        # print(f"encoding.join2idx: {len(encoding.join2idx)}, joinId: {joinId}")
+        logging.info(f"encoding.join2idx: {len(encoding.join2idx)}, joinId: {joinId}")
         if joinId >= len(encoding.join2idx):
             print(f"joinId: {joinId}, encoding.join2idx: {len(encoding.join2idx)}")
         filters_encoded = encoding.encode_filters(filters, alias)
