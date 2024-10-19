@@ -8,6 +8,12 @@ import pandas as pd
 from collections import deque
 from .database_util import formatFilter, formatJoin, TreeNode, filterDict2Hist
 from .database_util import *
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+import os
+import logging
+import threading
+
 
 def process_node(args):
             idx, node, obj = args
@@ -29,7 +35,7 @@ class PlanTreeDataset(Dataset):
         
         with open(plan_file, 'r') as f:
             plans = json.load(f)
-        plans = plans[:100]
+        # plans = plans[:100]
         generated_queries_path = f'./data/{dataset}/{mode}_generated_queries.csv'
         
 
@@ -99,17 +105,33 @@ class PlanTreeDataset(Dataset):
 
         self.treeNodes = []
 
-        
-
-        logging.info(f"traversing tree and getting collated dicts for {len(nodes)} plans")
-        # load if collated_dicts in file else process
+        # load collated_dicts from file if it exists
         collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
         if os.path.exists(collated_dicts_file):
-            logging.info(f"Loading collated_dicts from {collated_dicts_file}")
             self.collated_dicts = np.load(collated_dicts_file, allow_pickle=True)
             logging.info(f"Loaded collated_dicts from {collated_dicts_file}")
         else:
-            self.collate(nodes, idxs)
+
+            logging.info(f"traversing tree and getting collated dicts for {len(nodes)} plans")
+
+            self.collated_dicts = []
+            # Initialize a lock for thread-safe Encoding updates
+            self.encoding_lock = threading.Lock()
+
+            # Use ThreadPoolExecutor for multithreading
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Prepare future tasks
+                future_to_idx = {
+                    executor.submit(self.process_plan, idx, node): idx for idx, node in zip(idxs, nodes)
+                }
+
+                for future in tqdm(as_completed(future_to_idx), total=len(future_to_idx)):
+                    collated_dict = future.result()
+                    if collated_dict is not None:
+                        self.collated_dicts.append(collated_dict)
+
+            # Save collated_dicts for future use
+            collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
             np.save(collated_dicts_file, self.collated_dicts)
             logging.info(f"Saved collated_dicts to {collated_dicts_file}")
 
@@ -122,7 +144,30 @@ class PlanTreeDataset(Dataset):
         self.collated_dicts = [process_node((i, node, self)) for i, node in tqdm(zip(idxs, nodes), total=len(nodes))]
         
         
-    
+    def process_plan(self, idx, node):
+        """
+        Processes a single query plan to generate a collated dictionary.
+
+        Args:
+            idx (int): Query ID.
+            node (dict): JSON node of the query plan.
+
+        Returns:
+            dict: Collated dictionary containing features, heights, and adjacency list.
+        """
+        try:
+            # Traverse the query plan to build the tree structure
+            treeNode = self.traversePlan(node, idx, self.encoding)
+            # Convert the tree to a dictionary
+            # _dict = self.node2dict(treeNode, self.hist_file, self.sampled_data[idx], self.alias2t)
+            _dict = self.node2dict(treeNode)
+            # Pre-collate the dictionary for batching
+            collated_dict = self.pre_collate(_dict)
+            return collated_dict
+        except Exception as e:
+            logging.error(f"Error processing query_id={idx}: {e}")
+            return None
+        
     def js_node2dict(self, idx, node):
         treeNode = self.traversePlan(node, idx, self.encoding)
         _dict = self.node2dict(treeNode)

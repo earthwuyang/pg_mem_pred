@@ -9,7 +9,7 @@ import time
 import torch
 from scipy.stats import pearsonr
 import logging
-
+from .metrics import compute_metrics
 from model.dataset import collator
 
 def chunks(l, n):
@@ -26,10 +26,13 @@ def print_qerror(preds_unnorm, labels_unnorm, prints=False):
             qerror.append(float(labels_unnorm[i]) / float(preds_unnorm[i]))
 
     e_50, e_90 = np.median(qerror), np.percentile(qerror,90)    
+    e_95 = np.percentile(qerror,95)
+    e_max = np.percentile(qerror,100)
     e_mean = np.mean(qerror)
 
     if prints:
         print("Median: {}".format(e_50))
+        print("95th percentile: {}".format(e_90))
         print("Mean: {}".format(e_mean))
 
     res = {
@@ -87,12 +90,10 @@ def evaluate(model, ds, bs, norm, device, prints=False):
             label_preds = label_preds.squeeze()
 
             label_predss = np.append(label_predss, label_preds.cpu().detach().numpy())
-    scores = print_qerror(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels, prints)
-    # corr = get_corr(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels)
-    # if prints:
-    #     print('Corr: ',corr)
-    corr = None
-    return scores, corr
+    # scores = print_qerror(norm.inverse_transform(label_predss.reshape(-1,1)), ds.labels, prints)
+    result = compute_metrics(ds.labels, norm.inverse_transform(label_predss.reshape(-1,1)))
+    # print(result)
+    return result
 
 
 def train(model, train_ds, val_ds, crit, \
@@ -151,15 +152,17 @@ def train(model, train_ds, val_ds, crit, \
             label_predss = np.append(label_predss, label_preds.detach().cpu().numpy())
 
         if epoch >= 0: # 40
-            test_scores, corrs = evaluate(model, val_ds, bs, label_norm, device, False)
+            results = evaluate(model, val_ds, bs, label_norm, device, False)
 
-            if test_scores['q_mean'] < best_prev: ## mean mse
-                best_model_path = logging_fn(args, epoch, test_scores, filename = 'log.txt', save_model = True, model = model)
-                best_prev = test_scores['q_mean']
+            if results['qerror_50 (Median)'] < best_prev: ## mean mse
+                best_model_path = logging_fn(args, epoch, results, filename = 'log.txt', save_model = True, model = model)
+                best_prev = results['qerror_50 (Median)']
 
         if epoch % 20 == 0:
             print('Epoch: {}  Avg Loss: {:.4f}, Time: {:.2f}s'.format(epoch, losses/len(train_ds), time.time()-t0))
-            train_scores = print_qerror(label_norm.inverse_transform(label_predss.reshape(-1,1)), labels, True)
+            # train_scores = print_qerror(label_norm.inverse_transform(label_predss.reshape(-1,1)), labels, True)
+            result = compute_metrics(labels, label_norm.inverse_transform(label_predss.reshape(-1,1)))
+            print(result)
 
         scheduler.step()   
 

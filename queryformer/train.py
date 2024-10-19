@@ -190,7 +190,8 @@ def main():
     model.load_state_dict(loaded_model['model'])
     logging.info(f"Loaded best model from {full_best_path}")
     # test on test_dataset
-    scores, corr = evaluate(model, test_dataset, args.bs, label_norm, args.device, prints=True)
+    result = evaluate(model, test_dataset, args.bs, label_norm, args.device, prints=True)
+    print(f"test result: {result}")
 
 
 if __name__ == '__main__':
