@@ -124,13 +124,16 @@ def train(model, train_ds, val_ds, crit, \
 
         labels = np.array(train_ds.labels)[train_idxs]
 
-        for idxs in chunks(train_idxs, bs):
+        for idxs in tqdm(chunks(train_idxs, bs), total=len(train_ds)//bs):
             optimizer.zero_grad()
 
             batch, batch_labels = collator([train_ds[j] for j in idxs])
 
 
-            batch_cost_label = torch.FloatTensor(batch_labels).to(device)
+            # batch_cost_label = torch.FloatTensor(batch_labels).to(device)
+            # Apply label normalization here
+            batch_labels_norm = label_norm.transform(np.array(batch_labels).reshape(-1, 1)).squeeze()
+            batch_cost_label = torch.FloatTensor(batch_labels_norm).to(device)
             batch = batch.to(device)
 
             label_preds, _ = model(batch)
@@ -151,14 +154,14 @@ def train(model, train_ds, val_ds, crit, \
             losses += loss.item()
             label_predss = np.append(label_predss, label_preds.detach().cpu().numpy())
 
-        if epoch >= 0: # 40
+        if epoch >= 40: # 40
             results = evaluate(model, val_ds, bs, label_norm, device, False)
 
             if results['qerror_50 (Median)'] < best_prev: ## mean mse
                 best_model_path = logging_fn(args, epoch, results, filename = 'log.txt', save_model = True, model = model)
                 best_prev = results['qerror_50 (Median)']
 
-        if epoch % 20 == 0:
+        if epoch % 1 == 0:
             print('Epoch: {}  Avg Loss: {:.4f}, Time: {:.2f}s'.format(epoch, losses/len(train_ds), time.time()-t0))
             # train_scores = print_qerror(label_norm.inverse_transform(label_predss.reshape(-1,1)), labels, True)
             result = compute_metrics(labels, label_norm.inverse_transform(label_predss.reshape(-1,1)))

@@ -15,7 +15,7 @@ from sklearn.preprocessing import RobustScaler
 
 import ast  # Needed for literal_eval
 
-from model.util import Normalizer, seed_everything
+from model.util import  seed_everything
 from model.database_util import (
     generate_column_min_max,
     sample_all_tables,
@@ -40,7 +40,7 @@ def main():
     argparser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='Data directory')
     argparser.add_argument('--seed', type=int, default=1, help='Random seed')
     argparser.add_argument('--skip_train', action='store_true', help='Skip training')
-    argparser.add_argument('--bs', type=int, default=36, help='Batch size')
+    argparser.add_argument('--bs', type=int, default=1024, help='Batch size')
     argparser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     argparser.add_argument('--epochs', type=int, default=100, help='Number of epochs')
     argparser.add_argument('--clip_size', type=int, default=50, help='Clip size')
@@ -103,7 +103,7 @@ def main():
     column_min_max_vals = get_column_min_max_vals(dataset, DB_PARAMS, schema, t2alias, args.max_workers)
     
 
-    # Initialize Normalizers
+    # Initialize Scalers
     with open(os.path.join(data_dir, dataset, 'statistics_workload_combined.json')) as f:
         stats = json.load(f)
     max_label = stats['peakmem']['max']
@@ -144,14 +144,14 @@ def main():
     seed_everything(seed)
 
     if not args.skip_train:
-        train_dataset = PlanTreeDataset(data_dir, dataset, 'train', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
+        train_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers, label_norm)
         logging.info(f"Training dataset length = {len(train_dataset)}")
-        val_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
+        val_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers, label_norm)
         logging.info(f"Validation dataset length = {len(val_dataset)}")
         with open(encoding_file, 'wb') as f:
             pickle.dump(encoding, f)
 
-    test_dataset = PlanTreeDataset(data_dir, dataset, 'test', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers)
+    test_dataset = PlanTreeDataset(data_dir, dataset, 'test', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers, label_norm)
     logging.info(f"Test dataset length = {len(test_dataset)}")
     # print("type2idx:", encoding.join2idx)
     # print("table2idx:", encoding.table2idx)

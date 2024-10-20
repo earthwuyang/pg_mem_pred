@@ -20,7 +20,7 @@ def process_node(args):
             return obj.js_node2dict(idx, node)
 
 class PlanTreeDataset(Dataset):
-    def __init__(self, data_dir, dataset, mode, alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, max_workers):
+    def __init__(self, data_dir, dataset, mode, alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, max_workers, label_norm):
         self.data_dir = data_dir
         self.dataset = dataset
         self.mode = mode
@@ -30,6 +30,7 @@ class PlanTreeDataset(Dataset):
         self.sample_dir = sample_dir
         self.DB_PARAMS = DB_PARAMS
         self.encoding = encoding
+        self.label_norm = label_norm
 
         plan_file = os.path.join(data_dir, dataset, f'{mode}_plans.json')
         
@@ -108,6 +109,7 @@ class PlanTreeDataset(Dataset):
         # load collated_dicts from file if it exists
         collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
         if os.path.exists(collated_dicts_file):
+            logging.info(f"Loading collated_dicts from {collated_dicts_file}")
             self.collated_dicts = np.load(collated_dicts_file, allow_pickle=True)
             logging.info(f"Loaded collated_dicts from {collated_dicts_file}")
         else:
@@ -178,7 +180,12 @@ class PlanTreeDataset(Dataset):
         return self.length
     
     def __getitem__(self, idx):
-        return self.collated_dicts[idx], self.labels[idx]
+        collated_dict, raw_label = self.collated_dicts[idx], self.labels[idx]
+
+        # Normalize the label using the label_norm passed to the dataset
+        # normalized_label = self.label_norm.transform(np.array([raw_label]).reshape(-1, 1)).squeeze()
+
+        return collated_dict, raw_label
     
     def pre_collate(self, the_dict, max_node=30, rel_pos_max=20):
         x = pad_2d_unsqueeze(the_dict['features'], max_node)

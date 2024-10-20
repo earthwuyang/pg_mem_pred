@@ -31,7 +31,8 @@ class Prediction(nn.Module):
                 hid = hid + mid
             else:
                 hid = mid
-        out = torch.sigmoid(self.out_mlp2(hid))
+        # out = torch.sigmoid(self.out_mlp2(hid))
+        out = self.out_mlp2(hid)
 
         return out
 
