@@ -1,7 +1,8 @@
 import collections
 import os
 from enum import Enum
-
+import multiprocessing
+from functools import partial
 import numpy as np
 from tqdm import tqdm
 from cross_db_benchmark.benchmark_tools.column_types import Datatype
@@ -233,7 +234,7 @@ def generate_workload(dataset, target_path, num_queries=100, max_no_joins=3, max
     randstate = np.random.RandomState(seed)
 
     if os.path.exists(target_path) and not force:
-        print("Workload already generated")
+        print(f"Workload of {target_path} of dataset {dataset} has already been generated. Skipping.")
         return
 
     # read the schema file

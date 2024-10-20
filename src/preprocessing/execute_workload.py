@@ -16,7 +16,7 @@ def execute_workload(data_dir, dataset, cap_queries):
         "port": conn_params['port']
     }
     
-    workload_file = os.path.join(data_dir, 'workloads', dataset, 'workload_100k_s1_group_order_by.sql')
+    workload_file = os.path.join(data_dir, 'workloads', dataset, 'workload_100k_s1_group_order_by_complex.sql')
     query_dir = os.path.join(data_dir, dataset, 'raw_data','query_dir')
     verbose_plan_dir = os.path.join(data_dir, dataset, 'raw_data','verbose_plan_dir')
     analyzed_plan_dir = os.path.join(data_dir, dataset, 'raw_data','analyzed_plan_dir')

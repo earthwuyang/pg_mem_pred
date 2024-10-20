@@ -135,12 +135,26 @@ def export_and_import_dataset(dataset, mysql_dataset, conn_params):
         conn.autocommit = True
         with conn.cursor() as cur:
             try:
-                cur.execute(f"CREATE DATABASE {conn_params['dbname']};")
-                print(f"Database {conn_params['dbname']} created successfully.")
+                cur.execute(f"CREATE DATABASE {dataset};")
+                print(f"Database {dataset} created successfully.")
             except Exception as e:
-                print(f"Database {conn_params['dbname']} already exists.")
+                print(f"Database {dataset} already exists.")
 
         conn.close()
+
+    conn_params['dbname'] = dataset
+    conn = connect_db(conn_params)
+    if conn:
+        # Create tables for the current dataset
+        with conn.cursor() as cur:
+            sql_file_path = os.path.join(os.path.dirname(__file__), f"../../zsce/cross_db_benchmark/datasets/{dataset}/schema_sql/postgres.sql")
+            with open(sql_file_path, 'r') as f:
+                try:
+                    cur.execute(f.read())
+                except Exception as e:
+                    print(f"Failed to execute table creation SQL for dataset {dataset}: {e}")
+            conn.commit()
+            print(f"Table creation SQL executed for dataset {dataset}.")
 
     # Use multiprocessing to export and import tables in parallel
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:

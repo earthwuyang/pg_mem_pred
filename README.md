@@ -10,9 +10,10 @@ Example content: {"user":"wuy", "password":"wuy","host":"localhost", "port":5432
 
 
 ### create databases from mysql relational database server
-create database, create tables, load data into tables(scripts/impor_data.py).
-run `python src/preprocessing/export_data.py` to download data from relational database mariadb server.
-run `python src/preprocessing/import_data.py` to import data into local postgresql database.
+create database, create tables, load data into tables(scripts/import_data.py).
+<!-- run `python src/preprocessing/export_data.py` to download data from relational database mariadb server.
+run `python src/preprocessing/import_data.py` to import data into local postgresql database. -->
+run `python src/preprocessing/export_import_data.py` to download data from relational database mariadb server and import data into local postgresql database.
 
 ### create tpch and tpcds
 put tpch data csv files in /data/datasets/tpch_sf1
