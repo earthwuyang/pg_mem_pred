@@ -10,3 +10,4 @@
 /zsce/evaluation*
 *.csv
 *.npy
+*.bitmaps
