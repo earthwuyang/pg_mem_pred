@@ -80,13 +80,15 @@ class PlanTreeDataset(Dataset):
         histogram_file_path = f'./data/{dataset}/histogram_entire.csv'
 
         if not os.path.exists(histogram_file_path):
+            logging.info(f"Generating histograms for dataset '{dataset}'.")
             hist_file_df = generate_histograms_entire_db(
                 db_params=DB_PARAMS,
                 schema=schema,
                 hist_dir=hist_dir,
                 bin_number=50,
                 t2alias=t2alias,
-                max_workers=max_workers
+                max_workers=max_workers,
+                column_min_max_vals=encoding.column_min_max_vals
             )
             # Save histograms with comma-separated bins
             save_histograms(hist_file_df, save_path=histogram_file_path)
@@ -104,48 +106,35 @@ class PlanTreeDataset(Dataset):
         # print(f"idxs length {len(idxs)}")
         # print(f"self.sampled_data length {len(self.sampled_data)}")
 
-        self.treeNodes = []
 
-        # load collated_dicts from file if it exists
+        # if collated_dicts_file exists, load it instead of processing the plans again
         collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
         if os.path.exists(collated_dicts_file):
-            logging.info(f"Loading collated_dicts from {collated_dicts_file}")
+            logging.info(f"Collated_dicts file '{collated_dicts_file}' already exists. Loading it instead of processing the plans.")
             self.collated_dicts = np.load(collated_dicts_file, allow_pickle=True)
-            logging.info(f"Loaded collated_dicts from {collated_dicts_file}")
-        else:
+            return
+        self.collated_dicts = []
 
-            logging.info(f"traversing tree and getting collated dicts for {len(nodes)} plans")
+        # Initialize a lock for thread-safe Encoding updates
+        self.encoding_lock = threading.Lock()
 
-            self.collated_dicts = []
-            # Initialize a lock for thread-safe Encoding updates
-            self.encoding_lock = threading.Lock()
+        # Use ThreadPoolExecutor for multithreading
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Prepare future tasks
+            future_to_idx = {
+                executor.submit(self.process_plan, idx, node): idx for idx, node in zip(idxs, nodes)
+            }
 
-            # Use ThreadPoolExecutor for multithreading
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                # Prepare future tasks
-                future_to_idx = {
-                    executor.submit(self.process_plan, idx, node): idx for idx, node in zip(idxs, nodes)
-                }
+            for future in tqdm(as_completed(future_to_idx), total=len(future_to_idx), desc=f"Processing Plans: {dataset} {mode}"):
+                collated_dict = future.result()
+                if collated_dict is not None:
+                    self.collated_dicts.append(collated_dict)
 
-                for future in tqdm(as_completed(future_to_idx), total=len(future_to_idx)):
-                    collated_dict = future.result()
-                    if collated_dict is not None:
-                        self.collated_dicts.append(collated_dict)
+        # Save collated_dicts for future use
+        collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
+        np.save(collated_dicts_file, self.collated_dicts)
+        logging.info(f"Saved collated_dicts to {collated_dicts_file}")
 
-            # Save collated_dicts for future use
-            collated_dicts_file = f'./data/{dataset}/{mode}_collated_dicts.npy'
-            np.save(collated_dicts_file, self.collated_dicts)
-            logging.info(f"Saved collated_dicts to {collated_dicts_file}")
-
-    def collate(self, nodes, idxs):
-        # Wrap it with tqdm and multiprocessing
-        # with mp.Pool(processes=mp.cpu_count()) as pool:
-        # with mp.Pool(processes=1) as pool:
-        #     self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
-        # self.collated_dicts = list(tqdm(pool.imap(process_node, [(i, node, self) for i, node in zip(idxs, nodes)]), total=len(nodes)))
-        self.collated_dicts = [process_node((i, node, self)) for i, node in tqdm(zip(idxs, nodes), total=len(nodes))]
-        
-        
     def process_plan(self, idx, node):
         """
         Processes a single query plan to generate a collated dictionary.
@@ -157,25 +146,18 @@ class PlanTreeDataset(Dataset):
         Returns:
             dict: Collated dictionary containing features, heights, and adjacency list.
         """
-        try:
-            # Traverse the query plan to build the tree structure
-            treeNode = self.traversePlan(node, idx, self.encoding)
-            # Convert the tree to a dictionary
-            # _dict = self.node2dict(treeNode, self.hist_file, self.sampled_data[idx], self.alias2t)
-            _dict = self.node2dict(treeNode)
-            # Pre-collate the dictionary for batching
-            collated_dict = self.pre_collate(_dict)
-            return collated_dict
-        except Exception as e:
-            logging.error(f"Error processing query_id={idx}: {e}")
-            return None
-        
-    def js_node2dict(self, idx, node):
+        # try:
+        # Traverse the query plan to build the tree structure
         treeNode = self.traversePlan(node, idx, self.encoding)
+        # Convert the tree to a dictionary
         _dict = self.node2dict(treeNode)
+        # Pre-collate the dictionary for batching
         collated_dict = self.pre_collate(_dict)
         return collated_dict
-    
+        # except Exception as e:
+        #     logging.error(f"Error processing query_id={idx}: {e}")
+        #     return None
+        
     def __len__(self):
         return self.length
     
@@ -250,7 +232,7 @@ class PlanTreeDataset(Dataset):
             num_child.append(len(node.children))
 
             # iterate through the children of the current node, 
-            # add them to the `toVisit` deque, and build the adjacency list, assigning a new ID for each child
+            # add them to the toVisit deque, and build the adjacency list, assigning a new ID for each child
             for child in node.children:
                 toVisit.append((next_id, child))
                 adj_list.append((idx, next_id))
@@ -258,21 +240,16 @@ class PlanTreeDataset(Dataset):
         
         return adj_list, num_child, features
     
-    def traversePlan(self, plan, idx, encoding): # bfs accumulate plan
+    def traversePlan(self, plan, idx, encoding):
         '''
         Recursively constructs a tree structure from a JSON query plan
         '''
-
         nodeType = plan['Node Type']
         typeId = encoding.encode_type(nodeType)
-        # logging.info(f"encoding.type2idx: {len(encoding.type2idx)}, typeId: {typeId}")
-        card = None # plan['Actual Rows'] if needed
+        card = plan.get('Actual Rows', None)
         filters, alias = formatFilter(plan)
         join = formatJoin(plan)
         joinId = encoding.encode_join(join)
-        # logging.info(f"encoding.join2idx: {len(encoding.join2idx)}, joinId: {joinId}")
-        if joinId >= len(encoding.join2idx):
-            print(f"joinId: {joinId}, encoding.join2idx: {len(encoding.join2idx)}")
         filters_encoded = encoding.encode_filters(filters, alias)
         
         root = TreeNode(nodeType, typeId, filters, card, joinId, join, filters_encoded)
@@ -304,7 +281,7 @@ class PlanTreeDataset(Dataset):
         parent_nodes = adj_list[:,0]
         child_nodes = adj_list[:,1]
 
-        # loops while there are nodes that haven't been evaluated,
+        # determine the number of worker processes
         n = 0
         while uneval_nodes.any():
             # creating a mask for unevaluated child nodes and a mask for unready parents
@@ -320,6 +297,7 @@ class PlanTreeDataset(Dataset):
 
         # return the calculated heights for each node based on their order of evaluation
         return node_order 
+
 
 
 def node2feature(node, encoding, hist_file, table_sample, alias2t):
@@ -360,8 +338,9 @@ def node2feature(node, encoding, hist_file, table_sample, alias2t):
             elif len(potential_tables) > 1:
                 logging.warning(f"Ambiguous column '{col}' found in multiple tables {potential_tables}. Skipping.")
             else:
-                # logging.warning(f"Column '{col}' not found in any table. Skipping.")
-                pass
+                # Column not found in any table
+                logging.warning(f"Column '{col}' not found in any table. Skipping.")
+                continue
 
     # Histograms
     hists = filterDict2Hist(hist_file, mapped_filterDict, encoding)
@@ -373,18 +352,14 @@ def node2feature(node, encoding, hist_file, table_sample, alias2t):
     pad_value_op = encoding.op2idx.get('NA', 3)
 
     if len(filter_cols) == 0:
-        print(f"filter_cols is empty")
-        while 1:pass
+        logging.warning(f"filter_cols is empty for node: {node}")
     if len(filter_ops) == 0:    
-        print(f"filter_ops is empty")
-        while 1:pass
+        logging.warning(f"filter_ops is empty for node: {node}")
     if len(filter_vals) == 0:
-        print(f"filter_vals is empty")
-        while 1:pass
-    
+        logging.warning(f"filter_vals is empty for node: {node}")
+
     filter_cols = np.pad(filter_cols, (0, filter_pad_length), 'constant', constant_values=pad_value_col)[:max_filters]
     filter_ops = np.pad(filter_ops, (0, filter_pad_length), 'constant', constant_values=pad_value_op)[:max_filters]
-
     filter_vals = np.pad(filter_vals, (0, filter_pad_length), 'constant', constant_values=0.0)[:max_filters]
     
 
@@ -413,9 +388,10 @@ def node2feature(node, encoding, hist_file, table_sample, alias2t):
     # Ensure feature vector length is correct
     expected_length = 2 + (3 * MAX_FILTERS) + MAX_FILTERS + (HIST_BINS * MAX_FILTERS) + 1 + SAMPLE_SIZE
     actual_length = len(feature_vector)
-    assert actual_length == expected_length, f"Feature vector length {actual_length} does not match expected {expected_length}."
+    assert len(feature_vector) == expected_length, f"Feature vector length {actual_length} does not match expected {expected_length}."
 
     return feature_vector
+
 
 
 

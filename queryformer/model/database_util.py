@@ -56,39 +56,179 @@ def compute_shortest_paths_bfs_numba(adjacency_matrix, no_edge_weight=60):
                     dist_matrix[i, j] = dist_matrix[i, current] + 1
     return dist_matrix
 
+# Define a set of numeric data types
+NUMERIC_DATA_TYPES = {
+    'smallint',
+    'integer',
+    'bigint',
+    'decimal',
+    'numeric',
+    'real',
+    'double precision',
+    'float',
+    'float4',
+    'float8',
+}
+
+
+
 def get_column_min_max_vals(dataset, DB_PARAMS, schema, t2alias, max_workers):
-    column_min_max_file = f'./data/{dataset}/column_min_max_vals.csv'
-    if not os.path.exists(column_min_max_file):
-        logging.info(f"Generating column min-max values and saving to '{column_min_max_file}'.")
-        generate_column_min_max(
+    column_stats_file = f'./data/{dataset}/column_stats.csv'
+    if not os.path.exists(column_stats_file):
+        logging.info(f"Generating column statistics and saving to '{column_stats_file}'.")
+        generate_column_stats(
             db_params=DB_PARAMS,
             schema=schema,
-            output_file=column_min_max_file,
+            output_file=column_stats_file,
             t2alias=t2alias,
-            max_workers=max_workers,
-            pool_minconn=1,
+            max_workers=max_workers
         )
 
-    column_min_max_vals = load_column_min_max(column_min_max_file)
-    logging.info(f"Loaded column min-max values from '{column_min_max_file}'.")
+    column_min_max_vals = load_column_min_max(column_stats_file)
+    logging.info(f"Loaded column statistics from '{column_stats_file}'.")
     return column_min_max_vals
 
-# Load column_min_max_vals from CSV
 def load_column_min_max(file_path):
     """
-    Loads column min and max values from a CSV file.
+    Loads column min, max, and data types from a CSV file.
 
     Args:
         file_path (str): Path to the CSV file.
 
     Returns:
-        dict: Dictionary mapping column names to (min, max).
+        dict: Dictionary mapping column names to (min, max, data_type).
     """
     df = pd.read_csv(file_path)
     column_min_max_vals = {}
     for _, row in df.iterrows():
-        column_min_max_vals[row['name']] = (row['min'], row['max'])
+        column_min_max_vals[row['name']] = (row['min'], row['max'], row['data_type'])
     return column_min_max_vals
+
+def generate_column_stats(db_params, schema, output_file, t2alias={}, max_workers=4):
+    """
+    Connects to the PostgreSQL database, extracts min, max, cardinality, number of unique values,
+    and data types for each column in the specified tables using multiprocessing, and saves the statistics to a CSV file.
+
+    Args:
+        db_params (dict): Database connection parameters.
+        schema (dict): Schema dictionary mapping table names to their columns.
+        output_file (str): Path to save the generated CSV file.
+        t2alias (dict): Table aliases.
+        max_workers (int): Maximum number of multiprocessing workers.
+
+    Returns:
+        None
+    """
+    import multiprocessing as mp
+
+    # Initialize logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
+    
+    # List to hold table-column tuples
+    table_column_pairs = []
+    for table, columns in schema.items():
+        for column in columns:
+            if column == 'sid':
+                continue  # Skip 'sid' column
+            table_column_pairs.append((table, column, db_params, t2alias))
+
+    # Determine the number of worker processes
+    num_workers = min(len(table_column_pairs), max_workers)
+    logging.info(f"Starting multiprocessing with {num_workers} workers for {len(table_column_pairs)} table-column pairs.")
+
+    # Initialize a multiprocessing Pool with limited workers
+    with mp.Pool(processes=num_workers) as pool_mp:
+        # Use imap_unordered for better performance and to handle results as they come
+        results = []
+        for res in tqdm(pool_mp.imap_unordered(extract_column_stats_with_type, table_column_pairs), total=len(table_column_pairs)):
+            if res is not None:
+                results.append(res)
+
+    # Create a DataFrame from the results
+    stats_df = pd.DataFrame(results)
+
+    # Ensure the output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Save the DataFrame to CSV
+    stats_df.to_csv(output_file, index=False)
+    logging.info(f"Saved column statistics to '{output_file}'.")
+
+def extract_column_stats_with_type(args):
+    """
+    Extracts min, max, cardinality, number of unique values, and data type for a single table-column pair.
+
+    Args:
+        args (tuple): Contains (table, column, db_params, t2alias).
+
+    Returns:
+        dict or None: Dictionary with column statistics or None if an error occurs.
+    """
+    table, column, db_params, t2alias = args
+    stats = {}
+
+    # Skip 'sid' column if present
+    if column == 'sid':
+        return None
+
+    try:
+        # Establish a new database connection for each subprocess
+        conn = psycopg2.connect(**db_params)
+        conn.set_session(autocommit=True)
+        cur = conn.cursor()
+
+        # Get data type
+        data_type_query = f"""
+            SELECT data_type
+            FROM information_schema.columns
+            WHERE table_name = '{table}' AND column_name = '{column}';
+        """
+        cur.execute(data_type_query)
+        data_type = cur.fetchone()
+        if data_type:
+            data_type = data_type[0]
+        else:
+            data_type = 'unknown'
+
+        # Construct SQL queries
+        min_query = f"SELECT MIN({column}) FROM {table};"
+        max_query = f"SELECT MAX({column}) FROM {table};"
+        count_query = f"SELECT COUNT({column}) FROM {table} WHERE {column} IS NOT NULL;"
+        distinct_query = f"SELECT COUNT(DISTINCT {column}) FROM {table} WHERE {column} IS NOT NULL;"
+
+        # Execute queries and fetch results
+        cur.execute(min_query)
+        min_val = cur.fetchone()[0]
+
+        cur.execute(max_query)
+        max_val = cur.fetchone()[0]
+
+        cur.execute(count_query)
+        cardinality = cur.fetchone()[0]
+
+        cur.execute(distinct_query)
+        num_unique = cur.fetchone()[0]
+
+        # Populate the stats dictionary
+        stats = {
+            'name': f"{t2alias.get(table, table)}.{column}",
+            'min': min_val,
+            'max': max_val,
+            'cardinality': cardinality,
+            'num_unique_values': num_unique,
+            'data_type': data_type
+        }
+
+        # Close the cursor and connection
+        cur.close()
+        conn.close()
+
+        return stats
+
+    except Exception as e:
+        logging.error(f"Error extracting stats for '{table}.{column}': {e}")
+        return None
+
 
 def extract_query_info_from_plan(row, query_id, alias2t):
     json_plan = row['Plan']
@@ -403,6 +543,11 @@ def sample_all_tables(db_params, schema, sample_dir='./data/tpcds/sampled_data/'
         sampled_data[table] = df
     
     return sampled_data
+import os
+import logging
+import psycopg2
+import numpy as np
+import pandas as pd
 
 
 def generate_histogram_single(args):
@@ -410,15 +555,20 @@ def generate_histogram_single(args):
     Generates histogram for a single table-column pair.
 
     Args:
-        args (tuple): Contains (table, column, db_params, hist_dir, bin_number, t2alias).
+        args (tuple): Contains (table, column, db_params, hist_dir, bin_number, t2alias, data_type).
 
     Returns:
-        dict: Histogram record for the table-column.
+        dict: Histogram record for the table-column or None if skipped.
     """
-    table, column, db_params, hist_dir, bin_number, t2alias = args
+    table, column, db_params, hist_dir, bin_number, t2alias, data_type = args
 
-    if column == 'sid':
-        return None  # Skip the sample ID column
+    # Ensure the histogram directory exists
+    os.makedirs(hist_dir, exist_ok=True)
+
+    # Skip non-numeric columns
+    if data_type.lower() not in NUMERIC_DATA_TYPES:
+        # logging.info(f"Skipping non-numeric column '{table}.{column}' of type '{data_type}'.")
+        return None
 
     hist_file = os.path.join(hist_dir, f"{table}_{column}_histogram.csv")
 
@@ -426,33 +576,37 @@ def generate_histogram_single(args):
         try:
             df = pd.read_csv(hist_file)
             bins = df['bins'].tolist()
-            logging.info(f"Loaded histogram for '{table}.{column}' from '{hist_file}'.")
+            # logging.info(f"Loaded histogram for '{table}.{column}' from '{hist_file}'.")
         except Exception as e:
             logging.error(f"Error loading histogram from '{hist_file}': {e}")
             bins = []
     else:
         try:
-            # Establish a separate database connection for each subprocess
+            # Establish a new database connection for each subprocess
             conn = psycopg2.connect(**db_params)
             conn.set_session(autocommit=True)
             cur = conn.cursor()
 
-            query = f"SELECT {column} FROM {table} WHERE {column} IS NOT NULL"
+            # Fetch data for the column
+            query = f"SELECT {column} FROM {table} WHERE {column} IS NOT NULL;"
             cur.execute(query)
             data = cur.fetchall()
-            data = [row[0] for row in data if row[0] is not None]
+            # Convert to float, handle decimal.Decimal
+            data = [float(row[0]) for row in data if row[0] is not None]
+
             if not data:
                 logging.warning(f"No data found for histogram generation for '{table}.{column}'.")
                 cur.close()
                 conn.close()
                 return None
 
-            # Compute percentiles as bin edges
-            bins = np.percentile(data, np.linspace(0, 100, bin_number + 1))
+            # Compute percentiles as bin edges to ensure equal data distribution across bins
+            percentiles = np.linspace(0, 100, bin_number + 1)
+            bins = np.percentile(data, percentiles)
 
             # Save histogram to CSV
             pd.DataFrame({'bins': bins.tolist()}).to_csv(hist_file, index=False)
-            logging.info(f"Generated and saved histogram for '{table}.{column}' to '{hist_file}'.")
+            # logging.info(f"Generated and saved histogram for '{table}.{column}' to '{hist_file}'.")
 
             cur.close()
             conn.close()
@@ -460,47 +614,48 @@ def generate_histogram_single(args):
             logging.error(f"Error generating histogram for '{table}.{column}': {e}")
             bins = []
 
-    if len(bins) != 0:
+    if len(bins) == bin_number + 1:
         return {
             'table': table,
             'column': column,
             'bins': bins,
-            'table_column': f"{t2alias.get(table, table[:2])}.{column}"
+            'table_column': f"{t2alias.get(table, table)}.{column}"
         }
     else:
+        logging.warning(f"Histogram for '{table}.{column}' does not have the correct number of bins. Expected {bin_number + 1}, got {len(bins)}.")
         return None
 
-
-
-def generate_histograms_entire_db(db_params, schema, hist_dir, bin_number, t2alias, max_workers):
+def generate_histograms_entire_db(db_params, schema, hist_dir, bin_number, t2alias, max_workers, column_min_max_vals):
     """
-    Generates histograms for entire database tables.
+    Generates histograms for entire database tables based on actual data distributions.
 
     Args:
         db_params (dict): Database connection parameters.
-        tpcds_schema (dict): Schema of the tpcds database.
+        schema (dict): Schema mapping table names to their columns.
         hist_dir (str): Directory to save histograms.
         bin_number (int): Number of bins for histograms.
         t2alias (dict): Table aliases.
-        max_workers (int): Number of workers for parallel processing.
+        max_workers (int): Number of multiprocessing workers.
+        column_min_max_vals (dict): Dictionary mapping columns to (min, max, data_type).
 
     Returns:
         pd.DataFrame: DataFrame containing histograms.
     """
-    # Placeholder implementation
-    # Replace this with actual histogram generation logic
-    histograms = []
-    for table, columns in schema.items():
-        for column in columns:
-            # Example: Generate dummy bins
-            # Replace with actual histogram data retrieval
-            bins = list(np.linspace(0, 10, bin_number))
-            histograms.append({
-                'table': table,
-                'column': column,
-                'bins': bins
-            })
-    hist_file_df = pd.DataFrame(histograms)
+    # Define a list of table-column-data_type tuples
+    table_column_data_types = [
+        (table, column, db_params, hist_dir, bin_number, t2alias, column_min_max_vals.get(f"{table}.{column}", (None, None, ''))[2])
+        for table, columns in schema.items()
+        for column in columns if column != 'sid'  # Skip 'sid' if necessary
+    ]
+
+    # Use multiprocessing to generate histograms
+    with mp.Pool(processes=max_workers) as pool:
+        results = list(tqdm(pool.imap(generate_histogram_single, table_column_data_types), 
+                            total=len(table_column_data_types), desc="Generating Histograms"))
+
+    # Filter out None results (in case of errors or skipped columns)
+    results = [res for res in results if res is not None]
+    hist_file_df = pd.DataFrame(results)
     
     # Ensure 'table_column' is unique
     hist_file_df['table_column'] = hist_file_df['table'] + '.' + hist_file_df['column']
@@ -513,18 +668,16 @@ def generate_histograms_entire_db(db_params, schema, hist_dir, bin_number, t2ali
     
     return hist_file_df
 
-# model/database_util.py
-
 def save_histograms(hist_file_df, save_path):
     """
-    Saves the histograms DataFrame to a CSV file with comma-separated bins.
+    Saves the histograms DataFrame to a CSV file with JSON-serialized bins.
 
     Args:
         hist_file_df (pd.DataFrame): DataFrame containing histograms.
         save_path (str): Path to save the CSV file.
     """
-    # Convert 'bins' lists to comma-separated strings
-    hist_file_df['bins'] = hist_file_df['bins'].apply(lambda x: ','.join(map(str, x)) if isinstance(x, list) else x)
+    # Serialize 'bins' lists as JSON strings
+    hist_file_df['bins'] = hist_file_df['bins'].apply(lambda x: json.dumps(x) if isinstance(x, list) else x)
     
     # Create 'table_column' by concatenating 'table' and 'column' with a dot
     hist_file_df['table_column'] = hist_file_df['table'] + '.' + hist_file_df['column']
@@ -556,10 +709,21 @@ def load_entire_histograms(load_path='./data/tpcds/histogram_entire.csv'):
         logging.error(f"Histogram file '{load_path}' does not exist.")
         raise FileNotFoundError(f"Histogram file '{load_path}' does not exist.")
     hist_file_df = pd.read_csv(load_path)
-    # Safely parse the 'bins' column
-    hist_file_df['bins'] = hist_file_df['bins'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
+    
+    def parse_bins(x):
+        if isinstance(x, str):
+            try:
+                return json.loads(x)
+            except json.JSONDecodeError:
+                # Fallback to space-separated parsing
+                x = x.strip('[]')
+                return [float(num) for num in x.split()]
+        return x
+    
+    hist_file_df['bins'] = hist_file_df['bins'].apply(parse_bins)
     logging.info(f"Loaded entire table histograms from '{load_path}'.")
     return hist_file_df
+
 
 
 # Global variables for worker processes
@@ -873,6 +1037,9 @@ MAX_FILTERS = 30  # Maximum number of filters to consider
 SAMPLE_SIZE = 1000  # Size of the sample data
 
 
+import ast
+import numpy as np
+import logging
 def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_filters=MAX_FILTERS):
     ress = []
     filter_count = 0
@@ -884,20 +1051,26 @@ def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_fi
         # Retrieve histogram bins for the column
         matching_bins = hist_file.loc[hist_file['table_column'] == col, 'bins']
         if matching_bins.empty:
-            logging.warning(f"No histogram bins found for column '{col}'. Using default bins.")
+            # logging.warning(f"No histogram bins found for column '{col}'. Using default bins.")
             bins = np.linspace(0, 1, hist_bins + 1)  # Default bins
         else:
             bins = matching_bins.iloc[0]
             if isinstance(bins, str):
-                bins = ast.literal_eval(bins)
+                try:
+                    bins = ast.literal_eval(bins)
+                except Exception as e:
+                    logging.error(f"Error parsing bins for column '{col}': {e}. Using default bins.")
+                    bins = np.linspace(0, 1, hist_bins + 1)
             bins = np.array(bins)
             # Ensure bins have the correct size
             if len(bins) != hist_bins + 1:
-                bins = np.linspace(bins[0], bins[-1], hist_bins + 1)
+                logging.warning(f"Histogram bins for column '{col}' have incorrect length. Expected {hist_bins + 1}, got {len(bins)}. Recomputing bins.")
+                bins = np.linspace(0, 1, hist_bins + 1)  # Recompute default bins
 
         op = condition['op']
         val = condition['value']
-        mini, maxi = encoding.column_min_max_vals.get(col, (0, 1))
+        # Unpack three values, ignoring the third (data_type)
+        mini, maxi, _ = encoding.column_min_max_vals.get(col, (0, 1, 'unknown'))
         val_unnorm = val * (maxi - mini) + mini
 
         res = np.zeros(hist_bins)
@@ -929,7 +1102,7 @@ def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_fi
                 res[:idx[0]] = 1
                 res[idx[0]+1:] = 1
         else:
-            # logging.warning(f"Unsupported operator '{op}' in filter condition.")
+            # Unsupported operator
             res = np.zeros(hist_bins)
 
         ress.append(res)
@@ -944,9 +1117,12 @@ def filterDict2Hist(hist_file, filterDict, encoding, hist_bins=HIST_BINS, max_fi
     ress = np.concatenate(ress) if ress else np.zeros(hist_bins * max_filters)
 
     # Ensure the length is correct
-    assert len(ress) == hist_bins * max_filters, f"Histograms concatenated length {len(ress)} does not match expected {hist_bins * max_filters}."
+    if len(ress) != hist_bins * max_filters:
+        logging.error(f"Histograms concatenated length {len(ress)} does not match expected {hist_bins * max_filters}. Using zeroed histograms.")
+        ress = np.zeros(hist_bins * max_filters)
 
     return ress
+
 
 
 def formatJoin(json_node):

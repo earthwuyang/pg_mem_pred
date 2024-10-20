@@ -151,7 +151,7 @@ def main():
         with open(encoding_file, 'wb') as f:
             pickle.dump(encoding, f)
 
-    test_dataset = PlanTreeDataset(data_dir, dataset, 'test', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers, label_norm)
+    test_dataset = PlanTreeDataset(data_dir, dataset, 'val', alias2t, t2alias, schema, sample_dir, DB_PARAMS, encoding, args.max_workers, label_norm)
     logging.info(f"Test dataset length = {len(test_dataset)}")
     # print("type2idx:", encoding.join2idx)
     # print("table2idx:", encoding.table2idx)
