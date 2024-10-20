@@ -30,11 +30,13 @@ run `python src/preprocessing/generate_column_string_stats.py` to generate colum
 run `zsce/generate_zsce_queries.py` to generate zsce queries (random sampling of joins and predicates). 
 
 
-run `python src/preprocessing/execute_workload.py` execute worklosds and get mem info and time info as well as writing the output of explain analyze to analyzed_plan_dir (with queryid as filename). pass arguments `--dataset_dir` and `--dataset` to specify the dataset_dir and dataset correspondingly.
-`SET log_statement_stats = on` is needed to enable logging memory usage.
+`python src/preprocessing/execute_all_workloads.py`execute worklosds and get mem info and time info as well as writing the output of explain analyze to analyzed_plan_dir (with queryid as filename). Modify postgres_dir and data_dir as needed
 
-copy those logs to pg_mem_data/pg_log, e.g. from /usr/local/pgsql/data/log.
-chmod +r of these logs.
+<!-- run `python src/preprocessing/execute_workload.py` execute worklosds and get mem info and time info as well as writing the output of explain analyze to analyzed_plan_dir (with queryid as filename). pass arguments `--dataset_dir` and `--dataset` to specify the dataset_dir and dataset correspondingly.
+`SET log_statement_stats = on` is needed to enable logging memory usage. -->
+
+<!-- copy those logs to pg_mem_data/pg_log, e.g. from /usr/local/pgsql/data/log.
+chmod +r of these logs. -->
 
 
 First run `python src/preprocessing/extract_mem_time_info.py --dataset tpch_sf1 tpcds_sf1` to extract the memory usage information from the logs. 

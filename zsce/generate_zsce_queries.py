@@ -53,13 +53,18 @@ if __name__ == '__main__':
     for dataset in full_database_list:
         for workload_name, workload_args in workload_defs.items():
             print(f"Generating workload {workload_name} for {dataset}")
+            start_t = time.perf_counter()
             workload_path = os.path.join(args.workload_dir, dataset, f'{workload_name}.sql')
-            workload_gen_setups.append((dataset, workload_path, 5, workload_args, args.overwrite))
+            # not using multiprocessing, use main process to generate workloads
+            workload_gen((dataset, workload_path, 5, workload_args, args.overwrite))
+            print(f"Generated workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5, in {time.perf_counter() - start_t:.2f} secs")
+            # print(f"Generated workloads in {time.perf_counter() - start_t:.2f} secs")
+            # workload_gen_setups.append((dataset, workload_path, 5, workload_args, args.overwrite))
             # print(f"Generating workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5")
 
-    start_t = time.perf_counter()
-    proc = mp.cpu_count() - 2
-    proc = 1
-    p = mp.Pool(initargs=('arg',), processes=proc)
-    p.map(workload_gen, workload_gen_setups)
-    print(f"Generated workloads in {time.perf_counter() - start_t:.2f} secs")
+    # start_t = time.perf_counter()
+    # proc = mp.cpu_count() - 2
+    # proc = 1
+    # p = mp.Pool(initargs=('arg',), processes=proc)
+    # p.map(workload_gen, workload_gen_setups)
+    # print(f"Generated workloads in {time.perf_counter() - start_t:.2f} secs")
