@@ -79,6 +79,10 @@ def export_dataset(data_dir, dataset, mysql_dataset, overwrite):
     # Use multiprocessing to export tables in parallel
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         pool.starmap(export_table, [(dataset, mysql_dataset, table, sep, data_dir, overwrite) for table in tables])
+    # with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+    #     args_list = [(dataset, mysql_dataset, table, sep, data_dir, overwrite) for table in tables]
+    #     for _ in pool.imap(export_table, args_list):
+    #         pass  # We don't need to do anything with the results, just wait for all tasks to complete
 
 
 def main():

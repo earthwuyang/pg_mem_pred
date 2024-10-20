@@ -124,7 +124,22 @@ def prepare_dataset(data_dir, datasets, mode, statistics, debug, mem_pred, time_
     return df_features, df_labels
 
 
+def collate(df, columns):
+    """
+    Collate a DataFrame by selecting only the specified columns.
 
+    Args:
+        df (pd.DataFrame): The DataFrame to collate.
+        columns (list): A list of columns to select.
+
+    Returns:
+        pd.DataFrame: The collated DataFrame.
+    """
+    missing_cols = set(columns) - set(df.columns)
+    for col in missing_cols:
+        df[col] = 0
+    df = df[columns]
+    return df
 
 def train_XGBoost(args):
 
@@ -135,9 +150,11 @@ def train_XGBoost(args):
     # Prepare training and validation datasets
     X_train, y_train = prepare_dataset(args.data_dir, args.train_dataset, 'train', statistics, args.debug, args.mem_pred, args.time_pred)
     X_val, y_val = prepare_dataset(args.data_dir, args.train_dataset, 'val', statistics, args.debug, args.mem_pred, args.time_pred)
-    X_val = X_val[X_train.columns]
+    X_val = collate(X_val, X_train.columns)
+    
     X_test, y_test = prepare_dataset(args.data_dir, args.test_dataset, 'test', statistics, args.debug, args.mem_pred, args.time_pred)
-    X_test = X_test[X_train.columns]
+    
+    X_test = collate(X_test, X_train.columns)
 
     print("Training features shape:", X_train.shape)
     print("Validation features shape:", X_val.shape)

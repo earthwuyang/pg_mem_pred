@@ -37,7 +37,7 @@ def collect_db_statistics(conn_params=conn_params):
     stats_query = """
         SELECT s.tablename, s.attname, s.null_frac, s.avg_width, s.n_distinct, s.correlation, c.data_type 
         FROM pg_stats s
-        JOIN information_schema.columns c ON s.tablename=c.table_name AND s.attname=c.column_name
+        JOIN information_schema.columns c ON lower(s.tablename)=lower(c.table_name) AND s.attname=c.column_name
         WHERE s.schemaname='public';
     """
     column_stats_names, column_stats_rows = get_result(stats_query, include_column_names=True, conn_params=conn_params)
