@@ -78,7 +78,7 @@ def extract_features(plan, statistics):
 
 
 
-def prepare_dataset(data_dir, datasets, mode, statistics, debug, mem_pred, time_pred):
+def prepare_dataset(logger, data_dir, datasets, mode, statistics, debug, mem_pred, time_pred):
     """
     Prepare a dataset by extracting features and collecting labels.
 
@@ -92,13 +92,16 @@ def prepare_dataset(data_dir, datasets, mode, statistics, debug, mem_pred, time_
     plans = []
     if not isinstance(datasets, list):
         datasets = [datasets]
-    for ds in datasets:
-        plan_file = os.path.join(data_dir, ds, f'{mode}_plans.json')
+    for ds in tqdm(datasets, desc=f"Loading {mode} plans"):
+        if mode != 'test':
+            plan_file = os.path.join(data_dir, ds, f'total_plans.json')
+        else:
+            plan_file = os.path.join(data_dir, ds, f'test_plans.json')
         if debug:
             plan_file = os.path.join(data_dir, 'tpch_sf1', 'tiny_plans.json')
         plan = load_plans(plan_file)
         plans.extend(plan)
-    print(f"number of {mode} plans: {len(plans)}")
+    logger.info(f"number of {mode} plans: {len(plans)}")
 
     # Extract features and labels
     feature_dicts = []
@@ -141,24 +144,20 @@ def collate(df, columns):
     df = df[columns]
     return df
 
-def train_XGBoost(args):
-
-    statistics_file_path = os.path.join(args.data_dir, args.train_dataset, 'statistics_workload_combined.json')  # CAUTION
-    with open(statistics_file_path, 'r') as f:
-        statistics = json.load(f)
+def train_XGBoost(logger, args, combined_stats):
 
     # Prepare training and validation datasets
-    X_train, y_train = prepare_dataset(args.data_dir, args.train_dataset, 'train', statistics, args.debug, args.mem_pred, args.time_pred)
-    X_val, y_val = prepare_dataset(args.data_dir, args.train_dataset, 'val', statistics, args.debug, args.mem_pred, args.time_pred)
+    X_train, y_train = prepare_dataset(logger, args.data_dir, args.train_dataset, 'train', combined_stats, args.debug, args.mem_pred, args.time_pred)
+    X_val, y_val = prepare_dataset(logger, args.data_dir, args.val_dataset, 'val', combined_stats, args.debug, args.mem_pred, args.time_pred)
     X_val = collate(X_val, X_train.columns)
     
-    X_test, y_test = prepare_dataset(args.data_dir, args.test_dataset, 'test', statistics, args.debug, args.mem_pred, args.time_pred)
+    X_test, y_test = prepare_dataset(logger, args.data_dir, args.test_dataset, 'test', combined_stats, args.debug, args.mem_pred, args.time_pred)
     
     X_test = collate(X_test, X_train.columns)
 
-    print("Training features shape:", X_train.shape)
-    print("Validation features shape:", X_val.shape)
-    print("Testing features shape:", X_test.shape)
+    logger.info("Training features shape:", X_train.shape)
+    logger.info("Validation features shape:", X_val.shape)
+    logger.info("Testing features shape:", X_test.shape)
 
     
 
@@ -171,20 +170,20 @@ def train_XGBoost(args):
         n_jobs=-1
     )
 
-    print(f"Training XGBoost model...")
+    logger.info(f"Training XGBoost model...")
     # Train the model
     xgb_reg.fit(X_train, y_train)
 
-    print(f"Testing XGBoost model...")
+    logger.info(f"Testing XGBoost model...")
     # Predict on test set
     y_pred = xgb_reg.predict(X_test)
 
     if args.mem_pred:
-        y_pred = np.array(y_pred) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
-        y_test = np.array(y_test) * statistics['peakmem']['scale'] + statistics['peakmem']['center']
+        y_pred = np.array(y_pred) * combined_stats['peakmem']['scale'] + combined_stats['peakmem']['center']
+        y_test = np.array(y_test) * combined_stats['peakmem']['scale'] + combined_stats['peakmem']['center']
     elif args.time_pred:
-        y_pred = np.array(y_pred) * statistics['time']['scale'] + statistics['time']['center']
-        y_test = np.array(y_test) * statistics['time']['scale'] + statistics['time']['center']
+        y_pred = np.array(y_pred) * combined_stats['time']['scale'] + combined_stats['time']['center']
+        y_test = np.array(y_test) * combined_stats['time']['scale'] + combined_stats['time']['center']
 
     # # Evaluate
     # mse = mean_squared_error(y_test, y_pred)

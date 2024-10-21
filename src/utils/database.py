@@ -12,6 +12,7 @@ def get_relpages_reltuples(conn, table_name):
             reltuples = result[1]
         return relpages, reltuples
     except Exception as e:
+        # raise Exception(f"Error fetching relpages and reltuples for {table_name}: {e}")
         print(f"Error fetching relpages and reltuples for {table_name}: {e}")
         return 0, 0
 
@@ -19,7 +20,7 @@ def get_relpages_reltuples(conn, table_name):
 def get_table_size(conn, table_name):
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT pg_total_relation_size(%s);", (table_name,))
+            cur.execute(f"SELECT pg_total_relation_size('\"{table_name}\"');")
             table_size = cur.fetchone()[0]  # Size in bytes
         return table_size
     except Exception as e:

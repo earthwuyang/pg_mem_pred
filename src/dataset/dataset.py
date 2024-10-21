@@ -78,14 +78,16 @@ class QueryPlanDataset(Dataset):
         plans = load_json(json_file_path)
     
         # Connect to PostgreSQL
-        conn = connect_to_db(self.conn_info)
+        conn_info = self.conn_info.copy()
+        conn_info['database'] = dataset
+        conn = connect_to_db(conn_info)
         if not conn:
             raise Exception("Failed to connect to the database")
             exit(1)  # Exit if connection failed
         # Parse all query plans and create graphs
         graph_list = []
         if self.model.startswith('Hetero'):
-            db_stats = get_db_stats(dataset, self.conn_info)
+            db_stats = get_db_stats(dataset, conn_info)
         for idx, plan in tqdm(enumerate(plans), total=len(plans)):
             peakmem = (plan['peakmem'] - self.statistics['peakmem']['center']) / self.statistics['peakmem']['scale']
             time = (plan['time'] - self.statistics['time']['center']) / self.statistics['time']['scale']

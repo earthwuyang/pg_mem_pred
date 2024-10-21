@@ -165,6 +165,7 @@ def train_model(logger, args, statistics):
     with open(args.db_config) as f:
         conn_info = json.load(f)
 
+
     if args.model == 'zsce':
         args.batch_size = 1
 
@@ -172,6 +173,7 @@ def train_model(logger, args, statistics):
     if not args.skip_train:
         traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug, conn_info)
         logger.info('Train dataset size: {}'.format(len(traindataset)))
+
         valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, val_dataset, 'val', statistics, args.debug, conn_info)
         logger.info('Val dataset size: {}'.format(len(valdataset)))
     

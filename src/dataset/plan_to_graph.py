@@ -101,6 +101,7 @@ def traverse_operators(statistics, db_stats, data_type_mapping, plan, encode_tab
         if 'Relation Name' in plan_parameters:
             table_name = plan_parameters['Relation Name']
             if table_name not in table_nodes:
+                # print(f"db_stats['tables'].keys(): {db_stats['tables'].keys()}")
                 relpages, reltuples = db_stats['tables'][table_name]['relpages'], db_stats['tables'][table_name]['reltuples']
                 features = [relpages, reltuples]
                 table_nodes[table_name] = {

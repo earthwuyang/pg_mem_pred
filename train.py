@@ -17,8 +17,7 @@ from src.training.train import train_model
 from src.training.train_xgboost import train_XGBoost
 from src.preprocessing.get_explain_json_plans import get_explain_json_plans
 from src.preprocessing.extract_mem_time_info import extract_mem_info
-from src.preprocessing.gather_feature_statistics import gather_feature_statistics, combine_statistics, compute_numeric_statistics
-
+from src.dataset.combine_stats import combine_stats
 
 def get_logger(logfile):
 
@@ -107,28 +106,12 @@ if __name__ == "__main__":# Set random seed for reproducibility
         #     gather_feature_statistics(args.data_dir, dataset)
         # else:
         #     logger.info(f"statistics_workload_combined.json of {dataset} already exists, skipping gathering feature statistics")
-    combined_stats = {}
-    combined_raw_numeric = collections.defaultdict(list)
-    combined_statistics_file = os.path.join(args.data_dir, 'combined_statistics_workload.json')
-    if args.force or not os.path.exists(combined_statistics_file):
-        with open(combined_statistics_file, 'w') as f:
-            for dataset in args.train_dataset:
-                logger.info(f"gathering feature statistics for {dataset}...")
-                stats, raw_numeric = gather_feature_statistics(args.data_dir, dataset)
-                combine_statistics(combined_stats, stats, raw_numeric, combined_raw_numeric)
-                logger.info(f"Completed dataset {dataset}")
-            logger.info(f"Computing scale and center for numeric features using combined raw data...")
-            combined_stats = compute_numeric_statistics(combined_stats, combined_raw_numeric)
-            with open(combined_statistics_file, 'w') as f:
-                json.dump(combined_stats, f, indent=4)
-    else:
-        logger.info(f"combined_statistics_workload.json already exists, skipping gathering feature statistics")
-        with open(combined_statistics_file, 'r') as f:
-            combined_stats = json.load(f)
+
+    combined_stats = combine_stats(logger, args)
 
     # Train the model
     if args.model == 'XGBoost':
-        train_XGBoost(args)
+        train_XGBoost(logger, args, combined_stats)
     else:
         train_model(logger, args, combined_stats)
 
