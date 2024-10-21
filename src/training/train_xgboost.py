@@ -78,7 +78,7 @@ def extract_features(plan, statistics):
 
 
 
-def prepare_dataset(logger, data_dir, datasets, mode, statistics, debug, mem_pred, time_pred):
+def prepare_dataset(logger, data_dir, datasets, mode, statistics, debug, mem_pred, time_pred, not_cross_datasets):
     """
     Prepare a dataset by extracting features and collecting labels.
 
@@ -96,7 +96,10 @@ def prepare_dataset(logger, data_dir, datasets, mode, statistics, debug, mem_pre
         if mode != 'test':
             plan_file = os.path.join(data_dir, ds, f'total_plans.json')
         else:
-            plan_file = os.path.join(data_dir, ds, f'test_plans.json')
+            if not_cross_datasets:
+                plan_file = os.path.join(data_dir, ds, f'{mode}_plans.json')
+            else:
+                plan_file = os.path.join(data_dir, ds, f'total_plans.json')
         if debug:
             plan_file = os.path.join(data_dir, 'tpch_sf1', 'tiny_plans.json')
         plan = load_plans(plan_file)
@@ -146,12 +149,14 @@ def collate(df, columns):
 
 def train_XGBoost(logger, args, combined_stats):
 
+    not_cross_datasets = isinstance(args.train_dataset, str)
+
     # Prepare training and validation datasets
-    X_train, y_train = prepare_dataset(logger, args.data_dir, args.train_dataset, 'train', combined_stats, args.debug, args.mem_pred, args.time_pred)
-    X_val, y_val = prepare_dataset(logger, args.data_dir, args.val_dataset, 'val', combined_stats, args.debug, args.mem_pred, args.time_pred)
+    X_train, y_train = prepare_dataset(logger, args.data_dir, args.train_dataset, 'train', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
+    X_val, y_val = prepare_dataset(logger, args.data_dir, args.val_dataset, 'val', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
     X_val = collate(X_val, X_train.columns)
     
-    X_test, y_test = prepare_dataset(logger, args.data_dir, args.test_dataset, 'test', combined_stats, args.debug, args.mem_pred, args.time_pred)
+    X_test, y_test = prepare_dataset(logger, args.data_dir, args.test_dataset, 'test', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
     
     X_test = collate(X_test, X_train.columns)
 

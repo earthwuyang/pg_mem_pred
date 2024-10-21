@@ -22,7 +22,7 @@ def load_json(json_file):
 
     
 class QueryPlanDataset(Dataset):
-    def __init__(self, logger, model, encode_table_column, dataset_dir, dataset, mode, statistics, debug, conn_info):
+    def __init__(self, logger, model, encode_table_column, dataset_dir, dataset, mode, statistics, debug, conn_info, not_cross_datasets):
         super(QueryPlanDataset, self).__init__()
         self.logger = logger
         self.model = model
@@ -53,7 +53,10 @@ class QueryPlanDataset(Dataset):
                         if mode == 'test':
                             json_file_path = os.path.join(dataset_dir, ds, f'test_plans.json')
                         else:
-                            json_file_path = os.path.join(dataset_dir, ds, f'total_plans.json')
+                            if not_cross_datasets:
+                                json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+                            else:
+                                json_file_path = os.path.join(dataset_dir, ds, f'total_plans.json')
                   
                         self.logger.info(f"Creating dataset from {json_file_path} for {ds}")
                         self.dataset_list.extend(self.get_dataset(logger, json_file_path, ds))
@@ -68,7 +71,13 @@ class QueryPlanDataset(Dataset):
                 if not isinstance(dataset, list):
                     dataset = [dataset]
                 for ds in dataset:
-                    json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+                    if mode == 'test':
+                        json_file_path = os.path.join(dataset_dir, ds, f'test_plans.json')
+                    else:   
+                        if not_cross_datasets:
+                            json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+                        else:
+                            json_file_path = os.path.join(dataset_dir, ds, f'total_plans.json')
                     self.logger.info(f"Creating dataset from {json_file_path} for {ds}")
                     self.dataset_list.extend(self.get_dataset(logger, json_file_path, ds))
 

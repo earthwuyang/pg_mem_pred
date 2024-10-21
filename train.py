@@ -69,8 +69,9 @@ if __name__ == "__main__":# Set random seed for reproducibility
     args = parser.parse_args()
 
     if args.test_dataset is None:
-        args.test_dataset = args.dataset
-        args.val_dataset = args.dataset
+        assert len(args.dataset) == 1, "if test dataset not specified, --dataset must only have one item"
+        args.test_dataset = args.dataset[0]
+        args.val_dataset = args.dataset[0]
     args.train_dataset = args.dataset
 
     assert args.mem_pred or args.time_pred, "At least one of --mem_pred (default True) and --time_pred (default False) should be set"
@@ -93,9 +94,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     #     extract_mem_info(args.data_dir, args.dataset)
     # else:
     #     logger.info(f"mem_info.csv already exists, skipping extraction")
-
     for dataset in args.train_dataset + [args.val_dataset, args.test_dataset]:
-        logger.info(f"getting explain json plans for {dataset}...")
         if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'total_plans.json')):
             get_explain_json_plans(args.data_dir, dataset)
         else:

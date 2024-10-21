@@ -169,18 +169,20 @@ def train_model(logger, args, statistics):
     if args.model == 'zsce':
         args.batch_size = 1
 
+    not_cross_dataset = isinstance(args.train_dataset, str)
+
     # Load the dataset
     if not args.skip_train:
-        traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug, conn_info)
+        traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug, conn_info, not_cross_dataset)
         logger.info('Train dataset size: {}'.format(len(traindataset)))
 
-        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, val_dataset, 'val', statistics, args.debug, conn_info)
+        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, val_dataset, 'val', statistics, args.debug, conn_info, not_cross_dataset)
         logger.info('Val dataset size: {}'.format(len(valdataset)))
     
         train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         val_loader = DataLoader(valdataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-    testdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, test_dataset, 'test', statistics, args.debug, conn_info)  
+    testdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, test_dataset, 'test', statistics, args.debug, conn_info, not_cross_dataset)
 
     logger.info('Test dataset size: {}'.format(len(testdataset)))
     
