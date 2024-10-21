@@ -39,7 +39,7 @@ run `zsce/generate_zsce_queries.py` to generate zsce queries (random sampling of
 chmod +r of these logs. -->
 
 
-First run `python src/preprocessing/extract_mem_time_info.py --dataset tpch_sf1 tpcds_sf1` to extract the memory usage information from the logs. 
+First for every dataset, run `python src/preprocessing/extract_mem_time_info.py --dataset tpch_sf1 tpcds_sf1` to extract the memory usage information from the logs. 
 You need to modify the data_dir to where you put the pg_log. Also modify the name of the dataset, e.g 'tpch_sf1' or the dataset you want to extract.
 This will output mem_info.csv containing <queryid, peakmem, time>. queryid corresponds to the query id in the workload file and file name in query_dir, plan_dir and analyzed_plan_dir.
 peakmem in KB, time in seconds.
@@ -59,15 +59,18 @@ run `python zsce/gather_feature_statistics.py --dataset tpch_sf1 tpcds_sf1` for 
 run `python zsce/train.py` to train the zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
 ### for most methods:
+`sh train_cross_datasets.sh` to train across datasets.
+
+Its content: `python train.py --dataset airline carcinogenesis credit employee financial geneea --val_dataset hepatitis --test_dataset tpcds_sf1`
 <!-- run `python src/preprocessing/get_database_stats.py --dataset tpch_sf1 tpcds_sf1` to get database statistics (column_stats, and table_stats). Output is 'database_stats.json'. Need to modify the name of the dataset, e.g 'tpch_sf1' -->
 
-run `python src/preprocessing/get_explain_json_plans.py --dataset tpch_sf1 tpcds_sf1` generate train_plans, val_plans, test_plans in json format. Need to modify the name of the dataset, e.g 'tpch_sf1'
+<!-- run `python src/preprocessing/get_explain_json_plans.py --dataset tpch_sf1 tpcds_sf1` generate train_plans, val_plans, test_plans in json format. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
 <!-- run `python src/preprocessing/transform_to_zsce_format.py` to transform train, val, test plans into zsce format. output is in 'zsce' subdirectory. -->
 
-run `python src/preprocessing/gather_feature_statistics.py --dataset tpch_sf1 tpcds_sf1` to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1'. This is for most methods, not for zsce .
+<!-- run `python src/preprocessing/gather_feature_statistics.py --dataset tpch_sf1 tpcds_sf1` to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1'. This is for most methods, not for zsce . -->
 
-Example usage to train:
+<!-- Example usage to train:
 ```
 python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpch_sf1' --model_name 'GAT'
 ```
@@ -75,7 +78,7 @@ python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpch_sf1' --model_nam
 Example usage to test across database (test transferability):
 ```
 python train.py --skip_train --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1' --model_name 'GAT'
-```
+``` -->
 
 ### heterogeneous_graph
 <!-- When you update plan_to_graph code, do not forget to `rm -rf data`, because the graph datset is cached in `data` directory. -->

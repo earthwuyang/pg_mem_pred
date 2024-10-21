@@ -50,12 +50,16 @@ class QueryPlanDataset(Dataset):
                     if not isinstance(dataset, list):
                         dataset = [dataset]
                     for ds in dataset:
-                        json_file_path = os.path.join(dataset_dir, ds, f'{mode}_plans.json')
+                        if mode == 'test':
+                            json_file_path = os.path.join(dataset_dir, ds, f'test_plans.json')
+                        else:
+                            json_file_path = os.path.join(dataset_dir, ds, f'total_plans.json')
                   
                         self.logger.info(f"Creating dataset from {json_file_path} for {ds}")
                         self.dataset_list.extend(self.get_dataset(logger, json_file_path, ds))
 
                     with open(dataset_pickle_path, 'wb') as f:
+                        logger.info(f"Saving dataset to {dataset_pickle_path}")
                         pickle.dump(self.dataset_list, f)
                 
 

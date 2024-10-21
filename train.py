@@ -12,12 +12,12 @@ import logging
 from tqdm import tqdm
 import os
 from datetime import datetime
-
+import collections
 from src.training.train import train_model
 from src.training.train_xgboost import train_XGBoost
 from src.preprocessing.get_explain_json_plans import get_explain_json_plans
 from src.preprocessing.extract_mem_time_info import extract_mem_info
-from src.preprocessing.gather_feature_statistics import gather_feature_statistics
+from src.preprocessing.gather_feature_statistics import gather_feature_statistics, combine_statistics, compute_numeric_statistics
 
 
 def get_logger(logfile):
@@ -45,7 +45,8 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser = argparse.ArgumentParser()
     parser.add_argument('--db_config', type=str, default='conn.json', help='database configuration file')
     parser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
-    parser.add_argument('--dataset', type=str, default='tpch_sf1', help='dataset name. train and validation will use the same dataset')
+    parser.add_argument('--dataset', nargs='+', type=str, default=['tpch_sf1'], help='dataset name. train and validation will use the same dataset')
+    parser.add_argument('--val_dataset', type=str, default=None, help='dataset name. validation will use the same dataset')
     parser.add_argument('--test_dataset', type=str, default=None, help='dataset name. test will use the same dataset')
     parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
     parser.add_argument('--encode_table_column', action='store_true', default=False, help='encode table and column nodes')
@@ -70,6 +71,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
 
     if args.test_dataset is None:
         args.test_dataset = args.dataset
+        args.val_dataset = args.dataset
     args.train_dataset = args.dataset
 
     assert args.mem_pred or args.time_pred, "At least one of --mem_pred (default True) and --time_pred (default False) should be set"
@@ -93,23 +95,41 @@ if __name__ == "__main__":# Set random seed for reproducibility
     # else:
     #     logger.info(f"mem_info.csv already exists, skipping extraction")
 
-    logger.info(f"getting explain json plans...")
-    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'total_plans.json')):
-        get_explain_json_plans(args.data_dir, args.dataset)
-    else:
-        logger.info(f"explain json plans already exist, skipping getting explain json plans")
+    for dataset in args.train_dataset + [args.val_dataset, args.test_dataset]:
+        logger.info(f"getting explain json plans for {dataset}...")
+        if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'total_plans.json')):
+            get_explain_json_plans(args.data_dir, dataset)
+        else:
+            logger.info(f"explain json plans of {dataset} already exist, skipping getting explain json plans")
 
-    logger.info(f"gathering feature statistics...")
-    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'statistics_workload_combined.json')):
-        gather_feature_statistics(args.data_dir, args.dataset)
+        # logger.info(f"gathering feature statistics...")
+        # if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'statistics_workload_combined.json')):
+        #     gather_feature_statistics(args.data_dir, dataset)
+        # else:
+        #     logger.info(f"statistics_workload_combined.json of {dataset} already exists, skipping gathering feature statistics")
+    combined_stats = {}
+    combined_raw_numeric = collections.defaultdict(list)
+    combined_statistics_file = os.path.join(args.data_dir, 'combined_statistics_workload.json')
+    if args.force or not os.path.exists(combined_statistics_file):
+        with open(combined_statistics_file, 'w') as f:
+            for dataset in args.train_dataset:
+                logger.info(f"gathering feature statistics for {dataset}...")
+                stats, raw_numeric = gather_feature_statistics(args.data_dir, dataset)
+                combine_statistics(combined_stats, stats, raw_numeric, combined_raw_numeric)
+                logger.info(f"Completed dataset {dataset}")
+            logger.info(f"Computing scale and center for numeric features using combined raw data...")
+            combined_stats = compute_numeric_statistics(combined_stats, combined_raw_numeric)
+            with open(combined_statistics_file, 'w') as f:
+                json.dump(combined_stats, f, indent=4)
     else:
-        logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
-
+        logger.info(f"combined_statistics_workload.json already exists, skipping gathering feature statistics")
+        with open(combined_statistics_file, 'r') as f:
+            combined_stats = json.load(f)
 
     # Train the model
     if args.model == 'XGBoost':
         train_XGBoost(args)
     else:
-        train_model(logger, args)
+        train_model(logger, args, combined_stats)
 
   

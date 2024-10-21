@@ -153,17 +153,14 @@ def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, v
     logger.info("Training ends")
 
 # Define training function (redefined for clarity)
-def train_model(logger, args):
+def train_model(logger, args, statistics):
 
     dataset_dir = args.data_dir
     train_dataset = args.train_dataset
+    val_dataset = args.val_dataset
     test_dataset = args.test_dataset
     batch_size = args.batch_size
     num_workers = args.num_workers
-
-    statistics_file_path = os.path.join(args.data_dir, args.train_dataset, 'statistics_workload_combined.json')  # CAUTION
-    with open(statistics_file_path, 'r') as f:
-        statistics = json.load(f)
 
     with open(args.db_config) as f:
         conn_info = json.load(f)
@@ -175,7 +172,7 @@ def train_model(logger, args):
     if not args.skip_train:
         traindataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'train', statistics, args.debug, conn_info)
         logger.info('Train dataset size: {}'.format(len(traindataset)))
-        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, train_dataset, 'val', statistics, args.debug, conn_info)
+        valdataset = QueryPlanDataset(logger, args.model, args.encode_table_column, dataset_dir, val_dataset, 'val', statistics, args.debug, conn_info)
         logger.info('Val dataset size: {}'.format(len(valdataset)))
     
         train_loader = DataLoader(traindataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
@@ -191,7 +188,7 @@ def train_model(logger, args):
         # Initialize the model
         # Determine the number of unique data types for one-hot encoding
         # Assuming all graphs have the same data_type_mapping
-        sample_graph = test_loader.dataset[0]
+        sample_graph = train_loader.dataset[0]
         num_operator_features = sample_graph.x_dict['operator'].shape[1]
         num_table_features = sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
         num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
@@ -199,7 +196,7 @@ def train_model(logger, args):
             hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_table_column=args.encode_table_column, 
             num_operator_features=num_operator_features, num_table_features=num_table_features, num_column_features=num_column_features, dropout=args.dropout)
     else: 
-        sample_graph = test_loader.dataset[0]
+        sample_graph = train_loader.dataset[0]
         num_node_features = sample_graph.x.shape[1]
         model = MODELS[args.model](hidden_channels=args.hidden_dim, out_channels=1, num_layers = args.num_layers, num_node_features=num_node_features, dropout=args.dropout)
     model = model.to(args.device)

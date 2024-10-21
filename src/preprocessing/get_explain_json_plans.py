@@ -41,22 +41,22 @@ def get_explain_json_plans(data_dir, dataset):
     train_plans = plans[:train_size]
     val_plans = plans[train_size:train_size+val_size]
     test_plans = plans[train_size+val_size:]
-    print(f"train size: {len(train_plans)}, val size: {len(val_plans)}, test size: {len(test_plans)}")
+    # print(f"train size: {len(train_plans)}, val size: {len(val_plans)}, test size: {len(test_plans)}")
 
     # save data to files
     with open( os.path.join(data_dir, dataset, 'train_plans.json'), 'w') as f:
         json.dump(train_plans, f)
-    print(f"train plans saved to {os.path.join(data_dir, dataset, 'train_plans.json')}")
+    # print(f"train plans saved to {os.path.join(data_dir, dataset, 'train_plans.json')}")
 
     # save data to files
     with open( os.path.join(data_dir, dataset, 'val_plans.json'), 'w') as f:
         json.dump(val_plans, f)
-    print(f"val plans saved to {os.path.join(data_dir, dataset, 'val_plans.json')}")
+    # print(f"val plans saved to {os.path.join(data_dir, dataset, 'val_plans.json')}")
 
     # save data to files
     with open( os.path.join(data_dir, dataset, 'test_plans.json'), 'w') as f:
         json.dump(test_plans, f)
-    print(f"test plans saved to {os.path.join(data_dir, dataset, 'test_plans.json')}")
+    # print(f"test plans saved to {os.path.join(data_dir, dataset, 'test_plans.json')}")
 
 if __name__ == '__main__':
     data_dir = '/home/wuy/DB/pg_mem_data'

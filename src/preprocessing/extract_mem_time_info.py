@@ -88,7 +88,7 @@ def extract_mem_info(data_dir, dataset):
                     continue
 
     conn.close()
-    print(f"Number of queries with memory info: {count}")
+    print(f"Number of queries with memory info: {count} for dataset {dataset}")
 
 if __name__ == '__main__':
     data_dir='/home/wuy/DB/pg_mem_data'
