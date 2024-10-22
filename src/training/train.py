@@ -169,7 +169,7 @@ def train_model(logger, args, statistics):
     if args.model == 'zsce':
         args.batch_size = 1
 
-    not_cross_dataset = isinstance(args.train_dataset, str)
+    not_cross_dataset = len(args.train_dataset) ==1
 
     # Load the dataset
     if not args.skip_train:

@@ -22,6 +22,7 @@ from models.training.metrics import MRE, RMSE, QError, MeanQError
 from models.training.utils import batch_to, flatten_dict, find_early_stopping_metric
 from models.zero_shot_models.specific_models.model import zero_shot_models
 from cross_db_benchmark.benchmark_tools.database import DatabaseSystem
+from combine_stats import combine_stats
 
 from get_raw_plans import get_raw_plans
 from parse_plans import parse_raw
@@ -30,6 +31,8 @@ from gather_feature_statistics import gather_feature_statistics
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 from src.preprocessing.extract_mem_time_info import extract_mem_info
+
+
 
 def get_logger(logfile):
 
@@ -166,7 +169,7 @@ def optuna_intermediate_value(metrics):
     raise ValueError('Metric invalid')
 
 
-def train_model(logger, train_workload_runs, val_workload_runs, test_workload_runs, statistics_file,
+def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_workload_runs, combined_stats,
                 target_dir,
                 filename_model,
                 optimizer_class_name='Adam',
@@ -209,7 +212,7 @@ def train_model(logger, train_workload_runs, val_workload_runs, test_workload_ru
     # create a dataset
     loss_class_name = final_mlp_kwargs['loss_class_name']
     label_norm, feature_statistics, train_loader, val_loader, test_loaders = \
-        create_dataloader(logger, train_workload_runs, val_workload_runs, test_workload_runs, statistics_file, plan_featurization_name, database,
+        create_dataloader(logger, data_dir, train_workload_runs, val_workload_runs, test_workload_runs, combined_stats, plan_featurization_name, database,
                           val_ratio=0, batch_size=batch_size, shuffle=True, num_workers=num_workers,
                           pin_memory=False, limit_queries=limit_queries,
                           limit_queries_affected_wl=limit_queries_affected_wl, loss_class_name=loss_class_name)
@@ -330,7 +333,8 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, help="Directory where the data is stored", default='/home/wuy/DB/pg_mem_data/')
-    parser.add_argument("--dataset", type=str, help="Dataset to use for training", default='tpch_sf1')
+    parser.add_argument("--dataset", type=str, nargs='+', help="Datasets to use for training", default=['tpch_sf1'])
+    parser.add_argument("--val_dataset", type=str, help="Dataset to use for validation", default=None)
     parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default=None)
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
     parser.add_argument("--force", action='store_true', help="Force overwrite of existing files")
@@ -338,7 +342,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.test_dataset is None:
-        args.test_dataset = args.dataset
+        assert len(args.dataset) == 1, "If test_dataset is not specified, only one dataset can be used for training and validation"
+        args.val_dataset = args.dataset[0]
+        args.test_dataset = args.dataset[0]
     args.train_dataset = args.dataset
 
     hyperparameter_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'setup/tuned_hyperparameters/tune_est_best_config.json')
@@ -409,16 +415,21 @@ if __name__ == '__main__':
                                     f"and reading does not seem to fit"
 
     data_dir = '/home/wuy/DB/pg_mem_data/'
-    statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
+    
+    # statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
     # statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
-    target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'evaluation_train_{args.train_dataset}_test_{args.test_dataset}')
+    target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'evaluation_train_{"".join(args.train_dataset)}_test_{args.test_dataset}')
     filename_model = f'{args.train_dataset}'
     database = DatabaseSystem.POSTGRES
 
     param_dict = flatten_dict(train_kwargs)  # https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
-    train_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'train_plans.json')
-    val_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'val_plans.json')
-    test_workload_runs = os.path.join(data_dir, args.test_dataset, 'zsce', 'test_plans.json')
+    # train_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'train_plans.json')
+    # val_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'val_plans.json')
+    # test_workload_runs = os.path.join(data_dir, args.test_dataset, 'zsce', 'test_plans.json')
+    train_workload_runs = args.train_dataset
+    val_workload_runs = args.train_dataset
+    test_workload_runs = args.test_dataset
+
     if args.debug:
         train_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'tiny_plans.json')
         val_workload_runs = os.path.join(data_dir, args.train_dataset, 'zsce', 'tiny_plans.json')
@@ -427,7 +438,7 @@ if __name__ == '__main__':
     # val_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # test_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
 
-    logfilepath = os.path.join('logs', f'train_{args.train_dataset}_test_{args.test_dataset}')
+    logfilepath = os.path.join('logs', f'train_{"".join(args.train_dataset)}_test_{args.test_dataset}')
     if not os.path.exists(logfilepath):
         os.system(f"mkdir -p {logfilepath}")
     logfile = os.path.join(logfilepath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log")
@@ -439,32 +450,35 @@ if __name__ == '__main__':
     # else:
     #     logger.info(f"mem_info.csv already exists, skipping extraction")
 
-    logger.info(f"get raw plans...")
-    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'raw_plan.json')):
-        get_raw_plans(args.data_dir, args.dataset)
-    else:
-        logger.info(f"raw_plan.json already exists, skipping extraction")
+    for dataset in args.dataset + [args.val_dataset, args.test_dataset]:
+        logger.info(f"get raw plans for {dataset}...")
+        if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'zsce', 'raw_plan.json')):
+            get_raw_plans(args.data_dir, dataset)
+        else:
+            logger.info(f"raw_plan.json already exists, skipping extraction")
 
-    logger.info(f"parsing plans...")
-    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'parsed_plan.json')):
-        parse_raw(args.data_dir, args.dataset)
-    else:
-        logger.info(f"parsed_plan.json already exists, skipping parsing")
+        logger.info(f"parsing plans...")
+        if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'zsce', 'parsed_plan.json')):
+            parse_raw(args.data_dir, dataset)
+        else:
+            logger.info(f"parsed_plan.json already exists, skipping parsing")
 
-    logger.info(f"spliting parsed plans...")
-    if args.force or not (os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'train_plans.json')) 
-        and os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'val_plans.json')) 
-        and os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce', 'test_plans.json'))):
-        split_dataset(args.data_dir, args.dataset)
-    else:
-        logger.info(f"train_plans.json, val_plans.json, test_plans.json already exists, skipping splitting")
+        logger.info(f"spliting parsed plans...")
+        if args.force or not (os.path.exists(os.path.join(args.data_dir, dataset, 'zsce', 'train_plans.json')) 
+            and os.path.exists(os.path.join(args.data_dir, dataset, 'zsce', 'val_plans.json')) 
+            and os.path.exists(os.path.join(args.data_dir, dataset, 'zsce', 'test_plans.json'))):
+            split_dataset(args.data_dir, dataset)
+        else:
+            logger.info(f"train_plans.json, val_plans.json, test_plans.json already exists, skipping splitting")
 
-    logger.info(f"gathering faeture statistics from train_plans.json...")
-    if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce','statistics_workload_combined.json')):
-        gather_feature_statistics(args.data_dir, args.dataset)
-    else:
-        logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
+    combined_stats = combine_stats(logger, args)
+
+    # logger.info(f"gathering faeture statistics from train_plans.json...")
+    # if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce','statistics_workload_combined.json')):
+    #     gather_feature_statistics(args.data_dir, args.dataset)
+    # else:
+    #     logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
     
-    train_model(logger, train_workload_runs, val_workload_runs, test_workload_runs, statistics_file, target_dir, filename_model,
+    train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_workload_runs, combined_stats, target_dir, filename_model,
                 param_dict=param_dict, database=database, **train_kwargs)
         

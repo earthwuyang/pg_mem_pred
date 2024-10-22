@@ -219,11 +219,11 @@ class PlanOperator(dict):
                 col_ids = []
                 for c in output_column['columns']:
                     try:
-                        print(f"col {c}")
-                        print(f"column_id_mapping {column_id_mapping}")
-                        print(f"node_tables {node_tables}")
-                        print(f"partial_column_name_mapping {partial_column_name_mapping}")
-                        print(f"alias_dict {alias_dict}")
+                        # print(f"col {c}")
+                        # print(f"column_id_mapping {column_id_mapping}")
+                        # print(f"node_tables {node_tables}")
+                        # print(f"partial_column_name_mapping {partial_column_name_mapping}")
+                        # print(f"alias_dict {alias_dict}")
                         c_id = self.lookup_column_id(c, column_id_mapping, node_tables, partial_column_name_mapping,
                                                      alias_dict)
                         col_ids.append(c_id)

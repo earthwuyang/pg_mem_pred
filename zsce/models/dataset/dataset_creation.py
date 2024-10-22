@@ -5,20 +5,27 @@ import numpy as np
 from sklearn import preprocessing
 from sklearn.pipeline import Pipeline
 from torch.utils.data import DataLoader
-
+import os
 from cross_db_benchmark.benchmark_tools.utils import load_json
 from models.dataset.plan_dataset import PlanDataset
 from models.dataset.plan_graph_batching.plan_batchers import plan_collator_dict
 
-def read_workload_runs(logger, workload_run_paths, limit_queries=None, limit_queries_affected_wl=None):
+def read_workload_runs(logger, data_dir, workload_run_paths, limit_queries=None, limit_queries_affected_wl=None, mode='train', cross_datasets=False):
     # reads several workload runs
     plans = []
     database_statistics = dict()
 
-    if not isinstance(workload_run_paths, list):
-        workload_run_paths = [workload_run_paths]
-    for i, source in enumerate(workload_run_paths):
+    # if not isinstance(workload_run_paths, list):
+    #     workload_run_paths = [workload_run_paths]
+    for i, dataset in enumerate(workload_run_paths):
         try:
+            if mode != 'test':
+                if cross_datasets:
+                    source = os.path.join(data_dir, dataset, 'zsce', 'parsed_plan.json')
+                else:
+                    source = os.path.join(data_dir, dataset, 'zsce', '{mode}_plans.json')
+            else:
+                source = os.path.join(data_dir, dataset, 'zsce', 'test_plans.json')
             print(f"source {source}")
             run = load_json(source) # where SimpleNamespace is imported
         except JSONDecodeError:
@@ -48,10 +55,10 @@ def _inv_log1p(x):  # log1p(x) = log(x+1)
     return np.exp(x) - 1
 
 
-def create_datasets(logger, workload_run_paths, cap_training_samples=None, val_ratio=0.15, limit_queries=None,
-                    limit_queries_affected_wl=None, shuffle_before_split=True, loss_class_name=None):
-    plans, database_statistics = read_workload_runs(logger, workload_run_paths, limit_queries=limit_queries,
-                                                    limit_queries_affected_wl=limit_queries_affected_wl)
+def create_datasets(logger, data_dir, workload_run_paths, cap_training_samples=None, val_ratio=0.15, limit_queries=None,
+                    limit_queries_affected_wl=None, shuffle_before_split=True, loss_class_name=None, mode='train', cross_datasets=False):
+    plans, database_statistics = read_workload_runs(logger, data_dir, workload_run_paths, limit_queries=limit_queries,
+                                                    limit_queries_affected_wl=limit_queries_affected_wl, mode=mode, cross_datasets=cross_datasets)
 
     no_plans = len(plans)
     plan_idxs = list(range(no_plans))
@@ -100,7 +107,7 @@ def derive_label_normalizer(loss_class_name, y): # y is `runtimes`
     return pipeline
 
 
-def create_dataloader(logger, train_workload_run_paths, val_workload_run_paths, test_workload_run_paths, statistics_file, plan_featurization_name, database,
+def create_dataloader(logger, data_dir, train_workload_run_paths, val_workload_run_paths, test_workload_run_paths, combined_stats, plan_featurization_name, database,
                       val_ratio=0.15, batch_size=32, shuffle=True, num_workers=1, pin_memory=False,
                       limit_queries=None, limit_queries_affected_wl=None, loss_class_name=None):
     """
@@ -121,15 +128,24 @@ def create_dataloader(logger, train_workload_run_paths, val_workload_run_paths, 
     #                                                                               val_ratio=val_ratio,
     #                                                                               limit_queries=limit_queries,
     #                                                                               limit_queries_affected_wl=limit_queries_affected_wl)
-    label_norm, train_dataset, _, database_statistics = create_datasets(logger, [train_workload_run_paths], loss_class_name= loss_class_name,
-                                                                         val_ratio=0.0, shuffle_before_split=False)
+    if isinstance(train_workload_run_paths, str):
+        train_workload_run_paths = [train_workload_run_paths]
+    if isinstance(val_workload_run_paths, str):
+        val_workload_run_paths = [val_workload_run_paths]
+    if isinstance(test_workload_run_paths, str):
+        test_workload_run_paths = [test_workload_run_paths]
+
+    cross_datasets = len(train_workload_run_paths) > 1
+
+    label_norm, train_dataset, _, database_statistics = create_datasets(logger, data_dir, train_workload_run_paths, loss_class_name= loss_class_name,
+                                                                         val_ratio=0.0, shuffle_before_split=False, mode='train', cross_datasets=cross_datasets)
     
-    _, val_dataset, _, val_database_statistics = create_datasets(logger, [val_workload_run_paths], loss_class_name= loss_class_name,
-                                                                         val_ratio=0.0, shuffle_before_split=False)
+    _, val_dataset, _, val_database_statistics = create_datasets(logger, data_dir, val_workload_run_paths, loss_class_name= loss_class_name,
+                                                                         val_ratio=0.0, shuffle_before_split=False, mode='val', cross_datasets=cross_datasets)
 
     # postgres_plan_collator does the heavy lifting of creating the graphs and extracting the features and thus requires both
     # database statistics but also feature statistics
-    feature_statistics = load_json(statistics_file, namespace=False)
+    feature_statistics = combined_stats # load_json(statistics_file, namespace=False)
 
     plan_collator = plan_collator_dict[database]
     train_collate_fn = functools.partial(plan_collator, db_statistics=database_statistics,  # plan_collator here is in postgres_plan_batching.py
@@ -144,8 +160,8 @@ def create_dataloader(logger, train_workload_run_paths, val_workload_run_paths, 
     # for each test workoad run create a distinct test loader
     if test_workload_run_paths is not None:
         p = test_workload_run_paths
-        _, test_dataset, _, test_database_statistics = create_datasets(logger, [p], loss_class_name=loss_class_name,
-                                                                        val_ratio=0.0, shuffle_before_split=False)
+        _, test_dataset, _, test_database_statistics = create_datasets(logger, data_dir, p, loss_class_name=loss_class_name,
+                                                                        val_ratio=0.0, shuffle_before_split=False, mode='test', cross_datasets=cross_datasets)
         # test dataset
         test_collate_fn = functools.partial(plan_collator, db_statistics=test_database_statistics,
                                             feature_statistics=feature_statistics,

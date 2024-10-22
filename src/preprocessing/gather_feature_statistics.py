@@ -37,7 +37,7 @@ def gather_feature_statistics(data_dir, dataset):
             return self.value
 
     run_stats = []
-    parsed_plan_file = os.path.join(data_dir, dataset, 'train_plans.json')
+    parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'parsed_plan.json')
     if not os.path.exists(parsed_plan_file):
         print(f"Warning: {parsed_plan_file} does not exist. Skipping dataset '{dataset}'.")
         return {}, {}
@@ -70,7 +70,7 @@ def gather_feature_statistics(data_dir, dataset):
         else:
             unique_values = set(values)
             statistics_dict[k] = dict(
-                value_dict={v: id for id, v in enumerate(sorted(unique_values))},
+                value_dict={v: id for id, v in enumerate(unique_values)},
                 no_vals=len(unique_values),
                 type=str(FeatureType.categorical)
             )
@@ -84,7 +84,8 @@ def merge_categorical_features(existing, new):
 
     # Combine the value dictionaries
     combined_values = set(existing['value_dict'].keys()).union(new['value_dict'].keys())
-    sorted_values = sorted(combined_values)  # Optional: sort for consistency
+    # sorted_values = sorted(combined_values)  # Optional: sort for consistency
+    sorted_values = combined_values  # Optional: sort for consistency
 
     # Assign new unique IDs
     value_dict = {v: idx for idx, v in enumerate(sorted_values)}
