@@ -89,22 +89,16 @@ if __name__ == "__main__":# Set random seed for reproducibility
     logger = get_logger(log_file)
     logger.info(f"Args: {args}")
 
-    # logger.info(f"extracting memory and time information from logs...")
-    # if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'raw_data','mem_info.csv')):
-    #     extract_mem_info(args.data_dir, args.dataset)
-    # else:
-    #     logger.info(f"mem_info.csv already exists, skipping extraction")
-    for dataset in args.train_dataset + [args.val_dataset, args.test_dataset]:
+    if args.skip_train:
+        dataset_list = [args.test_dataset]
+    else:
+        dataset_list = args.train_dataset + [args.val_dataset, args.test_dataset]
+    for dataset in dataset_list:
         if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'total_plans.json')):
             get_explain_json_plans(args.data_dir, dataset)
         else:
             logger.info(f"explain json plans of {dataset} already exist, skipping getting explain json plans")
 
-        # logger.info(f"gathering feature statistics...")
-        # if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'statistics_workload_combined.json')):
-        #     gather_feature_statistics(args.data_dir, dataset)
-        # else:
-        #     logger.info(f"statistics_workload_combined.json of {dataset} already exists, skipping gathering feature statistics")
 
     combined_stats = combine_stats(logger, args)
 

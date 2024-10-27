@@ -192,7 +192,7 @@ def train_model(logger, args, statistics):
         # Initialize the model
         # Determine the number of unique data types for one-hot encoding
         # Assuming all graphs have the same data_type_mapping
-        sample_graph = train_loader.dataset[0]
+        sample_graph = test_loader.dataset[0]
         num_operator_features = sample_graph.x_dict['operator'].shape[1]
         num_table_features = sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
         num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
@@ -200,7 +200,7 @@ def train_model(logger, args, statistics):
             hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_table_column=args.encode_table_column, 
             num_operator_features=num_operator_features, num_table_features=num_table_features, num_column_features=num_column_features, dropout=args.dropout)
     else: 
-        sample_graph = train_loader.dataset[0]
+        sample_graph = test_loader.dataset[0]
         num_node_features = sample_graph.x.shape[1]
         model = MODELS[args.model](hidden_channels=args.hidden_dim, out_channels=1, num_layers = args.num_layers, num_node_features=num_node_features, dropout=args.dropout)
     model = model.to(args.device)
