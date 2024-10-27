@@ -338,6 +338,8 @@ if __name__ == '__main__':
     parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default=None)
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
     parser.add_argument("--force", action='store_true', help="Force overwrite of existing files")
+    parser.add_argument('--no_mem_pred', action='store_false', dest='mem_pred', help='do not predict memory')
+    parser.add_argument('--time_pred', action='store_true', default=False, help='predict time')
     parser.add_argument('--debug', action='store_true', help="Debug mode")
     args = parser.parse_args()
 
@@ -419,7 +421,7 @@ if __name__ == '__main__':
     # statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
     # statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
     target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'evaluation_train_{"".join(args.train_dataset)}_test_{args.test_dataset}')
-    filename_model = f'{args.train_dataset}'
+    filename_model = f'{"".join(args.train_dataset)}'
     database = DatabaseSystem.POSTGRES
 
     param_dict = flatten_dict(train_kwargs)  # https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys

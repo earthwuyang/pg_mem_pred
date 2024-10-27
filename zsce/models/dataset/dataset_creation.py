@@ -23,7 +23,7 @@ def read_workload_runs(logger, data_dir, workload_run_paths, limit_queries=None,
                 if cross_datasets:
                     source = os.path.join(data_dir, dataset, 'zsce', 'parsed_plan.json')
                 else:
-                    source = os.path.join(data_dir, dataset, 'zsce', '{mode}_plans.json')
+                    source = os.path.join(data_dir, dataset, 'zsce', f'{mode}_plans.json')
             else:
                 source = os.path.join(data_dir, dataset, 'zsce', 'test_plans.json')
             print(f"source {source}")

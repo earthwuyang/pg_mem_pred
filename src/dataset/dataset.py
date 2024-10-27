@@ -49,7 +49,7 @@ class QueryPlanDataset(Dataset):
                     self.dataset_list = []
                     if not isinstance(dataset, list):
                         dataset = [dataset]
-                    for ds in dataset:
+                    for ds in dataset:w
                         if mode == 'test':
                             json_file_path = os.path.join(dataset_dir, ds, f'test_plans.json')
                         else:
