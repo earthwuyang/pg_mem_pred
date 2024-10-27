@@ -152,17 +152,30 @@ def train_XGBoost(logger, args, combined_stats):
 
     not_cross_datasets = isinstance(args.train_dataset, str)
 
-    # Prepare training and validation datasets
-    X_train, y_train = prepare_dataset(logger, args.data_dir, args.train_dataset, 'train', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
-    X_val, y_val = prepare_dataset(logger, args.data_dir, args.val_dataset, 'val', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
-    X_val = collate(X_val, X_train.columns)
-    
+    column_names_file = os.path.join('data', 'xgb_column_names.pickle')
+
+    if not args.skip_train:
+        # Prepare training and validation datasets
+        X_train, y_train = prepare_dataset(logger, args.data_dir, args.train_dataset, 'train', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
+        column_names = X_train.columns
+        with open(column_names_file, 'wb') as f:
+            pickle.dump(X_train.columns, f)
+        logger.info(f"Saving column names to {column_names_file}...")
+        logger.info("Training features shape:", X_train.shape)
+        X_val, y_val = prepare_dataset(logger, args.data_dir, args.val_dataset, 'val', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
+        X_val = collate(X_val, column_names)
+        
+        logger.info("Validation features shape:", X_val.shape)
+        
+    else:
+        with open(column_names_file, 'rb') as f:
+            column_names = pickle.load(f)
+        logger.info(f"Loading column names from {column_names_file}...")
+
     X_test, y_test = prepare_dataset(logger, args.data_dir, args.test_dataset, 'test', combined_stats, args.debug, args.mem_pred, args.time_pred, not_cross_datasets)
     
-    X_test = collate(X_test, X_train.columns)
+    X_test = collate(X_test, column_names)
 
-    logger.info("Training features shape:", X_train.shape)
-    logger.info("Validation features shape:", X_val.shape)
     logger.info("Testing features shape:", X_test.shape)
 
     
