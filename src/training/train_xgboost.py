@@ -6,6 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
+import pickle
 from sklearn.metrics import mean_squared_error, r2_score
 from .metrics import compute_metrics
 
@@ -175,9 +176,24 @@ def train_XGBoost(logger, args, combined_stats):
         n_jobs=-1
     )
 
+    best_model_dir = 'checkpoints'
+
     logger.info(f"Training XGBoost model...")
-    # Train the model
-    xgb_reg.fit(X_train, y_train)
+
+    if not args.skip_train:
+        # Train the model
+        xgb_reg.fit(X_train, y_train)
+        
+        if not os.path.exists(best_model_dir):
+            os.makedirs(best_model_dir)
+        model_path = os.path.join(best_model_dir, 'xgb_reg.pkl')
+        logger.info(f"Saving XGBoost model to {model_path}...")
+        with open(model_path, 'wb') as f:
+            pickle.dump(xgb_reg, f)
+    else:
+        logger.info(f"Skip training and Load XGBoost model from {model_path}...")
+        with open(model_path, 'rb') as f:
+            xgb_reg = pickle.load(f)
 
     logger.info(f"Testing XGBoost model...")
     # Predict on test set
