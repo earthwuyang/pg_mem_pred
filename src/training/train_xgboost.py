@@ -193,13 +193,14 @@ def train_XGBoost(logger, args, combined_stats):
 
     logger.info(f"Training XGBoost model...")
 
+    model_path = os.path.join(best_model_dir, f'xgb_reg_{"".join(args.dataset)}.pkl')
     if not args.skip_train:
         # Train the model
         xgb_reg.fit(X_train, y_train)
         
         if not os.path.exists(best_model_dir):
             os.makedirs(best_model_dir)
-        model_path = os.path.join(best_model_dir, f'xgb_reg_{"".join(args.dataset)}.pkl')
+        
         logger.info(f"Saving XGBoost model to {model_path}...")
         with open(model_path, 'wb') as f:
             pickle.dump(xgb_reg, f)
