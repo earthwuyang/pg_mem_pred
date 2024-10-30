@@ -40,7 +40,7 @@ def gather_feature_statistics(data_dir, dataset):
 
 
     run_stats = []
-    parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'train_plans.json')
+    parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'total_plans.json')
     # parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'tiny_plans.json')
     with open(parsed_plan_file, 'r') as f:
         run_stats.append(json.load(f))

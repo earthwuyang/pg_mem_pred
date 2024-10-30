@@ -196,6 +196,7 @@ def train_model(logger, args, statistics):
         num_operator_features = sample_graph.x_dict['operator'].shape[1]
         num_table_features = sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
         num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
+        logger.info(f"num_operator_features={num_operator_features}, num_table_features={num_table_features}, num_column_features={num_column_features}")
         model = MODELS[args.model](
             hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_table_column=args.encode_table_column, 
             num_operator_features=num_operator_features, num_table_features=num_table_features, num_column_features=num_column_features, dropout=args.dropout)

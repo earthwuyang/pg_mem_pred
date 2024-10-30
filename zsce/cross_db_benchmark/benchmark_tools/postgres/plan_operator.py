@@ -219,18 +219,20 @@ class PlanOperator(dict):
                 col_ids = []
                 for c in output_column['columns']:
                     try:
+                        
+                        c_id = self.lookup_column_id(c, column_id_mapping, node_tables, partial_column_name_mapping,
+                                                     alias_dict)
+                        col_ids.append(c_id)
+                    except:
                         # print(f"col {c}")
                         # print(f"column_id_mapping {column_id_mapping}")
                         # print(f"node_tables {node_tables}")
                         # print(f"partial_column_name_mapping {partial_column_name_mapping}")
                         # print(f"alias_dict {alias_dict}")
-                        c_id = self.lookup_column_id(c, column_id_mapping, node_tables, partial_column_name_mapping,
-                                                     alias_dict)
-                        col_ids.append(c_id)
-                    except:
                         # not c[1].startswith('agg_')
-                        if c[0] != 'subgb':
-                            raise ValueError(f"Did not find unique table for column {c}")
+                        # if c[0] != 'subgb':
+                        #     raise ValueError(f"Did not find unique table for column {c}")
+                        col_ids.append(0)
 
                 output_column['columns'] = col_ids
 
@@ -239,6 +241,7 @@ class PlanOperator(dict):
             filter_columns.lookup_columns(self, column_id_mapping=column_id_mapping, node_tables=node_tables,
                                           partial_column_name_mapping=partial_column_name_mapping,
                                           alias_dict=alias_dict)
+                
             self.plan_parameters['filter_columns'] = filter_columns.to_dict()
 
         # replace table by id
@@ -276,8 +279,10 @@ class PlanOperator(dict):
             table = list(potential_tables)[0]
         else:
             raise NotImplementedError
-
-        col_id = column_id_mapping[(table, column)]
+        try:
+            col_id = column_id_mapping[(table, column)]
+        except: 
+            return 0
         return col_id
 
     def merge_recursively(self, node):

@@ -72,6 +72,7 @@ def get_column_features(conn, table_name, column_name):
 
 # Fetch all unique data types from the database to create a mapping
 def get_unique_data_types(conn):
+    return ['character', 'date', 'character varying', 'integer', 'numeric', 'double precision']
     try:
         with conn.cursor() as cur:
             cur.execute("""

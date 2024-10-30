@@ -100,7 +100,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
             logger.info(f"explain json plans of {dataset} already exist, skipping getting explain json plans")
 
 
-    combined_stats = combine_stats(logger, args)
+    combined_stats = combine_stats(logger, args, dataset_list)
 
     # Train the model
     if args.model == 'XGBoost':

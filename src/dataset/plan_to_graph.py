@@ -21,7 +21,7 @@ def one_hot_encode_data_type(data_type, data_type_mapping):
     else:
         # Assign 'unknown' category
         one_hot[-1] = 1
-    assert len(one_hot) == (len(data_type_mapping) + 1), "One-hot encoding should have 6 dimensions"
+    assert len(one_hot) == (len(data_type_mapping) + 1), f"One-hot encoding should have {(len(data_type_mapping) + 1)} dimensions"
     return one_hot
 
 
@@ -113,17 +113,25 @@ def traverse_operators(statistics, db_stats, data_type_mapping, plan, encode_tab
 
         output_list = plan_parameters.get('Output', [])
         for output_item in output_list:
+            # print(f"output_item {output_item}")
             cols = extract_columns(output_item)
             for col in cols:
                 if col not in column_nodes:
                     table_name = col.split('.')[0]
-                    column_name = col
+                    # print(f"table_name: {table_name}, col: {col}")
+                    # print(f"db_stats['tables'].keys {db_stats['tables'].keys()}")
+                    if table_name not in db_stats['tables']:
+                        table_name = table_name[:-2]
+                    column_name = col.split('.')[1]
+                    column_name = table_name + '.' + column_name
+                    # print(f"table_name: {table_name}, column_name: {column_name}")
+                    # print(f"db_stats['tables'].keys() {db_stats['tables'].keys()}")
                     avg_width = db_stats['tables'][table_name]['column_features'][column_name]['avg_width']
                     correlation = db_stats['tables'][table_name]['column_features'][column_name]['correlation']
                     n_distinct = db_stats['tables'][table_name]['column_features'][column_name]['n_distinct']
                     null_frac = db_stats['tables'][table_name]['column_features'][column_name]['null_frac']
                     data_type = db_stats['tables'][table_name]['column_features'][column_name]['data_type']
-                    one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
+                    one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4, 'double precision': 5}
                     features = [avg_width, correlation, n_distinct, null_frac] + one_hot
                     column_nodes[col] = {
                         'id': len(column_nodes),
@@ -203,12 +211,14 @@ def create_hetero_graph(logger, plan, conn, statistics, db_stats, encode_table_c
             sorted_tables = sorted(table_nodes.items(), key=lambda x: x[1]['id'])
             table_features = [table[1]['features'] for table in sorted_tables]
             data['table'].x = torch.tensor(table_features, dtype=torch.float)
+            # logger.debug(f"table_features: {data['table'].x.shape}")
         
         # Assign column features
         if column_nodes:
             sorted_columns = sorted(column_nodes.items(), key=lambda x: x[1]['id'])
             column_features = [column[1]['features'] for column in sorted_columns]
             data['column'].x = torch.tensor(column_features, dtype=torch.float)
+            # logger.debug(f"column_features: {data['column'].x .shape}")
         
     if operator_calledby_operator_edges:
         src, dst = zip(*operator_calledby_operator_edges)

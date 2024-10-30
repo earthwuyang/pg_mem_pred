@@ -5,15 +5,20 @@ from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from torch.nn import Linear
 from types import SimpleNamespace
+import logging
 # ---------------------- GNN Model Definition ---------------------- #
 
 class HeteroGraphConv(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels, num_layers, encode_table_column, **kwargs):
         super().__init__()
+        kwargs = SimpleNamespace(**kwargs)
         self.num_layers = num_layers
         self.encode_table_column = encode_table_column
+        self.num_operator_features = kwargs.num_operator_features
+        self.num_table_features = kwargs.num_table_features
+        self.num_column_features = kwargs.num_column_features
         # Project node features to hidden_channels
-        kwargs = SimpleNamespace(**kwargs)
+        
         self.lin_operator = Linear(kwargs.num_operator_features, hidden_channels)    
         if encode_table_column:
             self.lin_table = Linear(kwargs.num_table_features, hidden_channels)
@@ -47,6 +52,8 @@ class HeteroGraphConv(torch.nn.Module):
             node_layers += [('table', self.lin_table), ('column', self.lin_column)]
         for node_type, lin_layer in node_layers:
             if node_type in x_dict and x_dict[node_type].shape[0] > 0:
+                # logging.info(f"Projecting node type '{node_type}' with shape {x_dict[node_type].shape}")
+                # logging.info(f"self.num_operator_features: {self.num_operator_features}, self.num_table_features: {self.num_table_features}, self.num_column_features: {self.num_column_features}")
                 projected_x[node_type] = lin_layer(x_dict[node_type])
             else:
                 # Assign an empty tensor with appropriate feature size

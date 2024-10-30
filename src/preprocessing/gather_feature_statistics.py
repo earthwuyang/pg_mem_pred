@@ -37,7 +37,7 @@ def gather_feature_statistics(data_dir, dataset):
             return self.value
 
     run_stats = []
-    parsed_plan_file = os.path.join(data_dir, dataset, 'zsce', 'parsed_plan.json')
+    parsed_plan_file = os.path.join(data_dir, dataset, 'total_plans.json')
     if not os.path.exists(parsed_plan_file):
         print(f"Warning: {parsed_plan_file} does not exist. Skipping dataset '{dataset}'.")
         return {}, {}
