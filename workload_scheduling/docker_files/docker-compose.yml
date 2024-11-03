@@ -1,0 +1,21 @@
+version: '3.8'  # Specify the version of Docker Compose syntax
+
+services:
+  postgres:
+    image: postgres:latest
+    shm_size: "4g"
+    environment:
+      POSTGRES_USER: wuy
+      POSTGRES_PASSWORD: wuy
+      POSTGRES_DB: tpcds_sf1
+    ports:
+      - "5432:5432"  # Exposes PostgreSQL on port 5432
+    volumes:
+      - /data/wuy/db/docker_postgres:/var/lib/postgresql/data  # Persist data across container restarts
+    deploy:
+      resources:
+        limits:
+          memory: 4g  # Set memory limit to 1GB
+          cpus: "40"   # Set CPU limit to 2 cores
+
+
