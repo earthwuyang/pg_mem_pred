@@ -7,6 +7,7 @@ from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 import pickle
+from time import time
 from sklearn.metrics import mean_squared_error, r2_score
 from .metrics import compute_metrics
 
@@ -150,7 +151,7 @@ def collate(df, columns):
 
 def train_XGBoost(logger, args, combined_stats):
 
-    not_cross_datasets = isinstance(args.train_dataset, str)
+    not_cross_datasets = len(args.train_dataset) == 1
 
     column_names_file = os.path.join('data', 'xgb_column_names.pickle')
 
@@ -210,8 +211,13 @@ def train_XGBoost(logger, args, combined_stats):
             xgb_reg = pickle.load(f)
 
     logger.info(f"Testing XGBoost model...")
+
+    start_time = time()
     # Predict on test set
     y_pred = xgb_reg.predict(X_test)
+    end_time = time()
+    logger.info(f"XGBoost prediction time: {end_time - start_time}s")
+    while 1:pass
 
     if args.mem_pred:
         y_pred = np.array(y_pred) * combined_stats['peakmem']['scale'] + combined_stats['peakmem']['center']

@@ -115,6 +115,8 @@ def validate_model(logger, val_loader, model, epoch=0, epoch_stats=None, metrics
             input_model, label, sample_idxs_batch = custom_batch_to(batch, model.device, model.label_norm)  
             sample_idxs += sample_idxs_batch
             output = model(input_model)
+            # logging.info(f"test one batch time: {time.perf_counter() - test_start_t} seconds")
+            # while 1:pass
 
             # sum up mean batch losses
             val_loss += model.loss_fxn(output, label).cpu()
@@ -180,10 +182,10 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
                 tree_layer_name='GATConv',
                 tree_layer_kwargs=None,
                 hidden_dim=32,
-                batch_size=32,
+                batch_size=4096,
                 output_dim=1,
                 epochs=0,
-                device='cpu',
+                device='cuda:0',
                 plan_featurization_name=None,
                 max_epoch_tuples=100000,
                 param_dict=None,  # param_dict=param_dict
@@ -231,6 +233,18 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
                                        plan_featurization_name=plan_featurization_name,
                                        label_norm=label_norm,
                                        **model_kwargs)
+
+    total_params = sum(p.numel() for p in model.parameters())
+    logger.info(f"Total parameters: {total_params}")
+    # 计算模型的总大小
+    total_size = 0
+    for param in model.parameters():
+        total_size += param.numel() * param.element_size()  # numel() 是元素总数, element_size() 是每个元素的字节数
+
+    # 转换为 KB, MB
+    logger.info(f"Model total size: {total_size / 1024:.2f} KB")
+    logger.info(f"Model total size: {total_size / (1024 ** 2):.2f} MB")
+    
     # move to gpu
     model = model.to(model.device)
     # print(model)
@@ -308,7 +322,7 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
 
                 early_stop_m = find_early_stopping_metric(metrics)
                 logger.info("Reloading best model")
-                model.load_state_dict(early_stop_m.best_model)
+                # model.load_state_dict(early_stop_m.best_model)
                 validate_model(logger, test_loader, model, epoch=epoch, epoch_stats=test_stats, metrics=metrics,
                                log_all_queries=True)
 
@@ -357,7 +371,7 @@ if __name__ == '__main__':
     loss_class_name='MSELoss'
     max_epoch_tuples=100000
     seed = 0
-    device = 'cpu'
+    device = 'cuda:0'
     num_workers = 10
     limit_queries=None
     limit_queries_affected_wl=None
@@ -413,14 +427,14 @@ if __name__ == '__main__':
                         skip_train=args.skip_train
                         )
 
-    assert len(hyperparams) == 0, f"Not all hyperparams were used (not used: {hyperparams.keys()}). Hence generation " \
-                                    f"and reading does not seem to fit"
+    # assert len(hyperparams) == 0, f"Not all hyperparams were used (not used: {hyperparams.keys()}). Hence generation " \
+                                    # f"and reading does not seem to fit"
 
     data_dir = '/home/wuy/DB/pg_mem_data/'
     
     # statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
     # statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
-    target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'evaluation_train_{"".join(args.train_dataset)}_test_{args.test_dataset}')
+    target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'evaluation_train_{"".join(args.train_dataset)}_test_{args.test_dataset}_{"mem" if args.mem_pred else ""}_{"time" if args.time_pred else ""}')
     filename_model = f'{"".join(args.train_dataset)}'
     database = DatabaseSystem.POSTGRES
 
@@ -440,7 +454,7 @@ if __name__ == '__main__':
     # val_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # test_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
 
-    logfilepath = os.path.join('logs', f'train_{"".join(args.train_dataset)}_test_{args.test_dataset}')
+    logfilepath = os.path.join('logs', f'train_{"".join(args.train_dataset)}_test_{args.test_dataset}_{"mem" if args.mem_pred else ""}_{"time" if args.time_pred else ""}.log')
     if not os.path.exists(logfilepath):
         os.system(f"mkdir -p {logfilepath}")
     logfile = os.path.join(logfilepath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log")

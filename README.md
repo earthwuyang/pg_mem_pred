@@ -80,6 +80,9 @@ Example usage to test across database (test transferability):
 python train.py --skip_train --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1' --model_name 'GAT'
 ``` -->
 
+### cross machine test example:
+`python zsce/train.py --data_dir /home/wuy/DB/pg_mem_data_qh3 --dataset airline credit carcinogenesis employee hepatitis --val_dataset tpcds_sf1 --test_dataset geneea --skip_train`
+
 ### heterogeneous_graph
 <!-- When you update plan_to_graph code, do not forget to `rm -rf data`, because the graph datset is cached in `data` directory. -->
 `python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'`

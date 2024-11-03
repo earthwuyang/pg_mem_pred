@@ -22,7 +22,7 @@ def combine_stats(logger, args):
             with open(combined_statistics_file, 'w') as f:
                 json.dump(combined_stats, f, indent=4)
     else:
-        logger.info(f"combined_statistics_workload.json already exists, skipping gathering feature statistics")
+        logger.info(f"{combined_statistics_file} already exists, skipping gathering feature statistics")
         with open(combined_statistics_file, 'r') as f:
             combined_stats = json.load(f)
     return combined_stats

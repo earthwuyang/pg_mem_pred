@@ -10,7 +10,7 @@ from torch_geometric.loader import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 import functools
 from time import time
-
+import logging
 from src.dataset.dataset import load_json
 from src.models.GIN import GIN
 from src.models.GAT import GAT
@@ -76,6 +76,8 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
     time_preds = []
     memories = []
     times = []
+    torch.cuda.synchronize()
+    start_time = time()
     with torch.no_grad():
         for batch in tqdm(val_loader, desc="Val:"):
             batch = batch.to(device)
@@ -86,6 +88,11 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
                 out_mem, out_time = model(batch.x_dict, batch.edge_index_dict, batch['operator'].batch)
             else: # homogeneous graph
                 out_mem, out_time = model(batch)
+            end_time = time()
+            total_time = end_time - start_time
+            # logging.info(f"Time taken for one batch: {total_time}")
+            # while 1:pass
+
             labels = batch.y.reshape(-1,2)
             mem_loss = criterion(out_mem, labels[:, 0])
             time_loss = criterion(out_time, labels[:, 1])
@@ -204,6 +211,18 @@ def train_model(logger, args, statistics):
         sample_graph = test_loader.dataset[0]
         num_node_features = sample_graph.x.shape[1]
         model = MODELS[args.model](hidden_channels=args.hidden_dim, out_channels=1, num_layers = args.num_layers, num_node_features=num_node_features, dropout=args.dropout)
+    
+    
+    total_params = sum(p.numel() for p in model.parameters())
+    logger.info(f"Total parameters: {total_params}")
+    # 计算模型的总大小
+    total_size = 0
+    for param in model.parameters():
+        total_size += param.numel() * param.element_size()  # numel() 是元素总数, element_size() 是每个元素的字节数
+
+    # 转换为 KB, MB
+    logger.info(f"Model total size: {total_size / 1024:.2f} KB")
+    logger.info(f"Model total size: {total_size / (1024 ** 2):.2f} MB")
     model = model.to(args.device)
     optimizer = Adam(model.parameters(), lr=args.lr)
     criterion = torch.nn.L1Loss()
