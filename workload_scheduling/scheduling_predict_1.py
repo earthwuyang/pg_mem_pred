@@ -650,7 +650,10 @@ class MemoryBasedStrategy:
                 self.active_queries -= 1
                 # actual_active_queries = self.get_actual_active_queries()
                 # logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. Actual active queries: {actual_active_queries}.")
-                logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                if success:
+                    logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                else:
+                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
                 
                 if self.active_queries ==0 and self.ready_queue.is_empty():
                     self.finished=True

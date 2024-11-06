@@ -44,7 +44,9 @@ def execute_all_workloads(args):
     os.makedirs(pg_log_dataset_dir, exist_ok=True)
     mv_command = f"echo {args.password} | sudo -S -u root bash -c 'mv {os.path.join(args.postgres_dir, 'data/log/post*')} {pg_log_dataset_dir}'"
     subprocess.run(mv_command, shell=True)
-    print(f"move postgres logs files of dataset {previous_dataset} to {pg_log_dataset_dir}")
+    chmod_command = f"echo {args.password} | sudo -S -u root bash -c 'chmod -R +r {pg_log_dataset_dir}'"
+    subprocess.run(chmod_command, shell=True)
+    print(f"move postgres logs files of dataset {previous_dataset} to {pg_log_dataset_dir} and grant read permission")
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()

@@ -15,8 +15,6 @@ import subprocess
 import torch
 from torch_geometric.data import Data
 
-from GIN import GIN
-
 
 @dataclass(order=True)
 class PrioritizedQuery:
@@ -184,6 +182,8 @@ def execute_query(
 
     try:
         with engine.connect() as conn:
+            sql = "set property for 'root' 'max_user_connections' = '10000';"
+            conn.execute(text(sql))
             # wait_for_available_memory(prioritized_query, total_memory_mb)
             logging.debug(f"{strategy}: Executing Query {query_id} whose retry is {prioritized_query.retry_count}...")
             # Execute the query
@@ -242,6 +242,8 @@ def naive_execute_query(
 
         try:
             with engine.connect() as conn:
+                sql = "set property for 'root' 'max_user_connections' = '10000';"
+                conn.execute(text(sql))
                 logging.debug(f"{strategy}: Executing Query {query_id} whose retry is {prioritized_query.retry_count}...")
                 # Execute the query
                 result = conn.execute(text(query.sql))

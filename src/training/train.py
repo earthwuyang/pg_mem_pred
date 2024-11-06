@@ -199,8 +199,8 @@ def train_model(logger, args, statistics):
         # Initialize the model
         # Determine the number of unique data types for one-hot encoding
         # Assuming all graphs have the same data_type_mapping
-        sample_graph = test_loader.dataset[0]
-        num_operator_features = sample_graph.x_dict['operator'].shape[1]
+        sample_graph = train_loader.dataset[1]
+        num_operator_features = 23 # sample_graph.x_dict['operator'].shape[1]
         num_table_features = sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
         num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
         logger.info(f"num_operator_features={num_operator_features}, num_table_features={num_table_features}, num_column_features={num_column_features}")

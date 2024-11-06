@@ -1,1 +1,1 @@
-python train.py --dataset airline carcinogenesis credit employee financial geneea --val_dataset hepatitis --test_dataset tpcds_sf1
+python train.py --dataset airline carcinogenesis credit employee financial geneea hepatitis  --val_dataset tpch_sf1 --test_dataset tpcds_sf1

@@ -217,7 +217,6 @@ def train_XGBoost(logger, args, combined_stats):
     y_pred = xgb_reg.predict(X_test)
     end_time = time()
     logger.info(f"XGBoost prediction time: {end_time - start_time}s")
-    while 1:pass
 
     if args.mem_pred:
         y_pred = np.array(y_pred) * combined_stats['peakmem']['scale'] + combined_stats['peakmem']['center']

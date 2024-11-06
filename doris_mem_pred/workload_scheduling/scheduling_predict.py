@@ -267,7 +267,7 @@ def naive_execute_query(
             error_message = str(e)
             prioritized_query.retry_count += 1
             prioritized_query.priority = prioritized_query.priority - 1
-            wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
+            wait_time = min(base_wait_time ** prioritized_query.retry_count, 8)
 
             logging.debug(f"{strategy}: Query {query_id} failed with error {error_message} and will sleep for {wait_time:.2f} seconds before retrying...")
             time.sleep(wait_time)  # Wait before retrying
@@ -360,6 +360,7 @@ class NaiveStrategy:
         end_time = time.time()
         total_exec_time = end_time - start_time
         logging.info(f"Naive Strategy Total Execution Time: {total_exec_time:.2f} seconds.")
+        
         return total_exec_time
 
 # ----------------------------
@@ -570,8 +571,10 @@ class MemoryBasedStrategy:
         finally:
             with self.condition:
                 self.active_queries -= 1
-                logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
-                
+                if success:
+                    logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                else:
+                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
                 if self.active_queries ==0 and self.ready_queue.is_empty():
                     self.finished=True
                     logging.debug(f"Scheduler: All queries completed. Notified all (from complete_callback).")
@@ -587,10 +590,12 @@ class MemoryBasedStrategy:
             # current_memory_usage = get_postgres_memory_usage()
             # available_memory = total_memory_mb - current_memory_usage
             # available_memory = max(available_memory, 0)
-            available_memory = get_available_memory()
+            available_memory = get_available_memory() 
             logging.debug(f"Query {prioritized_query.query.id}: Total memory: {total_memory_mb} MB, Available memory: {available_memory}MB, peak memory: {prioritized_query.query.explain_json_plan['peak_memory_mb']}MB")
-            if prioritized_query.query.explain_json_plan['peak_memory_mb'] <= available_memory :
+            if self.predict_peak_memory(prioritized_query.query.explain_json_plan) <= available_memory:
                 return
+            # if prioritized_query.query.explain_json_plan['peak_memory_mb'] <= available_memory :
+            #     return
             else:
                 logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
                 wait_time = min(base_wait_time ** prioritized_query.retry_count, 32)
@@ -608,6 +613,7 @@ class MemoryBasedStrategy:
         :param explain_json_plan: Dictionary containing the explain plan of the query.
         :return: Estimated peak memory usage in KB.
         """
+        return explain_json_plan.get('peak_memory_mb', 0)
         plan_str = explain_json_plan['plan']
         root, edge_src, edge_tgt, features, node_levels = parse_tree(plan_str)
         # Create edge index tensor
@@ -819,7 +825,7 @@ def main():
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=adjusted_max_connections)
     logging.info(f"Initialized ThreadPoolExecutor with {adjusted_max_connections} workers.")
 
-    max_retries = 100
+    max_retries = 10000
 
 
     
@@ -853,6 +859,9 @@ def main():
                 info['total_time'] for info in naive_strategy.results.values() if 'total_time' in info
             )
             naive_waiting_sum_list.append(naive_waiting_sum)
+            mean_naive_waiting = mean(naive_waiting_sum_list) if not args.no_naive else 0
+            logging.info(f"Naive Strategy Average Total Execution Time: {naive_total_time:.2f} seconds.")
+            logging.info(f"Naive Strategy Average Sum of Waiting Times: {mean_naive_waiting:.2f} seconds.")
         
     import pickle
     # Load statistics from JSON file
