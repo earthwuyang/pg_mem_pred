@@ -14,7 +14,7 @@ from datetime import datetime
 import subprocess
 import torch
 from torch_geometric.data import Data
-
+import random
 from model import GraphGINModel
 from parse import parse_tree
 
@@ -46,10 +46,18 @@ class PriorityQueue:
             heapq.heappush(self.heap, prioritized_query)
     
 
+    # def pop_ready_queries(self, current_time: float) -> List[PrioritizedQuery]:
+    #     ready = []
+    #     with self.lock:
+    #         while self.heap and self.heap[0].next_available_time <= current_time:
+    #             ready.append(heapq.heappop(self.heap))
+    #     return ready 
+    
+
     def pop_ready_queries(self, current_time: float) -> List[PrioritizedQuery]:
         ready = []
         with self.lock:
-            while self.heap and self.heap[0].next_available_time <= current_time:
+            if self.heap[0].next_available_time <= current_time:
                 ready.append(heapq.heappop(self.heap))
         return ready    
 
@@ -62,6 +70,10 @@ class PriorityQueue:
     def is_empty(self) -> bool:
         with self.lock:
             return len(self.heap) == 0
+
+    def __len__(self):
+        with self.lock:
+            return len(self.heap)
 
 
 
@@ -78,29 +90,42 @@ def parse_metrics(metrics_text):
 
 def get_available_memory():
 
+    def parse_profile(text):
+        for line in text.split('\n'):
+            if 'PhysicalMemory(VmRSS)' in line:
+                cur_mem = line.split(':')[1].strip()
+                if 'GB' in cur_mem:
+                    cur_mem = float(cur_mem[:-3]) * 1024 # convert GB to MB
+                elif 'MB' in cur_mem:
+                    cur_mem = float(cur_mem[:-3])
+                elif 'KB' in cur_mem:
+                    cur_mem = float(cur_mem[:-3]) / 1024
+                else:
+                    logging.DEBUG(f"cur_mem: {cur_mem}")
+                    raise NameError(f"Unknown memory format: {cur_mem}")
+                return cur_mem
     import requests
 
     # Replace with your BE host and port
     BE_HOST = '101.6.5.215'
-    BE_PORT = 8040
+    BE_PORT_list = [8040, 8042, 8043]
+    cur_mem_total = 0
+    for BE_PORT in BE_PORT_list:
+        metrics_url = f'http://{BE_HOST}:{BE_PORT}/profile'
 
-    metrics_url = f'http://{BE_HOST}:{BE_PORT}/metrics'
+        try:
+            response = requests.get(metrics_url)
+            response.raise_for_status()
+            metrics_data = response.text
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching metrics: {e}")
+            metrics_data = None
+        if metrics_data:
+            # print(f"metrics_data: {metrics_data}")
+            current_mem = parse_profile(metrics_data)
+            cur_mem_total += current_mem
 
-    try:
-        response = requests.get(metrics_url)
-        response.raise_for_status()
-        metrics_data = response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching metrics: {e}")
-        metrics_data = None
-    if metrics_data:
-        # print(f"metrics_data: {metrics_data}")
-        metrics = parse_metrics(metrics_data)
-
-        available_memory = metrics.get('doris_be_memory_jemalloc_retained_bytes', 0)
-        # print(f"available_memory: {available_memory}")
-        return available_memory / 1024**2
-
+    return 8 * 1024 - cur_mem_total
 
 def parse_memory_setting(setting: str) -> int:
     """
@@ -149,70 +174,6 @@ def get_postgres_memory_usage():
     except Exception as e:
         print(f"Error: {e}")
         return None
-    
-
-    
-# ----------------------------
-# Function to Execute a Single Query using SQLAlchemy
-# ----------------------------
-def execute_query(
-    executor: concurrent.futures.ThreadPoolExecutor,
-    engine: Engine,
-    memory_based_priority_queue: PriorityQueue,
-    prioritized_query: PrioritizedQuery,
-    result_dict: Dict[int, Dict[str, Any]],
-    lock: threading.Lock,
-    strategy: str,
-    max_retries: int = 10,
-    base_wait_time: float = 2.0,
-    total_memory_mb: float = 0,
-    exp: int = 0,
-    exp_num: int = 0
-):
-    """
-    Executes a single query and records execution and waiting times.
-    Adjusts priority based on retry attempts.
-
-    :return: Tuple containing (query_id, success, error_message)
-    """
-    query = prioritized_query.query
-    query_id = query.id
-
-    # Record the start time of execution
-    start_exec_time = time.time()
-    prioritized_query.start_time = start_exec_time  # Set start_time to avoid None
-
-    try:
-        with engine.connect() as conn:
-            # wait_for_available_memory(prioritized_query, total_memory_mb)
-            logging.debug(f"{strategy}: Executing Query {query_id} whose retry is {prioritized_query.retry_count}...")
-            # Execute the query
-            result = conn.execute(text(query.sql))
-            result.fetchall()
-        
-        end_exec_time = time.time()
-        exec_time = end_exec_time - start_exec_time
-        total_time = end_exec_time - prioritized_query.enqueue_time
-
-        # Update result_dict with execution time and waiting time
-        with lock:
-            result_dict[query_id] = {
-                'execution_time': exec_time,
-                'total_time': total_time,
-                'success': True
-            }
-        
-        logging.info(f"{strategy}({exp+1}/{exp_num}): Query {query_id} executed in {exec_time:.2f} seconds. Total time: {total_time:.2f} seconds. its retry is {prioritized_query.retry_count}.")
-        
-        return (prioritized_query, True, None)  # Success
-
-    except Exception as e:
-        error_message = str(e)
-        
-        prioritized_query.retry_count += 1
-        prioritized_query.priority = prioritized_query.priority - 1
-
-        return (prioritized_query, False, error_message)
 
 def naive_execute_query(
     executor: concurrent.futures.ThreadPoolExecutor,
@@ -267,9 +228,15 @@ def naive_execute_query(
             error_message = str(e)
             prioritized_query.retry_count += 1
             prioritized_query.priority = prioritized_query.priority - 1
-            wait_time = min(base_wait_time ** prioritized_query.retry_count, 8)
+            wait_time = min(base_wait_time ** (prioritized_query.retry_count), 32) + random.uniform(0, 1)
 
             logging.debug(f"{strategy}: Query {query_id} failed with error {error_message} and will sleep for {wait_time:.2f} seconds before retrying...")
+            if 'refused' in error_message or 'Lost connection' in error_message:
+                import os
+                import subprocess
+                cmd='docker exec -it doris sh -c "unset http_proxy && unset https_proxy && unset HTTP_PROXY && unset HTTPS_PROXY && export JAVA_HOME=/usr/lib/jvm/jdk-17.0.2/ &&  ./doris/output/fe/bin/start_fe.sh --daemon"'
+                subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                logging.info(f"restarting fe")
             time.sleep(wait_time)  # Wait before retrying
 
     # If all retries failed
@@ -501,7 +468,7 @@ class MemoryBasedStrategy:
                     self.wait_for_available_memory(prioritized_query, self.total_memory_mb)
                     
                     future = self.executor.submit(
-                        execute_query,
+                        self.execute_query,
                         self.executor,
                         self.engine,
                         self.ready_queue,
@@ -547,11 +514,18 @@ class MemoryBasedStrategy:
                 
                 if prioritized_query.retry_count < self.max_retries:
                     # Re-enqueue the query with higher priority
-                    base_wait_time = 1.1
-                    wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
+                    base_wait_time = self.base_wait_time
+                    # wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
+                    wait_time = min(self.base_wait_time ** (prioritized_query.retry_count), 8) + random.uniform(0, 1)
                     prioritized_query.next_available_time = time.time() + wait_time
                     # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority and sleep {wait_time} seconds...")
-                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority...")
+                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority, wait_time: {wait_time} seconds... current active queries: {self.active_queries}, self.ready_queue.len: {len(self.ready_queue)}")
+                    if 'refused' in error_message:
+                        import os
+                        cmd='docker exec -it doris sh -c "unset http_proxy && unset https_proxy && unset HTTP_PROXY && unset HTTPS_PROXY && export JAVA_HOME=/usr/lib/jvm/jdk-17.0.2/ &&  ./doris/output/fe/bin/start_fe.sh --daemon"'
+                        os.system(cmd)
+                        logging.info(f"restarting fe")
+                        # raise Exception(f"connection refused, query: {query_id}")
                     # time.sleep(wait_time)
                     self.ready_queue.push(prioritized_query)
                 else:
@@ -572,33 +546,35 @@ class MemoryBasedStrategy:
             with self.condition:
                 self.active_queries -= 1
                 if success:
-                    logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                    logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue len: {len(self.ready_queue)}.")
                 else:
-                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue len: {len(self.ready_queue)}.")
                 if self.active_queries ==0 and self.ready_queue.is_empty():
                     self.finished=True
                     logging.debug(f"Scheduler: All queries completed. Notified all (from complete_callback).")
                     self.condition.notify_all()
                 else:
+                    # self.condition.notify()
                     self.condition.notify()
     
 
         
     def wait_for_available_memory(self, prioritized_query: PrioritizedQuery, total_memory_mb: float):
-        base_wait_time = 2
         while True:
             # current_memory_usage = get_postgres_memory_usage()
             # available_memory = total_memory_mb - current_memory_usage
             # available_memory = max(available_memory, 0)
-            available_memory = get_available_memory() * 0.8
+            available_memory = get_available_memory() * 0.1
             logging.debug(f"Query {prioritized_query.query.id}: Total memory: {total_memory_mb} MB, Available memory: {available_memory}MB, peak memory: {prioritized_query.query.explain_json_plan['peak_memory_mb']}MB")
             if self.predict_peak_memory(prioritized_query.query.explain_json_plan) <= available_memory:
                 return
             # if prioritized_query.query.explain_json_plan['peak_memory_mb'] <= available_memory :
             #     return
             else:
-                logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
-                wait_time = min(base_wait_time ** prioritized_query.retry_count, 32)
+                # prioritized_query.retry_count += 1
+                wait_time = min(self.base_wait_time ** (prioritized_query.retry_count), 8) + random.uniform(0, 1)
+                
+                logging.debug(f"Query {prioritized_query.query.id} will wait {wait_time} seconds for available memory with retry {prioritized_query.retry_count}.  Currently active queries: {self.active_queries}, self.ready_queue len: {len(self.ready_queue)}.")
                 time.sleep(wait_time)  # Wait for available memory to increase
 
 
@@ -613,7 +589,8 @@ class MemoryBasedStrategy:
         :param explain_json_plan: Dictionary containing the explain plan of the query.
         :return: Estimated peak memory usage in KB.
         """
-        return explain_json_plan.get('peak_memory_mb', 0)
+        # return explain_json_plan.get('peak_memory_mb', 0)
+
         plan_str = explain_json_plan['plan']
         root, edge_src, edge_tgt, features, node_levels = parse_tree(plan_str)
         # Create edge index tensor
@@ -632,6 +609,69 @@ class MemoryBasedStrategy:
 
         # pred_mem = explain_json_plan.get('peak_memory_mb', 0)
         return pred_mem
+    
+    # ----------------------------
+    # Function to Execute a Single Query using SQLAlchemy
+    # ----------------------------
+    def execute_query(
+        self,
+        executor: concurrent.futures.ThreadPoolExecutor,
+        engine: Engine,
+        memory_based_priority_queue: PriorityQueue,
+        prioritized_query: PrioritizedQuery,
+        result_dict: Dict[int, Dict[str, Any]],
+        lock: threading.Lock,
+        strategy: str,
+        max_retries: int = 10,
+        base_wait_time: float = 2.0,
+        total_memory_mb: float = 0,
+        exp: int = 0,
+        exp_num: int = 0
+    ):
+        """
+        Executes a single query and records execution and waiting times.
+        Adjusts priority based on retry attempts.
+
+        :return: Tuple containing (query_id, success, error_message)
+        """
+        query = prioritized_query.query
+        query_id = query.id
+
+        # Record the start time of execution
+        start_exec_time = time.time()
+        prioritized_query.start_time = start_exec_time  # Set start_time to avoid None
+
+        try:
+            with engine.connect() as conn:
+                # wait_for_available_memory(prioritized_query, total_memory_mb)
+                logging.debug(f"{strategy}: Executing Query {query_id} whose retry is {prioritized_query.retry_count}... currently active queries: {self.active_queries}, self.ready_queue len: {len(self.ready_queue)}")
+                # Execute the query
+                result = conn.execute(text(query.sql))
+                result.fetchall()
+            
+            end_exec_time = time.time()
+            exec_time = end_exec_time - start_exec_time
+            total_time = end_exec_time - prioritized_query.enqueue_time
+
+            # Update result_dict with execution time and waiting time
+            with lock:
+                result_dict[query_id] = {
+                    'execution_time': exec_time,
+                    'total_time': total_time,
+                    'success': True
+                }
+            
+            logging.info(f"{strategy}({exp+1}/{exp_num}): Query {query_id} executed in {exec_time:.2f} seconds. Total time: {total_time:.2f} seconds. its retry is {prioritized_query.retry_count}.")
+            
+            return (prioritized_query, True, None)  # Success
+
+        except Exception as e:
+            error_message = str(e)
+            
+            prioritized_query.retry_count += 1
+            prioritized_query.priority = prioritized_query.priority - 1
+
+            return (prioritized_query, False, error_message)
 
 # ----------------------------
 # Function to Load Queries from JSON File
@@ -844,7 +884,7 @@ def main():
                 queries=queries,
                 executor=executor,
                 max_retries=max_retries,  # Set as needed
-                base_wait_time=1.1,
+                base_wait_time=2,
                 exp = i,
                 exp_num = args.exp_num
             )
@@ -894,7 +934,7 @@ def main():
             shared_buffers_kb=shared_buffers_kb,
             executor=executor,
             max_retries=max_retries,  # Enable retries similar to Naive Strategy
-            base_wait_time=1.1,  # Set as needed
+            base_wait_time=2,  # Set as needed
             exp = i,
             exp_num = args.exp_num,
             device = args.device
