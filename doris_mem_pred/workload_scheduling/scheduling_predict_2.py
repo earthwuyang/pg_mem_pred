@@ -867,7 +867,7 @@ def main():
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=adjusted_max_connections)
     logging.info(f"Initialized ThreadPoolExecutor with {adjusted_max_connections} workers.")
 
-    max_retries = 100
+    max_retries = 10000
 
 
     
@@ -904,7 +904,7 @@ def main():
             mean_naive_waiting = mean(naive_waiting_sum_list) if not args.no_naive else 0
             logging.info(f"Naive Strategy Average Total Execution Time: {naive_total_time:.2f} seconds.")
             logging.info(f"Naive Strategy Average Sum of Waiting Times: {mean_naive_waiting:.2f} seconds.")
-    exit()
+
     import pickle
     # Load statistics from JSON file
     with open(f'../tpcds_scaler.pkl','rb') as f:
