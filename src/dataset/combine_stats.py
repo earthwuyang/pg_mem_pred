@@ -1,7 +1,11 @@
 import json
 import os
 import collections
+import sys
+sys.path.append('/home/wuy/DB/memory_prediction/')
+import logging
 from src.preprocessing.gather_feature_statistics import gather_feature_statistics, combine_statistics, compute_numeric_statistics
+from database_list import full_database_list as dataset_list
 
 def combine_stats(logger, args, dataset_list):
     
@@ -24,3 +28,14 @@ def combine_stats(logger, args, dataset_list):
         with open(combined_statistics_file, 'r') as f:
             combined_stats = json.load(f)
     return combined_stats
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_dir', type=str, default='../pg_mem_data', help='path to data directory')
+    parser.add_argument('--force', action='store_true', help='force re-gathering feature statistics')
+    args = parser.parse_args()
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    combined_stats = combine_stats(logger, args, dataset_list)
