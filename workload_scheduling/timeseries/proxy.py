@@ -391,7 +391,7 @@ if adjusted_max_connections <= 0:
 
 logging.info(f"Adjusted max_connections for connection pool: {adjusted_max_connections}")
 
-total_query_memory_limit_kb = 3 * 1024**2  # 3 GB for example
+total_query_memory_limit_kb = 1 * 1024**2  # 3 GB for example
 
 
 
