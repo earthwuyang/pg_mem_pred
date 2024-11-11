@@ -372,7 +372,7 @@ if __name__ == '__main__':
     max_epoch_tuples=100000
     seed = 0
     device = 'cuda:0'
-    num_workers = 8
+    num_workers = 4
     limit_queries=None
     limit_queries_affected_wl=None
     skip_train=False
@@ -488,6 +488,8 @@ if __name__ == '__main__':
             logger.info(f"train_plans.json, val_plans.json, test_plans.json already exists, skipping splitting")
 
     combined_stats = combine_stats(logger, args)
+    # with open(os.path.join(args.data_dir, 'zsce_combined_statistics_workload.json'),'r') as f:
+    #     combined_stats = json.load(f)
 
     # logger.info(f"gathering faeture statistics from train_plans.json...")
     # if args.force or not os.path.exists(os.path.join(args.data_dir, args.dataset, 'zsce','statistics_workload_combined.json')):

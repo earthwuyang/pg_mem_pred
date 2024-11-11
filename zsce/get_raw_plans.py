@@ -66,7 +66,7 @@ def get_raw_plans(data_dir, dataset):
                                     verbose_plan_dir=verbose_plan_dir, conn_params=conn_params)
 
     # Use multiprocessing to process queries in parallel
-    with Pool(processes=cpu_count()) as pool:
+    with Pool(processes=10) as pool:
         query_plans = list(tqdm(pool.imap(process_query_partial, range(number)), total=number))
 
     # Filter out None values in case of errors

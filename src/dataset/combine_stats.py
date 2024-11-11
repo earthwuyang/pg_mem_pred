@@ -11,7 +11,8 @@ def combine_stats(logger, args, dataset_list):
     
     combined_stats = {}
     combined_raw_numeric = collections.defaultdict(list)
-    combined_statistics_file = os.path.join(args.data_dir, f'combined_statistics_workload_{"_".join(dataset_list)}.json')
+    # combined_statistics_file = os.path.join(args.data_dir, f'combined_statistics_workload_{"_".join(dataset_list)}.json')
+    combined_statistics_file = os.path.join(args.data_dir, f'combined_statistics_workload.json')
     if args.force or not os.path.exists(combined_statistics_file):
         with open(combined_statistics_file, 'w') as f:
             for dataset in dataset_list:

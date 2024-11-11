@@ -56,6 +56,7 @@ run `python zsce/split_parsed_plans.py --dataset tpch_sf1 tpcds_sf1` to split 'p
 
 
 run `python zsce/gather_feature_statistics.py --dataset tpch_sf1 tpcds_sf1` for zsce method to collect dictionary mapping of categorical values, and get robust scaler statistics for each numerical values. Output is statistics_workload_combined.json. Need to modify the name of the dataset, e.g 'tpch_sf1' -->
+run `python zsce/combine_stats.py`
 
 run `python zsce/train.py` to train the zsce method. Need to modify the name of the dataset, e.g 'tpch_sf1'
 
