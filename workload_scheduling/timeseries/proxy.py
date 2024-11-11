@@ -404,8 +404,8 @@ logging.info(f"Initialized ThreadPoolExecutor with {adjusted_max_connections} wo
 
 max_retries = 10000
 import json
-statistics_file = f'/home/wuy/DB/pg_mem_data/{args.dataset}/combined_statistics_workload.json'
-statistics_file = f'/home/wuy/DB/pg_mem_data/airline/statistics_workload_combined.json'
+# statistics_file = f'/home/wuy/DB/pg_mem_data/{args.dataset}/combined_statistics_workload.json'
+statistics_file = f'/home/wuy/DB/pg_mem_data/combined_statistics_workload.json'
 with open(statistics_file, 'r') as f:
     statistics = json.load(f)
 
@@ -415,9 +415,10 @@ with open(statistics_file, 'r') as f:
 with open('/home/wuy/DB/pg_mem_data/combined_statistics_workload.json') as f:
     statistics = json.load(f)
 
-model = GIN(hidden_channels=32, out_channels=1, num_layers=6, num_node_features=21, dropout=0.5)
+model = GIN(hidden_channels=32, out_channels=1, num_layers=6, num_node_features=23, dropout=0.5)
 logging.info(f"Loading checkpoint")
-model.load_state_dict(torch.load('../GIN_carcinogenesis_credit_employee_financial_geneea_tpcds_sf1_mem__best.pth'))
+# model.load_state_dict(torch.load('../GIN_carcinogenesis_credit_employee_financial_geneea_tpcds_sf1_mem__best.pth'))
+model.load_state_dict(torch.load('../GIN_airline_credit_carcinogenesis_employee_hepatitis_mem__best.pth'))
 model = model.to(args.device)
 model.eval()
 logging.info(f"Model loaded")

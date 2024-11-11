@@ -1,1 +1,1 @@
-docker run -d -p 5431:5432 --name my_postgres -e POSTGRES_PASSWORD=password123 --memory=3g --shm-size=3g -v /home/wuy/DB/docke_postgres_data:/var/lib/postgresql/data  -v /home/wuy/DB:/var/lib/postgresql/config  postgres -c 'config_file=/var/lib/postgresql/config/postgresql.conf'
+docker run -d -p 5431:5432 --name my_postgres -e POSTGRES_PASSWORD=password123 --memory=1g --shm-size=1g -v /home/wuy/DB/docke_postgres_data:/var/lib/postgresql/data  -v /home/wuy/DB:/var/lib/postgresql/config  postgres -c 'config_file=/var/lib/postgresql/config/postgresql.conf'
