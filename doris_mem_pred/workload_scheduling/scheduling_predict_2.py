@@ -233,9 +233,8 @@ def naive_execute_query(
             logging.debug(f"{strategy}: Query {query_id} failed with error {error_message} and will sleep for {wait_time:.2f} seconds before retrying...")
             if 'refused' in error_message or 'Lost connection' in error_message:
                 import os
-                import subprocess
                 cmd='docker exec -it doris sh -c "unset http_proxy && unset https_proxy && unset HTTP_PROXY && unset HTTPS_PROXY && export JAVA_HOME=/usr/lib/jvm/jdk-17.0.2/ &&  ./doris/output/fe/bin/start_fe.sh --daemon"'
-                subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                os.system(cmd)
                 logging.info(f"restarting fe")
             time.sleep(wait_time)  # Wait before retrying
 

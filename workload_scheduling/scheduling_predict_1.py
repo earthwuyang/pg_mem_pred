@@ -474,6 +474,8 @@ class MemoryBasedStrategy:
         # For heapq, lower priority value means higher priority, so invert the priority
         self.model = model
         self.statistics = statistics
+        self.mem_scale = self.statistics['peakmem']['scale']
+        self.mem_center = self.statistics['peakmem']['center']
         self.engine = engine
         self.total_memory_kb = total_memory_kb
         self.work_mem_kb = work_mem_kb
@@ -491,6 +493,7 @@ class MemoryBasedStrategy:
         
         # Initialize the priority queue
         self.ready_queue = PriorityQueue()
+        self.success_count = 0
         
         for query in queries:
             peak_memory = self.predict_peak_memory(query.explain_json_plan)
@@ -513,8 +516,8 @@ class MemoryBasedStrategy:
             # Define weights for time and memory; adjust as needed
             alpha = 1.0  # Weight for execution time
             beta = 0.5   # Weight for peak memory
-            priority_value = -alpha * execution_time * 1e2   # + beta * peakmem 
-            # priority_value =  - beta * peakmem
+            # priority_value = -alpha * execution_time * 1e2   # + beta * peakmem 
+            priority_value =  - beta * peakmem
             # For heapq, lower priority value has higher priority 
             prioritized_query = PrioritizedQuery(
                 priority=priority_value,
@@ -628,7 +631,7 @@ class MemoryBasedStrategy:
                     wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
                     prioritized_query.next_available_time = time.time() + wait_time
                     # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority and sleep {wait_time} seconds...")
-                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority...")
+                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority... success_count: {self.success_count}")
                     # time.sleep(wait_time)
                     self.ready_queue.push(prioritized_query)
                 else:
@@ -641,6 +644,7 @@ class MemoryBasedStrategy:
                         }
                     logging.error(f"Scheduler: Query {query_id} failed after {self.max_retries} retries.")
             else: # success
+                self.success_count += 1
                 pass
 
         except Exception as e:
@@ -651,9 +655,9 @@ class MemoryBasedStrategy:
                 # actual_active_queries = self.get_actual_active_queries()
                 # logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. Actual active queries: {actual_active_queries}.")
                 if success:
-                    logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                    logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
                 else:
-                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
                 
                 if self.active_queries ==0 and self.ready_queue.is_empty():
                     self.finished=True
@@ -678,7 +682,7 @@ class MemoryBasedStrategy:
             if prioritized_query.query.explain_json_plan['peakmem'] <= available_memory:
                 return
             else:
-                logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
                 wait_time = min(base_wait_time ** prioritized_query.retry_count, 32)
                 time.sleep(wait_time)  # Wait for available memory to increase
 
@@ -706,6 +710,7 @@ class MemoryBasedStrategy:
         # move data to device
         data = data.to(self.device)
         pred_mem, _ = self.model(data)
+        pred_mem = pred_mem * self.mem_scale + self.mem_center
         explain_json_plan['pred_peakmem'] = pred_mem
         return pred_mem
 

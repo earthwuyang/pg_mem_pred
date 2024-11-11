@@ -372,7 +372,7 @@ if __name__ == '__main__':
     max_epoch_tuples=100000
     seed = 0
     device = 'cuda:0'
-    num_workers = 10
+    num_workers = 8
     limit_queries=None
     limit_queries_affected_wl=None
     skip_train=False

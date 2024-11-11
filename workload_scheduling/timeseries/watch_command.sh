@@ -1,0 +1,1 @@
+atch -n 0.5 'awk "{print \$1/1024/1024/1024 \" GB\"}" memory.usage_in_bytes'
