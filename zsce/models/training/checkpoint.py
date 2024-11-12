@@ -59,9 +59,15 @@ def save_checkpoint(logger, epochs_wo_improvement, epoch, model, optimizer, targ
     if not (target_path is None or model_name is None):
         target_csv_path = os.path.join(target_path, f'{model_name}.csv')
         save_csv(csv_stats, target_csv_path)
-        if model.label_norm is not None:
-            label_norm_path = os.path.join(target_path, f'{model_name}_label_norm.pkl')
-            joblib.dump(model.label_norm, label_norm_path, compress=1)
+        # if model.label_norm is not None:
+        #     label_norm_path = os.path.join(target_path, f'{model_name}_label_norm.pkl')
+        #     joblib.dump(model.label_norm, label_norm_path, compress=1)
+        if model.mem_norm is not None:
+            mem_norm_path = os.path.join(target_path, f'{model_name}_mem_norm.pkl')
+            joblib.dump(model.mem_norm, mem_norm_path, compress=1)
+        if model.time_norm is not None:
+            time_norm_path = os.path.join(target_path, f'{model_name}_time_norm.pkl')            
+            joblib.dump(model.time_norm, time_norm_path, compress=1)
     else:
         logger.info("Skipping saving the epoch stats")
 

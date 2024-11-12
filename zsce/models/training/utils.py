@@ -21,26 +21,28 @@ def recursive_to(iterable, device):
             recursive_to(v, device)
 
 
-def batch_to(batch, device, label_norm):
-    graph, features, label, sample_idxs = batch
+def batch_to(batch, device, mem_norm, time_norm):
+    graph, features, mem_label, time_label, sample_idxs = batch
     # print(f"graph {graph}")
     # print(f"features {features}")
     # print(f"label {label}")
     # print(f"sample_idxs {sample_idxs}")
     # normalize the labels for training
-    if label_norm is not None:
-        # print(f"label before normalization {label}")
-        label = label_norm.transform(label.reshape(-1,1))
-        label = label.reshape(-1)
-        # print(f"label after normalization {label}")
-        # while 1:pass
-    label = torch.from_numpy(label)
+    if mem_norm is not None:
+        mem_label = mem_norm.transform(mem_label.reshape(-1,1))
+        mem_label = mem_label.reshape(-1)
+        mem_label = torch.from_numpy(mem_label)
+    if time_norm is not None:
+        time_label = time_norm.transform(time_label.reshape(-1,1))
+        time_label = time_label.reshape(-1)
+        time_label = torch.from_numpy(time_label)
 
     recursive_to(features, device)
-    recursive_to(label, device)
+    recursive_to(mem_label, device)
+    recursive_to(time_label, device)
     # recursive_to(graph, device)
     graph = graph.to(device)
-    return (graph, features), label, sample_idxs
+    return (graph, features), mem_label, time_label, sample_idxs
 
 
 def flatten_dict(d, parent_key='', sep='_'):
