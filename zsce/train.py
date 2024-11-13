@@ -189,7 +189,7 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
                 plan_featurization_name=None,
                 max_epoch_tuples=100000,
                 param_dict=None,  # param_dict=param_dict
-                num_workers=1,
+                num_workers=8,
                 early_stopping_patience=20,
                 trial=None,
                 database=None,
@@ -355,6 +355,7 @@ if __name__ == '__main__':
     parser.add_argument('--no_mem_pred', action='store_false', dest='mem_pred', help='do not predict memory')
     parser.add_argument('--time_pred', action='store_true', default=False, help='predict time')
     parser.add_argument('--debug', action='store_true', help="Debug mode")
+    parser.add_argument('--num_workers', type=int, default=8, help="Number of workers for data loading")
     args = parser.parse_args()
 
     if args.test_dataset is None:
@@ -372,7 +373,7 @@ if __name__ == '__main__':
     max_epoch_tuples=100000
     seed = 0
     device = 'cuda:0'
-    num_workers = 4
+    num_workers = args.num_workers
     limit_queries=None
     limit_queries_affected_wl=None
     skip_train=False
@@ -430,7 +431,7 @@ if __name__ == '__main__':
     # assert len(hyperparams) == 0, f"Not all hyperparams were used (not used: {hyperparams.keys()}). Hence generation " \
                                     # f"and reading does not seem to fit"
 
-    data_dir = '/home/wuy/DB/pg_mem_data/'
+    data_dir = args.data_dir
     
     # statistics_file = os.path.join(data_dir, args.train_dataset, 'zsce', 'statistics_workload_combined.json')
     # statistics_file = '/home/wuy/DB/pg_mem_pred/tpch_data/statistics_workload_combined.json' # CAUTION
