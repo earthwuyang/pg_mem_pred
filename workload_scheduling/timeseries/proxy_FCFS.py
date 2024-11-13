@@ -296,8 +296,9 @@ executor = concurrent.futures.ThreadPoolExecutor(max_workers=adjusted_max_connec
 logging.info(f"Initialized ThreadPoolExecutor with {adjusted_max_connections} workers.")
 
 # Load statistics (replace with actual path and ensure the file exists)
-statistics_file = f'/home/wuy/DB/pg_mem_data/{args.dataset}/combined_statistics_workload.json'
-statistics_file = f'/home/wuy/DB/pg_mem_data/airline/statistics_workload_combined.json'
+# statistics_file = f'/home/wuy/DB/pg_mem_data/{args.dataset}/combined_statistics_workload.json'
+statistics_file = f'/home/wuy/DB/pg_mem_data/combined_statistics_workload.json'
+
 try:
     with open(statistics_file, 'r') as f:
         statistics = json.load(f)

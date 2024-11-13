@@ -84,11 +84,13 @@ def create_datasets(logger, data_dir, workload_run_paths, cap_training_samples=N
 
     # derive label normalization
     # runtimes = np.array([p.plan_runtime / 1000 for p in plans])
+    runtimes = np.array([p.plan_runtime for p in plans])
     peakmems = np.array([p.peakmem for p in plans])
     # label_norm = derive_label_normalizer(loss_class_name, runtimes)
-    label_norm = derive_label_normalizer(loss_class_name, peakmems)
+    mem_norm = derive_label_normalizer(loss_class_name, peakmems)
+    time_norm = derive_label_normalizer(loss_class_name, runtimes)
 
-    return label_norm, train_dataset, val_dataset, database_statistics
+    return mem_norm, time_norm, train_dataset, val_dataset, database_statistics
 
 
 def derive_label_normalizer(loss_class_name, y): # y is `runtimes`
@@ -137,10 +139,10 @@ def create_dataloader(logger, data_dir, train_workload_run_paths, val_workload_r
 
     cross_datasets = len(train_workload_run_paths) > 1
 
-    label_norm, train_dataset, _, database_statistics = create_datasets(logger, data_dir, train_workload_run_paths, loss_class_name= loss_class_name,
+    mem_norm, time_norm, train_dataset, _, database_statistics = create_datasets(logger, data_dir, train_workload_run_paths, loss_class_name= loss_class_name,
                                                                          val_ratio=0.0, shuffle_before_split=False, mode='train', cross_datasets=cross_datasets)
     
-    _, val_dataset, _, val_database_statistics = create_datasets(logger, data_dir, val_workload_run_paths, loss_class_name= loss_class_name,
+    _, _, val_dataset, _, val_database_statistics = create_datasets(logger, data_dir, val_workload_run_paths, loss_class_name= loss_class_name,
                                                                          val_ratio=0.0, shuffle_before_split=False, mode='val', cross_datasets=cross_datasets)
 
     # postgres_plan_collator does the heavy lifting of creating the graphs and extracting the features and thus requires both
@@ -160,7 +162,7 @@ def create_dataloader(logger, data_dir, train_workload_run_paths, val_workload_r
     # for each test workoad run create a distinct test loader
     if test_workload_run_paths is not None:
         p = test_workload_run_paths
-        _, test_dataset, _, test_database_statistics = create_datasets(logger, data_dir, p, loss_class_name=loss_class_name,
+        _, _, test_dataset, _, test_database_statistics = create_datasets(logger, data_dir, p, loss_class_name=loss_class_name,
                                                                         val_ratio=0.0, shuffle_before_split=False, mode='test', cross_datasets=cross_datasets)
         # test dataset
         test_collate_fn = functools.partial(plan_collator, db_statistics=test_database_statistics,
@@ -170,4 +172,4 @@ def create_dataloader(logger, data_dir, train_workload_run_paths, val_workload_r
         dataloader_args.update(collate_fn=test_collate_fn)
         test_loader = DataLoader(test_dataset, **dataloader_args)
 
-    return label_norm, feature_statistics, train_loader, val_loader, [test_loader]
+    return mem_norm, time_norm, feature_statistics, train_loader, val_loader, [test_loader]

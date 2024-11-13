@@ -134,6 +134,7 @@ def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, v
             labels = batch.y.reshape(-1,2)
             mem_loss = criterion(out_mem, labels[:, 0])
             time_loss = criterion(out_time, labels[:, 1])
+            logger.debug(f"mem_loss={mem_loss.item()}, time_loss={time_loss.item()}")
             loss = 0
             if mem_pred:
                 loss += mem_loss

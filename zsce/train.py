@@ -52,53 +52,85 @@ def get_logger(logfile):
     log.addHandler(fh)
     return log
 
-def train_epoch(logger, epoch_stats, train_loader, model, optimizer, max_epoch_tuples, custom_batch_to=batch_to):
+def train_epoch(logger, epoch_stats, train_loader, model, optimizer, max_epoch_tuples, mem_pred, time_pred, custom_batch_to=batch_to):
     model.train()
 
     # run remaining batches
     train_start_t = time.perf_counter()
     losses = []
     errs = []
+    errs_mem = []
+    errs_time = []
     # for batch_idx, batch in enumerate(tqdm(train_loader)):
     for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
         if max_epoch_tuples is not None and batch_idx * train_loader.batch_size > max_epoch_tuples:
             break
 
-        input_model, label, sample_idxs = custom_batch_to(batch, model.device, model.label_norm)  # label_norm is returned by create_dataloader
+        input_model, mem_label, time_label, sample_idxs = custom_batch_to(batch, model.device, model.mem_norm, model.time_norm) 
         # graph, dictionaries = input_model
         # print(graph, dictionaries.keys()) # dict_keys(['column', 'table', 'output_column', 'filter_column', 'plan0', 'plan1', 'plan2', 'plan3', 'plan4', 'plan5', 'plan6', 'plan7', 'plan8', 'plan9', 'plan10', 'plan11', 'plan12', 'plan13', 'logical_pred_0', 'logical_pred_1'])
         # while 1:pass
         optimizer.zero_grad()
         output = model(input_model)
+        # logger.info(f"output shape: {output.shape}")
+        output_mem = output[:, 0].reshape(-1, 1)
+        output_time = output[:, 1].reshape(-1, 1)
+        # print(f"output_mem {output_mem}, output_time {output_time}")
+        # while 1:pass
         # print(f"output {output}, label {label}")
         # print(f"output shape: {output.shape}, label shape: {label.shape}")  # output shape: torch.Size([2048, 1]), label shape: torch.Size([2048])
-        loss = model.loss_fxn(output, label)
+        mem_loss = model.loss_fxn(output_mem, mem_label)
+        time_loss = model.loss_fxn(output_time, time_label)
+        # logger.info(f"mem_loss: {mem_loss}, time_loss: {time_loss}")
+        # while 1:pass
+
+        if mem_pred:
+            loss = mem_loss
+        if time_pred:
+            loss = time_loss
+        if mem_pred and time_pred:
+            alpha = 1
+            loss = mem_loss + alpha * time_loss
         if torch.isnan(loss):
             raise ValueError('Loss was NaN')
         loss.backward()
         optimizer.step()
 
         loss = loss.detach().cpu().numpy()
-        output = output.detach().cpu().numpy().reshape(-1)
-        label = label.detach().cpu().numpy().reshape(-1)
-        errs = np.concatenate((errs, output - label))
+        # output = output.detach().cpu().numpy().reshape(-1)
+        # label = label.detach().cpu().numpy().reshape(-1)
+        # errs = np.concatenate((errs, output - label))
+        output_mem = output_mem.detach().cpu().numpy().reshape(-1)
+        output_time = output_time.detach().cpu().numpy().reshape(-1)
+        mem_label = mem_label.detach().cpu().numpy().reshape(-1)
+        time_label = time_label.detach().cpu().numpy().reshape(-1)
+        # print(f"output_mem {output_mem}, output_time {output_time}")
+        errs_mem = np.concatenate((errs_mem, output_mem - mem_label))
+        errs_time = np.concatenate((errs_time, output_time - time_label))
+        # print(f"errs_mem {errs_mem}, errs_time {errs_time}")
         losses.append(loss)
 
     mean_loss = np.mean(losses)
-    mean_rmse = np.sqrt(np.mean(np.square(errs)))
+    mean_rmse_mem = np.sqrt(np.mean(np.square(errs_mem)))
+    mean_rmse_time = np.sqrt(np.mean(np.square(errs_time)))
     # print(f"Train Loss: {mean_loss:.2f}")
     # print(f"Train RMSE: {mean_rmse:.2f}")
-    epoch_stats.update(train_time=time.perf_counter() - train_start_t, mean_loss=mean_loss, mean_rmse=mean_rmse)
+    epoch_stats.update(train_time=time.perf_counter() - train_start_t, mean_loss=mean_loss, mean_rmse_mem=mean_rmse_mem, mean_rmse_time=mean_rmse_time)
 
 
 def validate_model(logger, val_loader, model, epoch=0, epoch_stats=None, metrics=None, max_epoch_tuples=None,
+                   mem_pred = True,  time_pred = False, 
                    custom_batch_to=batch_to, verbose=False, log_all_queries=False):
     model.eval()
 
     with torch.autograd.no_grad():
         val_loss = torch.Tensor([0])
-        labels = []
-        preds = []
+        val_loss_mem = torch.Tensor([0])
+        val_loss_time = torch.Tensor([0])
+        mem_preds = []
+        time_preds = []
+        mem_labels = []
+        time_labels = []
         probs = []
         sample_idxs = []
 
@@ -112,53 +144,83 @@ def validate_model(logger, val_loader, model, epoch=0, epoch_stats=None, metrics
 
             val_num_tuples += val_loader.batch_size
 
-            input_model, label, sample_idxs_batch = custom_batch_to(batch, model.device, model.label_norm)  
+            input_model, mem_label, time_label, sample_idxs_batch = custom_batch_to(batch, model.device, model.mem_norm, model.time_norm)  
             sample_idxs += sample_idxs_batch
             output = model(input_model)
+            output_mem = output[:, 0].reshape(-1, 1)
+            output_time = output[:, 1].reshape(-1, 1)
             # logging.info(f"test one batch time: {time.perf_counter() - test_start_t} seconds")
             # while 1:pass
 
             # sum up mean batch losses
-            val_loss += model.loss_fxn(output, label).cpu()
+            # val_loss += model.loss_fxn(output, label).cpu()
+            val_loss_mem += model.loss_fxn(output_mem, mem_label).cpu()
+            val_loss_time += model.loss_fxn(output_time, time_label).cpu()
 
             # inverse transform the predictions and labels
-            curr_pred = output.cpu().numpy()
-            curr_label = label.cpu().numpy()
-            if model.label_norm is not None:
-                curr_pred = model.label_norm.inverse_transform(curr_pred)
-                curr_label = model.label_norm.inverse_transform(curr_label.reshape(-1, 1))
-                curr_label = curr_label.reshape(-1)
-            # print(f"preds {preds}, labels {labels}")
-            preds.append(curr_pred.reshape(-1))
-            labels.append(curr_label.reshape(-1))
+            # curr_pred = output.cpu().numpy()
+            curr_pred_mem = output_mem.cpu().numpy()
+            curr_pred_time = output_time.cpu().numpy()
+            # curr_label = label.cpu().numpy()
+            curr_mem_label = mem_label.cpu().numpy()
+            curr_time_label = time_label.cpu().numpy()
+            # print(f"curr_pred {curr_pred}, curr_label {curr_label}")
+            if model.mem_norm is not None:
+                curr_pred_mem = model.mem_norm.inverse_transform(curr_pred_mem)
+                curr_mem_label = model.mem_norm.inverse_transform(curr_mem_label.reshape(-1, 1)).reshape(-1)
+                
+            if model.time_norm is not None:
+                    curr_pred_time = model.time_norm.inverse_transform(curr_pred_time)
+                    curr_time_label = model.time_norm.inverse_transform(curr_time_label.reshape(-1, 1)).reshape(-1)
+               
+            mem_preds.append(curr_pred_mem.reshape(-1))
+            time_preds.append(curr_pred_time.reshape(-1))
+            mem_labels.append(curr_mem_label.reshape(-1))
+            time_labels.append(curr_time_label.reshape(-1))
 
         if epoch_stats is not None:
             epoch_stats.update(val_time=time.perf_counter() - test_start_t)
             epoch_stats.update(val_num_tuples=val_num_tuples)
-            val_loss = (val_loss.cpu() / len(val_loader)).item()
-            logger.info(f'val_loss epoch {epoch}: {val_loss}')
-            epoch_stats.update(val_loss=val_loss)
+            # val_loss = (val_loss.cpu() / len(val_loader)).item()
+            # logger.info(f'val_loss epoch {epoch}: {val_loss}')
+            # epoch_stats.update(val_loss=val_loss)
+            val_loss_mem = (val_loss_mem.cpu() / len(val_loader)).item()
+            val_loss_time = (val_loss_time.cpu() / len(val_loader)).item()
+            logger.info(f'val_loss_mem epoch {epoch}: {val_loss_mem}')
+            logger.info(f'val_loss_time epoch {epoch}: {val_loss_time}')
+            epoch_stats.update(val_loss_mem=val_loss_mem, val_loss_time=val_loss_time)
 
-        labels = np.concatenate(labels, axis=0)
-        preds = np.concatenate(preds, axis=0)
+        # labels = np.concatenate(labels, axis=0)
+        # preds = np.concatenate(preds, axis=0)
+        mem_preds = np.concatenate(mem_preds, axis=0)
+        time_preds = np.concatenate(time_preds, axis=0)
+        mem_labels = np.concatenate(mem_labels, axis=0)
+        time_labels = np.concatenate(time_labels, axis=0)
         if verbose:
-            logger.debug(f'labels: {labels}')
-            logger.debug(f'preds: {preds}')
-        epoch_stats.update(val_std=np.std(labels))
+            logger.debug(f'mem labels: {mem_labels}')
+            logger.debug(f'time labels: {time_labels}')
+            logger.debug(f'mem preds: {mem_preds}')
+            logger.debug(f'time preds: {time_preds}')
+        epoch_stats.update(val_std_mem=np.std(mem_labels), val_std_time=np.std(time_labels))
         if log_all_queries:
-            epoch_stats.update(val_labels=[float(f) for f in labels])
-            epoch_stats.update(val_preds=[float(f) for f in preds])
+            epoch_stats.update(val_mem_labels=[float(f) for f in mem_labels], val_time_labels=[float(f) for f in time_labels], val_mem_preds=[float(f) for f in mem_preds], val_time_preds=[float(f) for f in time_preds], val_sample_idxs=sample_idxs)
+            epoch_stats.update(val_mem_preds=[float(f) for f in mem_preds], val_time_preds = [float(f) for f in time_preds])
             epoch_stats.update(val_sample_idxs=sample_idxs)
 
         # save best model for every metric
         any_best_metric = False
         if metrics is not None:
+            logger.info(f"evaluating memory prediction")
             for metric in metrics:
-                best_seen = metric.evaluate(metrics_dict=epoch_stats, model=model, labels=labels, preds=preds,
+                best_seen = metric.evaluate(metrics_dict=epoch_stats, model=model, labels=mem_labels, preds=mem_preds,
                                             probs=probs)
                 if best_seen and metric.early_stopping_metric:
                     any_best_metric = True
                     logger.info(f"New best model for {metric.metric_name}")
+            logging.info(f"\nevaluating time prediction")
+            for metric in metrics:
+                metric.evaluate(metrics_dict=epoch_stats, model=model, labels=time_labels, preds=time_preds,
+                                            probs=probs)
 
     return any_best_metric
 
@@ -193,6 +255,8 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
                 early_stopping_patience=20,
                 trial=None,
                 database=None,
+                mem_pred = True,
+                time_pred = False,
                 limit_queries=None,
                 limit_queries_affected_wl=None,
                 skip_train=False):
@@ -213,11 +277,12 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
 
     # create a dataset
     loss_class_name = final_mlp_kwargs['loss_class_name']
-    label_norm, feature_statistics, train_loader, val_loader, test_loaders = \
+    mem_norm, time_norm, feature_statistics, train_loader, val_loader, test_loaders = \
         create_dataloader(logger, data_dir, train_workload_runs, val_workload_runs, test_workload_runs, combined_stats, plan_featurization_name, database,
                           val_ratio=0, batch_size=batch_size, shuffle=True, num_workers=num_workers,
                           pin_memory=False, limit_queries=limit_queries,
                           limit_queries_affected_wl=limit_queries_affected_wl, loss_class_name=loss_class_name)
+    
     if loss_class_name == 'QLoss':
         metrics = [RMSE(), MRE(), QError(percentile=50, early_stopping_metric=True), QError(percentile=95),
                    QError(percentile=100), MeanQError()]
@@ -231,7 +296,7 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
                                        feature_statistics=feature_statistics, tree_layer_name=tree_layer_name,
                                        tree_layer_kwargs=tree_layer_kwargs,
                                        plan_featurization_name=plan_featurization_name,
-                                       label_norm=label_norm,
+                                       mem_norm=mem_norm, time_norm=time_norm,
                                        **model_kwargs)
 
     total_params = sum(p.numel() for p in model.parameters())
@@ -261,10 +326,10 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
         epoch_stats.update(epoch=epoch)
         epoch_start_time = time.perf_counter()
         # try:
-        train_epoch(logger, epoch_stats, train_loader, model, optimizer, max_epoch_tuples)
+        train_epoch(logger, epoch_stats, train_loader, model, optimizer, max_epoch_tuples, mem_pred, time_pred)
 
         any_best_metric = validate_model(logger, val_loader, model, epoch=epoch, epoch_stats=epoch_stats, metrics=metrics,
-                                         max_epoch_tuples=max_epoch_tuples)
+                                         max_epoch_tuples=max_epoch_tuples, mem_pred=mem_pred, time_pred=time_pred)
         epoch_stats.update(epoch=epoch, epoch_time=time.perf_counter() - epoch_start_time)
 
         # report to optuna
@@ -352,6 +417,7 @@ if __name__ == '__main__':
     parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default=None)
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
     parser.add_argument("--force", action='store_true', help="Force overwrite of existing files")
+    parser.add_argument('--mem_pred', action='store_true', default=True, help='predict memory')
     parser.add_argument('--no_mem_pred', action='store_false', dest='mem_pred', help='do not predict memory')
     parser.add_argument('--time_pred', action='store_true', default=False, help='predict time')
     parser.add_argument('--debug', action='store_true', help="Debug mode")
@@ -416,7 +482,7 @@ if __name__ == '__main__':
                         tree_layer_name=hyperparams.pop('tree_layer_name'),
                         plan_featurization_name=hyperparams.pop('plan_featurization_name'),  # 'PostgresEstSystemCardDetail' in tune_est_best_config.json, while 'PostgresTrueCardDetail' is the default as defined in train_default(), the third one is 'PostgresDeepDBEstSystemCardDetail'
                         hidden_dim=hyperparams.pop('hidden_dim'),
-                        output_dim=1,
+                        output_dim=2,
                         epochs=200 if max_no_epochs is None else max_no_epochs,
                         early_stopping_patience=20,
                         max_epoch_tuples=max_epoch_tuples,
@@ -499,5 +565,5 @@ if __name__ == '__main__':
     #     logger.info(f"statistics_workload_combined.json already exists, skipping gathering feature statistics")
     
     train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_workload_runs, combined_stats, target_dir, filename_model,
-                param_dict=param_dict, database=database, **train_kwargs)
+                param_dict=param_dict, database=database, mem_pred=args.mem_pred, time_pred=args.time_pred, **train_kwargs)
         

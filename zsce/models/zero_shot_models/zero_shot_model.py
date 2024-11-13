@@ -13,10 +13,11 @@ class ZeroShotModel(FcOutModel):
     def __init__(self, device='cpu', hidden_dim=None, final_mlp_kwargs=None, output_dim=1, tree_layer_name=None,
                  tree_layer_kwargs=None, test=False, skip_message_passing=False, node_type_kwargs=None,
                  feature_statistics=None, add_tree_model_types=None, prepasses=None, plan_featurization=None,
-                 encoders=None, label_norm=None):
+                 encoders=None, mem_norm=None, time_norm=None):
         super().__init__(output_dim=output_dim, input_dim=hidden_dim, final_out_layer=True, **final_mlp_kwargs)
 
-        self.label_norm = label_norm
+        self.mem_norm = mem_norm
+        self.time_norm = time_norm
 
         self.test = test
         self.skip_message_passing = skip_message_passing

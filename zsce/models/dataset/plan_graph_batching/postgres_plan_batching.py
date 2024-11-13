@@ -221,7 +221,9 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
     column_features = []
     table_features = []
     table_to_plan_edges = []
-    labels = []
+    mem_labels = []
+    time_labels = []
+    
     predicate_depths = []
     intra_predicate_edges = []
     logical_preds = []
@@ -238,14 +240,15 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
     for sample_idx, p in plans:
         sample_idxs.append(sample_idx)
         # labels.append(p.plan_runtime)
-        labels.append(p.peakmem)
+        mem_labels.append(p.peakmem)
+        time_labels.append(p.plan_runtime)
         
         plan_to_graph(p, p.database_id, plan_depths, plan_features, plan_to_plan_edges, db_statistics,
                       feature_statistics, filter_to_plan_edges, filter_features, output_column_to_plan_edges,
                       output_column_features, column_to_output_column_edges, column_features, table_features,
                       table_to_plan_edges, output_column_idx, column_idx, table_idx,
                       plan_featurization, predicate_depths, intra_predicate_edges, logical_preds)
-    assert len(labels) == len(plans)
+    # assert len(labels) == len(plans)
     assert len(plan_depths) == len(plan_features)
 
     data_dict, nodes_per_depth, plan_dict = create_node_types_per_depth(plan_depths, plan_to_plan_edges)  
@@ -315,14 +318,16 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
     features = postprocess_feats(features, num_nodes_dict)
 
     # rather deal with runtimes in secs
-    labels = postprocess_labels(labels)  # original plan['plan_runtime'] is in miliseconds
+    # labels = postprocess_labels(labels)  # original plan['plan_runtime'] is in miliseconds
+    mem_labels = postprocess_labels(mem_labels)  
+    time_labels = postprocess_labels(time_labels)  
 
     # print(f"graph {graph}\nfeatures {features}\nlabels {labels}\nsample_idxs {sample_idxs}")
     # features: dict_keys(['column', 'table', 'output_column', 'filter_column', 'plan0', 'plan1', 'plan2', 'plan3', 'plan4', 'plan5', 'plan6', 'plan7', 'plan8', 'plan9', 'logical_pred_0'])
     # print(f"column {features['column'].shape}, table {features['table'].shape}, output_column {features['output_column'].shape}, filter_column {features['filter_column'].shape}, plan0 {features['plan0'].shape}, plan1 {features['plan1'].shape}, plan2 {features['plan2'].shape}, plan3 {features['plan3'].shape}, plan4 {features['plan4'].shape}, plan5 {features['plan5'].shape}, plan6 {features['plan6'].shape}, plan7 {features['plan7'].shape}, plan8 {features['plan8'].shape}, plan9 {features['plan9'].shape}, logical_pred_0 {features['logical_pred_0'].shape}")
     # print(f"column {features['column'].shape}, table {features['table'].shape}, output_column {features['output_column'].shape}, filter_column {features['filter_column'].shape}, plan0 {features['plan0'].shape}, logical_pred_0 {features['logical_pred_0'].shape}")
     # previous line outputs: column torch.Size([23, 5]), table torch.Size([4, 2]), output_column torch.Size([24, 1]), filter_column torch.Size([7, 7]), plan0 torch.Size([1, 5]), logical_pred_0 torch.Size([2, 2])
-    return graph, features, labels, sample_idxs
+    return graph, features, mem_labels, time_labels, sample_idxs
 
 
 def postprocess_labels(labels):
