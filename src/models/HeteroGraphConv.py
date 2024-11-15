@@ -32,7 +32,8 @@ class HeteroGraphConv(torch.nn.Module):
             layers.update({
                 ('table', 'scannedby', 'operator'): GraphConv(hidden_channels, hidden_channels),
                 ('column', 'outputby', 'operator'): GraphConv(hidden_channels, hidden_channels),
-                ('table', 'selfloop', 'table'): GraphConv(hidden_channels, hidden_channels),
+                ('column', 'referencedby', 'column'): GraphConv(hidden_channels, hidden_channels),
+                ('column', 'containedby', 'table'): GraphConv(hidden_channels, hidden_channels),
                 ('column', 'selfloop', 'column'): GraphConv(hidden_channels, hidden_channels)
             })
         self.conv = HeteroConv(layers, aggr='sum')

@@ -30,9 +30,18 @@ class QueryPlanDataset(Dataset):
         self.encode_table_column = encode_table_column
         self.conn_info = conn_info
 
+        self.schema = {}
+        if self.encode_table_column:
+            if not isinstance(dataset, list):
+                dataset = [dataset]
+            for ds in dataset:
+                schema_file_path = os.path.join(dataset_dir, ds, 'schema.json')
+                with open(schema_file_path, 'r') as f:
+                    self.schema[ds] = json.load(f)
+
         if debug:
             json_file_path = '/home/wuy/DB/pg_mem_data/tpch_sf1/tiny_plans.json' # for debug
-            self.dataset_list = self.get_dataset(logger, json_file_path, dataset)
+            self.dataset_list = self.get_dataset(logger, json_file_path, 'tpch_sf1')
 
         else:
             if self.model.startswith('Hetero'):
@@ -102,7 +111,7 @@ class QueryPlanDataset(Dataset):
             time = (plan['time'] - self.statistics['time']['center']) / self.statistics['time']['scale']
 
             if self.model.startswith('Hetero'):
-                graph = create_hetero_graph(logger, plan, conn, self.statistics, db_stats, self.encode_table_column, peakmem, time)
+                graph = create_hetero_graph(logger, plan, conn, self.statistics, db_stats, self.schema[dataset] if dataset in self.schema else None, self.encode_table_column, peakmem, time)
                 # logger.info(graph)
                 graph_list.append(graph)
             else:   # homogeneous graph

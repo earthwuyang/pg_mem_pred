@@ -150,10 +150,44 @@ def traverse_operators(statistics, db_stats, data_type_mapping, plan, encode_tab
                                operator_id_counter, current_operator_id)
 
 
+def create_schema_graph(schema, db_stats, data_type_mapping, table_nodes, column_nodes, column_containedby_table_edges, column_referencedby_column_edges):
+    for table_name in db_stats['tables'].keys():
+        relpages, reltuples = db_stats['tables'][table_name]['relpages'], db_stats['tables'][table_name]['reltuples']
+        table_nodes[table_name] = {
+            'id': len(table_nodes),
+            'features': [relpages, reltuples]  # Placeholder, will be updated later
+        }
+        for column_name in db_stats['tables'][table_name]['column_features'].keys():
+            # column_name = f"{table_name}.{column_name}"
+            avg_width = db_stats['tables'][table_name]['column_features'][column_name]['avg_width']
+            correlation = db_stats['tables'][table_name]['column_features'][column_name]['correlation']
+            n_distinct = db_stats['tables'][table_name]['column_features'][column_name]['n_distinct']
+            null_frac = db_stats['tables'][table_name]['column_features'][column_name]['null_frac']
+            data_type = db_stats['tables'][table_name]['column_features'][column_name]['data_type']
+            one_hot = one_hot_encode_data_type(data_type, data_type_mapping)  # Unique data types: {'character': 0, 'character varying': 1, 'date': 2, 'integer': 3, 'numeric': 4}
+            features = [avg_width, correlation, n_distinct, null_frac] + one_hot
 
+            column_nodes[column_name] = {
+                'id': len(column_nodes),
+                'features': features  # Placeholder, will be updated later
+            }
+            column_id = column_nodes[column_name]['id']
+            table_id = table_nodes[table_name]['id']
+            column_containedby_table_edges.append((column_id, table_id))
+
+    for referencing_table, referencing_column, referenced_table, referenced_column in schema['relationships']:
+        if isinstance(referencing_column, list) and isinstance(referenced_column, list):
+            for referencing_col, referenced_col in zip(referencing_column, referenced_column):
+                referee_column_id = column_nodes[f"{referencing_table}.{referencing_col}"]['id']
+                referent_column_id = column_nodes[f"{referenced_table}.{referenced_col}"]['id']
+                column_referencedby_column_edges.append((referent_column_id, referee_column_id))
+        else:
+            referee_column_id = column_nodes[f"{referencing_table}.{referencing_column}"]['id']
+            referent_column_id = column_nodes[f"{referenced_table}.{referenced_column}"]['id']
+            column_referencedby_column_edges.append((referent_column_id, referee_column_id))
 
 # Function to parse the query plan and extract the tables, columns, and predicates
-def parse_query_plan(logger, plan, conn, statistics, db_stats, encode_table_column):
+def parse_query_plan(logger, plan, conn, statistics, db_stats, schema, encode_table_column):
     operator_nodes = []    # List of operators with features
     table_nodes = {}       # List of tables with features
     column_nodes = {}      # List of columns with features
@@ -162,8 +196,10 @@ def parse_query_plan(logger, plan, conn, statistics, db_stats, encode_table_colu
     operator_calledby_operator_edges = []    
     table_scannedby_operator_edges = []    
     column_outputby_operator_edges = []    
-    table_selfloop_table_edges = []    
+    column_containedby_table_edges = []
+    column_referencedby_column_edges = []
     column_selfloop_column_edges = []
+    table_selfloop_table_edges = []
 
 
     operator_id_counter = [0]  # Using a list to make it mutable in recursion
@@ -171,7 +207,8 @@ def parse_query_plan(logger, plan, conn, statistics, db_stats, encode_table_colu
     unique_data_types = sorted(db_stats['unique_data_types'])
     data_type_mapping = {data_type: i for i, data_type in enumerate(unique_data_types)}
 
-    #     create_schema_graph(schema, db_stats, data_type_mapping, table_nodes, column_nodes, column_containedby_table_edges, column_referencedby_column_edges)
+    if encode_table_column:
+        create_schema_graph(schema, db_stats, data_type_mapping, table_nodes, column_nodes, column_containedby_table_edges, column_referencedby_column_edges)
 
 
     traverse_operators(statistics, db_stats, data_type_mapping, plan, encode_table_column, operator_nodes, table_nodes, column_nodes, 
@@ -179,9 +216,9 @@ def parse_query_plan(logger, plan, conn, statistics, db_stats, encode_table_colu
                        table_selfloop_table_edges, column_selfloop_column_edges, 
                        operator_id_counter)
     
-    for table_name, table_info in table_nodes.items():
-        table_id = table_info['id']
-        table_selfloop_table_edges.append((table_id, table_id))
+    # for table_name, table_info in table_nodes.items():
+    #     table_id = table_info['id']
+    #     table_selfloop_table_edges.append((table_id, table_id))
 
     for column_name, column_info in column_nodes.items():
         column_id = column_info['id']
@@ -189,14 +226,14 @@ def parse_query_plan(logger, plan, conn, statistics, db_stats, encode_table_colu
 
     return operator_nodes, table_nodes, column_nodes, \
         operator_calledby_operator_edges, table_scannedby_operator_edges, column_outputby_operator_edges, \
-        table_selfloop_table_edges, column_selfloop_column_edges  
+        column_containedby_table_edges, column_referencedby_column_edges, column_selfloop_column_edges  
 
 # Function to create the heterogeneous graph from parsed components
-def create_hetero_graph(logger, plan, conn, statistics, db_stats, encode_table_column, peakmem, time):
+def create_hetero_graph(logger, plan, conn, statistics, db_stats, schema, encode_table_column, peakmem, time):
     operator_nodes, table_nodes, column_nodes, \
         operator_calledby_operator_edges, table_scannedby_operator_edges, column_outputby_operator_edges, \
-        table_selfloop_table_edges, column_selfloop_column_edges  \
-        = parse_query_plan(logger, plan, conn, statistics, db_stats, encode_table_column)
+        column_containedby_table_edges, column_referencedby_column_edges, column_selfloop_column_edges  \
+        = parse_query_plan(logger, plan, conn, statistics, db_stats, schema, encode_table_column)
 
     # Create the heterogeneous graph
     data = HeteroData()
@@ -233,9 +270,17 @@ def create_hetero_graph(logger, plan, conn, statistics, db_stats, encode_table_c
             src, dst = zip(*column_outputby_operator_edges)
             data['column', 'outputby', 'operator'].edge_index = torch.tensor([src, dst], dtype=torch.long)
 
-        if table_selfloop_table_edges:
-            src, dst = zip(*table_selfloop_table_edges)
-            data['table','selfloop', 'table'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+        if column_referencedby_column_edges:
+            src, dst = zip(*column_referencedby_column_edges)
+            data['column','referencedby', 'column'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+
+        if column_containedby_table_edges:
+            src, dst = zip(*column_containedby_table_edges)
+            data['column', 'containedby', 'table'].edge_index = torch.tensor([src, dst], dtype=torch.long)
+
+        # if table_selfloop_table_edges:
+        #     src, dst = zip(*table_selfloop_table_edges)
+        #     data['table','selfloop', 'table'].edge_index = torch.tensor([src, dst], dtype=torch.long)
 
         if column_selfloop_column_edges:
             src, dst = zip(*column_selfloop_column_edges)
