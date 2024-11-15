@@ -106,7 +106,7 @@ def get_db_stats(dataset, conn_info):
     db_stats = {}
     conn = psycopg2.connect(**conn_info)
 
-    unique_data_types = get_unique_data_types(conn)
+    unique_data_types = get_unique_data_types(conn) # len 6
     db_stats['unique_data_types'] = unique_data_types
     db_stats['tables'] = {}
 

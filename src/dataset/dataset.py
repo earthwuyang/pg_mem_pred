@@ -32,7 +32,7 @@ class QueryPlanDataset(Dataset):
 
         if debug:
             json_file_path = '/home/wuy/DB/pg_mem_data/tpch_sf1/tiny_plans.json' # for debug
-            self.dataset_list = self.get_dataset(logger, json_file_path, dataset)
+            self.dataset_list = self.get_dataset(logger, json_file_path, 'tpch_sf1')
 
         else:
             if self.model.startswith('Hetero'):

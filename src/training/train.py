@@ -134,7 +134,7 @@ def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, v
             labels = batch.y.reshape(-1,2)
             mem_loss = criterion(out_mem, labels[:, 0])
             time_loss = criterion(out_time, labels[:, 1])
-            logger.debug(f"mem_loss={mem_loss.item()}, time_loss={time_loss.item()}")
+            # logger.debug(f"mem_loss={mem_loss.item()}, time_loss={time_loss.item()}")
             loss = 0
             if mem_pred:
                 loss += mem_loss
@@ -202,8 +202,8 @@ def train_model(logger, args, statistics):
         # Assuming all graphs have the same data_type_mapping
         sample_graph = train_loader.dataset[1]
         num_operator_features = 23 # sample_graph.x_dict['operator'].shape[1]
-        num_table_features = sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
-        num_column_features = sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
+        num_table_features = 2 # sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
+        num_column_features = 11 # sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
         logger.info(f"num_operator_features={num_operator_features}, num_table_features={num_table_features}, num_column_features={num_column_features}")
         model = MODELS[args.model](
             hidden_channels=args.hidden_dim, out_channels=1, num_layers=args.num_layers, encode_table_column=args.encode_table_column, 
