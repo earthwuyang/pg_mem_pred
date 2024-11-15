@@ -11,10 +11,10 @@
 *.csv
 *.npy
 *.bitmaps
-*.sql
 *json
 !conn.json
-!zsce/setup/tuned_hyperparameters/tune_est_best_config.json
+!zsce/**/*.json 
+!zsce/*.json
 *.txt
 *.log
 *.gz

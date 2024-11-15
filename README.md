@@ -12,7 +12,7 @@ Example content: {"user":"wuy", "password":"wuy","host":"localhost", "port":5432
 ### create databases from mysql relational database server
 create database, create tables, load data into tables(scripts/import_data.py).
 <!-- run `python src/preprocessing/export_data.py` to download data from relational database mariadb server.
-run `python src/preprocessing/import_data.py` to import data into local postgresql database. -->
+run `python src/preprocessing/import_data.py --dataset tpch_sf1 --port 5432` to import data into local postgresql database. -->
 run `python src/preprocessing/export_import_data.py` to download data from relational database mariadb server and import data into local postgresql database.
 
 ### create tpch and tpcds
@@ -21,7 +21,7 @@ put tpdcs data csv files in /data/datasets/tpcds_sf1
 `/data/datasets/tpch-kit/import_data.sh` to import data into local postgresql database.
 `/data/datasets/tpcds-kit/import_data.sh` to import data into local postgresql database.
 
-run `python src/preprocessing/analyze_datasets.py` to analyze datasets
+run `python src/preprocessing/analyze_datasets.py --port 5432` to analyze datasets
 
 run `python src/preprocessing/get_column_type_for_databases.py` to get column type for dataset, which outputs `column_type.json` in each dataset directory.
 
@@ -89,6 +89,13 @@ python train.py --skip_train --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf
 <!-- When you update plan_to_graph code, do not forget to `rm -rf data`, because the graph datset is cached in `data` directory. -->
 `python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'`
 
+
+## cross docker postgres mem data collection
+cd cross_machines/1, modify corresponding parameters, sh start_docker.sh
+
+run python src/preprocessing/import_data.py --port 5422
+
+run python src/preprocessing/execute_all_workloads.py --port 5422 --docker_name my_postgres_2
 
 ## Code Structure
 

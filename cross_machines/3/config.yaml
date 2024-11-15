@@ -1,0 +1,24 @@
+docker_id: my_postgres_3
+port: 5423
+memory: 3g
+shm_size: 1g
+memory_swap: 4g
+cpus: 5
+shared_buffers: 256m
+work_mem: 4m
+maintenance_work_mem: 64m
+max_wal_size: 1g
+min_wal_size: 80m
+effective_cache_size: 768m
+max_connections: 1000
+
+total_cpus: 80
+thread_per_core: 2
+cores_per_socket: 20
+sockets: 2
+l1d_cache: 1.3m
+l1i_cache: 1.3m
+l2_cache: 40m
+l3_cache: 55m
+
+
