@@ -76,3 +76,8 @@
 *.tar.bz
 *.tar.bz2
 *.tar.gz
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg

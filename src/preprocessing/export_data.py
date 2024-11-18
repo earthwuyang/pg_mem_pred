@@ -73,7 +73,8 @@ def export_dataset(data_dir, dataset, mysql_dataset, overwrite):
 
     database_name = schema['name']
     tables = schema['tables']
-    sep = schema['csv_kwargs']['sep']
+    # sep = schema['csv_kwargs']['sep']
+    sep = '|'
     
 
     # Use multiprocessing to export tables in parallel

@@ -1,6 +1,3 @@
-# sudo setcap cap_sys_ptrace+ep /home/wuy/software/anaconda3/envs/zsce/bin/python3.8
-
-
 import sqlalchemy
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -17,101 +14,10 @@ from datetime import datetime
 import subprocess
 import torch
 from torch_geometric.data import Data
-import matplotlib.pyplot as plt
+
 from GIN import GIN
 from parse_plan import parse_plan
 
-
-# # Function to monitor memory usage of Docker PostgreSQL
-# def monitor_memory(pid, interval, metrics, key_prefix, stop_event):
-#     while not stop_event.is_set():
-#         try:
-#             process = psutil.Process(pid)
-#             mem_info = process.memory_info()
-#             swap_memory = mem_info.vms - mem_info.rss  # Virtual memory minus resident memory (approx swap)
-#             total_memory = mem_info.rss  # Resident memory
-#             metrics[key_prefix]['time'].append(time.time())
-#             metrics[key_prefix]['swap_mem'].append(swap_memory / 1024)  # Convert to KB
-#             metrics[key_prefix]['total_mem'].append(total_memory / 1024)  # Convert to KB
-#         except Exception as e:
-#             print(f"Error monitoring process {pid}: {e}")
-#             break
-#         time.sleep(interval)
-
-import subprocess
-def get_process_swap_memory(pid):
-    """
-    Get swap memory usage for a given process using /proc/<pid>/smaps.
-    """
-    swap_memory = 0
-    try:
-        with open(f'/proc/{pid}/smaps', 'r') as smaps:
-            for line in smaps:
-                if line.startswith("Swap:"):
-                    swap_memory += int(line.split()[1])  # Swap memory is in KB
-    except Exception as e:
-        print(f"Error reading swap memory for PID {pid}: {e}")
-    return swap_memory
-
-
-def monitor_postgres_memory(interval, metrics, key_prefix, stop_event):
-    """
-    Monitor memory usage of all PostgreSQL processes, including swap memory.
-    """
-    while not stop_event.is_set():
-        total_swap_memory = 0
-        total_memory = 0
-        try:
-            for proc in psutil.process_iter(['name']):
-                if 'postgres' in proc.info['name']:
-                    try:
-                        mem_info = proc.memory_info()
-                        rss = mem_info.rss // 1024  # Resident memory in KB
-                        swap = get_process_swap_memory(proc.pid)  # Swap memory in KB
-                        total_swap_memory += swap
-                        total_memory += rss
-                    except psutil.NoSuchProcess:
-                        continue
-                    except Exception as e:
-                        print(f"Error monitoring process {proc.pid}: {e}")
-            # Record the metrics
-            metrics[key_prefix]['time'].append(time.time())
-            metrics[key_prefix]['swap_mem'].append(total_swap_memory)  # In KB
-            metrics[key_prefix]['total_mem'].append(total_memory)  # In KB
-        except Exception as e:
-            print(f"Error monitoring PostgreSQL processes: {e}")
-            break
-        time.sleep(interval)
-
-# Plot the memory metrics
-def plot_memory_metrics(metrics, result_dir):
-    plt.figure(figsize=(10, 6))
-    
-    # Convert time to relative
-    start_time = min(
-        metrics['naive']['time'][0] if metrics['naive']['time'] else float('inf'),
-        metrics['memory_based']['time'][0] if metrics['memory_based']['time'] else float('inf')
-    )
-    naive_time = [t - start_time for t in metrics['naive']['time']]
-    memory_based_time = [t - start_time for t in metrics['memory_based']['time']]
-    
-    # Plot naive
-    if naive_time:
-        plt.plot(naive_time, metrics['naive']['swap_mem'], label="Naive Swap Memory (KB)", linestyle='--')
-        plt.plot(naive_time, metrics['naive']['total_mem'], label="Naive Total Memory (KB)")
-
-    # Plot memory-based
-    if memory_based_time:
-        plt.plot(memory_based_time, metrics['memory_based']['swap_mem'], label="Memory-Based Swap Memory (KB)", linestyle='--')
-        plt.plot(memory_based_time, metrics['memory_based']['total_mem'], label="Memory-Based Total Memory (KB)")
-    
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Memory (KB)")
-    plt.title("Swap and Total Memory Usage During Execution")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(os.path.join(result_dir,'memory_usage.png'))
 
 @dataclass(order=True)
 class PrioritizedQuery:
@@ -400,8 +306,7 @@ class NaiveStrategy:
                     self.results[query_id] = {
                         'execution_time': exec_time,
                         'total_time': total_time,
-                        'success': True,
-                        'retry_count': prioritized_query.retry_count
+                        'success': True
                     }
                     self.success_count += 1
                 
@@ -443,7 +348,7 @@ class NaiveStrategy:
         futures = {}
         for query in self.queries:
             priority_value = 0
-            self.prioritized_query = PrioritizedQuery(
+            prioritized_query = PrioritizedQuery(
                 priority=priority_value,
                 query=query,
                 enqueue_time=time.time()
@@ -452,7 +357,7 @@ class NaiveStrategy:
                 self.naive_execute_query,
                 self.executor,
                 self.engine,
-                self.prioritized_query,
+                prioritized_query,
                 self.lock,
                 'naive',
                 self.max_retries,
@@ -543,8 +448,7 @@ class MemoryBasedStrategy:
                     'execution_time': float('inf'),
                     'total_time': float('inf'),
                     'success': False,
-                    'error_message': 'Exceeds memory limit.',
-                    'retry_count': 0
+                    'error_message': 'Exceeds memory limit.'
                 }
                 continue
             
@@ -557,12 +461,12 @@ class MemoryBasedStrategy:
             # priority_value = -alpha * execution_time * 1e2   # + beta * peakmem 
             priority_value =  - beta * peakmem
             # For heapq, lower priority value has higher priority 
-            self.prioritized_query = PrioritizedQuery(
+            prioritized_query = PrioritizedQuery(
                 priority=priority_value,
                 query=query,
                 enqueue_time=time.time()
             )
-            self.ready_queue.push(self.prioritized_query)
+            self.ready_queue.push(prioritized_query)
 
         # Condition variable to synchronize scheduler and executor
         self.condition = threading.Condition()
@@ -586,7 +490,6 @@ class MemoryBasedStrategy:
         with self.condition:
             while not self.finished:
                 self.condition.wait()
-
         scheduler.join()
 
         end_time = time.time()
@@ -686,12 +589,11 @@ class MemoryBasedStrategy:
                         self.results[query_id] = {
                             'execution_time': float('inf'),
                             'success': False,
-                            'error_message': error_message,
-                            'retry_count': prioritized_query.retry_count
+                            'error_message': error_message
                         }
                     logging.error(f"Scheduler: Query {query_id} failed after {self.max_retries} retries. success count: {self.success_count}.")
             else: # success
-                # logging.debug(f"success_count: {self.success_count} in query_complete_callback.")
+                self.success_count += 1
                 pass
 
         except Exception as e:
@@ -734,8 +636,6 @@ class MemoryBasedStrategy:
                 if wait_count == 0:
                     logging.error(f"Query {prioritized_query.query.id} failed to get available memory after {wait_count} retries.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
                     return 0
-                # current_actual_active_queires = self.get_actual_active_queries()
-                # logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count} with wait_count {wait_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. current actual active queries: {current_actual_active_queires}.")
                 logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count} with wait_count {wait_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
                 wait_time = min(base_wait_time ** prioritized_query.retry_count, 32)
                 time.sleep(wait_time)  # Wait for available memory to increase
@@ -784,14 +684,13 @@ class MemoryBasedStrategy:
             total_time = end_exec_time - prioritized_query.enqueue_time
 
             # Update result_dict with execution time and waiting time
-            with self.lock:
+            with lock:
                 self.results[query_id] = {
                     'execution_time': exec_time,
                     'total_time': total_time,
-                    'success': True,
-                    'retry_count': prioritized_query.retry_count
+                    'success': True
                 }
-                self.success_count += 1
+            
             logging.info(f"{strategy}({exp+1}/{exp_num}): Query {query_id} executed in {exec_time:.2f} seconds. Total time: {total_time:.2f} seconds. its retry is {prioritized_query.retry_count}. success_count: {self.success_count}")
             
             return (prioritized_query, True, None)  # Success
@@ -912,20 +811,6 @@ def log_memory_spill(engine: Engine, strategy_name: str):
     else:
         logging.info(f"{strategy_name} Strategy: No memory spilled to disk.")
 
-import os
-def save_strategy_results(save_dir, memory_based_strategy_results, naive_strategy_results):
-    try:
-        # Save memory-based strategy results
-        with open(os.path.join(save_dir,'memory_based_strategy_results.json'), 'w') as memory_file:
-            json.dump(memory_based_strategy_results, memory_file, indent=4)
-        print("Memory-based strategy results saved to 'memory_based_strategy_results.json'.")
-
-        # Save naive strategy results
-        with open(os.path.join(save_dir, 'naive_strategy_results.json'), 'w') as naive_file:
-            json.dump(naive_strategy_results, naive_file, indent=4)
-        print("Naive strategy results saved to 'naive_strategy_results.json'.")
-    except Exception as e:
-        print(f"Error saving results: {e}")
 
 # ----------------------------
 # Main Function to Compare Strategies
@@ -978,8 +863,7 @@ def main():
             pool_size=1000,          # Adjust based on max_connections
             max_overflow=0,        # No additional connections beyond pool_size
             pool_timeout=30,       # Timeout for getting connection
-            pool_recycle=5,      # Recycle connections after 30 minutes
-            pool_pre_ping=True,    # Ping connections before using them
+            pool_recycle=1800      # Recycle connections after 30 minutes
         )
         logging.info("SQLAlchemy Engine created successfully.")
     except Exception as e:
@@ -1020,7 +904,7 @@ def main():
 
     # postgres_background_memory_kb = get_postgres_background_memory_usage()
     # available_memory_kb += postgres_background_memory_kb
-    available_memory_kb = 3 * 1024**2
+    available_memory_kb = 3 * 1024**2 # 3GB
 
     # # ----------------------------
     # # Improved PostgreSQL Memory Estimation
@@ -1083,37 +967,9 @@ def main():
     model.eval()
     logging.info(f"Model loaded")
 
-    # import docker
-    # client = docker.from_env()
-    # container_name = 'my_postgres'
-    # try:
-    #     container = client.containers.get(container_name)
-    #     container_id = container.id
-    #     logging.info(f"Connected to Docker container '{container_name}' with id {container_id}.")
-    # except docker.errors.NotFound:
-    #     logging.error(f"Docker container '{container_name}' not found.")
-    #     raise
-    # except Exception as e:
-    #     logging.error(f"Error connecting to Docker container '{container_name}': {e}")
-    #     raise
+
     
-    # docker_postgres_pid = container.attrs['State']['Pid']
-    # logging.info(f"Docker container '{container_name}' has PID {docker_postgres_pid}.")
-
-    interval = 1
-    metrics = {
-        'naive': {'time': [], 'swap_mem': [], 'total_mem': []},
-        'memory_based': {'time': [], 'swap_mem': [], 'total_mem': []}
-    }
-
-    # Stop events for monitoring threads
-    naive_stop_event = threading.Event()
-    memory_based_stop_event = threading.Event()
-
-    # Threads for monitoring
-    naive_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'naive', naive_stop_event))
-    memory_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'memory_based', memory_based_stop_event))
-
+    
     # ----------------------------
     # Execute Memory-Based Strategy Multiple Times
     # ----------------------------
@@ -1138,10 +994,7 @@ def main():
             device = args.device
         )
         try:
-            memory_based_thread.start()
             memory_based_total_time = memory_based_strategy.execute()
-            memory_based_stop_event.set()
-            memory_based_thread.join()
         except Exception as e:
             logging.error(f"Memory-Based Strategy failed: {e}")
             memory_based_total_time = float('inf')
@@ -1174,11 +1027,7 @@ def main():
                 exp = i,
                 exp_num = args.exp_num
             )
-            naive_thread.start()
             naive_total_time = naive_strategy.execute()
-            naive_stop_event.set()
-            naive_thread.join()
-
             naive_total_time_list.append(naive_total_time)
 
             # Log memory spill after strategy execution
@@ -1189,12 +1038,8 @@ def main():
                 info['total_time'] for info in naive_strategy.results.values() if 'total_time' in info
             )
             naive_waiting_sum_list.append(naive_waiting_sum)
-    
-    result_path = f'./results/{args.num_queries}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
-    if not os.path.exists(result_path):
-        os.makedirs(result_path)
-    save_strategy_results(result_path, memory_based_strategy.results, naive_strategy.results)
 
+            
     # ----------------------------
     # Compare Performance
     # ----------------------------
@@ -1204,32 +1049,12 @@ def main():
     mean_naive_waiting = mean(naive_waiting_sum_list) if not args.no_naive else 0
     mean_memory_based_waiting = mean(memory_based_waiting_sum_list)
 
-    naive_total_retry_count = sum(
-        info['retry_count'] for info in naive_strategy.results.values() if'retry_count' in info
-    ) if not args.no_naive else 0
-    memory_based_total_retry_count = sum(
-        info['retry_count'] for info in memory_based_strategy.results.values() if'retry_count' in info
-    )
-    naive_max_retry_count = max(
-        info['retry_count'] for info in naive_strategy.results.values() if'retry_count' in info
-    ) if not args.no_naive else 0
-    memory_based_max_retry_count = max(
-        info['retry_count'] for info in memory_based_strategy.results.values() if'retry_count' in info
-    )
-    
-    
-    
-
     if not args.no_naive:
         logging.info(f"Naive Strategy Average Total Execution Time: {mean_naive_time:.2f} seconds.")
         logging.info(f"Naive Strategy Average Sum of Waiting Times: {mean_naive_waiting:.2f} seconds.")
-        logging.info(f"Total retries for Naive Strategy: {naive_total_retry_count}")
-        logging.info(f"Naive Strategy Max Retries: {naive_max_retry_count}")
     
     logging.info(f"Memory-Based Strategy Average Total Execution Time: {mean_memory_based_time:.2f} seconds.")
     logging.info(f"Memory-Based Strategy Average Sum of Waiting Times: {mean_memory_based_waiting:.2f} seconds.")
-    logging.info(f"Total retries for Memory-Based Strategy: {memory_based_total_retry_count}")
-    logging.info(f"Memory-Based Strategy Max Retries: {memory_based_max_retry_count}")
 
     if not args.no_naive:
         if mean_memory_based_time < mean_naive_time:
@@ -1246,8 +1071,6 @@ def main():
         else:
             logging.info("Both strategies have the same average sum of waiting times.")
 
-    # Plot the results
-    plot_memory_metrics(metrics, result_dir=result_path)
 
     # ----------------------------
     # Close the Engine and Executor
