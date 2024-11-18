@@ -1156,6 +1156,8 @@ def main():
         )
         memory_based_waiting_sum_list.append(memory_based_waiting_sum)
 
+    logging.info(f"Waiting for {60} seconds before starting naive strategy.")
+    time.sleep(60)
     # ----------------------------
     # Execute Naive Strategy Multiple Times
     # ----------------------------
