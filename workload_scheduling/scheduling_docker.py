@@ -1071,7 +1071,7 @@ def main():
     # docker_postgres_pid = container.attrs['State']['Pid']
     # logging.info(f"Docker container '{container_name}' has PID {docker_postgres_pid}.")
 
-    interval = 1
+    interval = 0.2
     metrics = {
         'naive': {'time': [], 'swap_mem': [], 'total_mem': []},
         'memory_based': {'time': [], 'swap_mem': [], 'total_mem': []}
@@ -1128,7 +1128,7 @@ def main():
         memory_based_waiting_sum_list.append(memory_based_waiting_sum)
 
     logging.info(f"Waiting for {60} seconds before starting naive strategy.")
-    time.sleep(1)
+    time.sleep(60)
     # ----------------------------
     # Execute Naive Strategy Multiple Times
     # ----------------------------
@@ -1222,7 +1222,7 @@ def main():
     # Plot the results
     # plot_memory_metrics(metrics, result_dir=result_path)
     import pickle
-    with open(f'{args.num_queries}_metrics.pkl','w') as f:
+    with open(f'{args.num_queries}_metrics.pkl','wb') as f:
         pickle.dump(metrics, f)
 
 

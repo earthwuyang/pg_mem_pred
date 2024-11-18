@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
+import os
 # Plot the memory metrics
-def plot_memory_metrics(metrics, result_dir):
+def plot_memory_metrics(metrics, result_dir, num_queries):
     plt.figure(figsize=(10, 6))
     
     # Convert time to relative
@@ -20,18 +22,23 @@ def plot_memory_metrics(metrics, result_dir):
         plt.plot(memory_based_time, metrics['memory_based']['swap_mem'], label="Memory-Based Swap Memory (KB)", linestyle='--')
         plt.plot(memory_based_time, metrics['memory_based']['total_mem'], label="Memory-Based Total Memory (KB)")
     
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Memory (KB)")
-    plt.title("Swap and Total Memory Usage During Execution")
-    plt.legend()
+    plt.xlabel("Time (seconds)", fontsize=14)
+    plt.ylabel("Memory (KB)", fontsize=14)
+    plt.title("Swap and Total Memory Usage During Execution", fontsize=16)
+    plt.legend(fontsize=12)
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(os.path.join(result_dir,'memory_usage.png'))
+    # adjust x and y axis ticks font size
+    plt.tick_params(axis='both', which='major', labelsize=12)
+    plt.savefig(os.path.join(result_dir,f'{num_queries}_queries_memory_usage.png'))
 
 import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--num_queries', type=int, help='number of queries', required=True)
+args = parser.parse_args()
 
 result_dir = './'
-with open(f'{args.num_queries}_metrics.pkl') as f:
+with open(f'{args.num_queries}_metrics.pkl', 'rb') as f:
     import pickle
     metrics = pickle.load(f)
-plot(metrics, result_dir)
+plot_memory_metrics(metrics, result_dir, args.num_queries)
