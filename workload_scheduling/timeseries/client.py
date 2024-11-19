@@ -79,7 +79,13 @@ def submit_queries():
         sql = q.sql
         try:
             q.submit_time = time.time()
-            response = requests.post(f"{PROXY_URL}/submit_query", json={"sql": sql, "id": qid, "explain_json_plan": q.explain_json_plan})
+            while True:
+                response = requests.post(f"{PROXY_URL}/submit_query", json={"sql": sql, "id": qid, "explain_json_plan": q.explain_json_plan})
+                if response.status_code == 200:
+                    break
+                print(f"Failed to submit query. Retrying in 1 second.")
+                time.sleep(1)
+            
             if response.status_code == 200:
                 data = response.json()
                 query_id = data.get("query_id")
@@ -147,6 +153,20 @@ def reset_proxy():
     except Exception as e:
         logging.error(f"Exception while resetting proxy: {e}")
 
+def stop_proxy():
+    """
+    Sends a request to the proxy to stop the server.
+    """
+    try:
+        response = requests.post(f"{PROXY_URL}/stop")
+        if response.status_code == 200:
+            logging.info("Proxy server stopped successfully.")
+        else:
+            logging.error(f"Failed to stop proxy server. Status Code: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Exception while stopping proxy: {e}")
+
+
 def main():
     """
     Starts the query submission in a separate thread.
@@ -168,6 +188,7 @@ def main():
         logging.info(f"Total time taken: {end-begin:.2f} seconds for {args.num_queries} queries.")
         average_latency = sum([q.end_time - q.submit_time for q in queries]) / len(queries)
         logging.info(f"Average latency: {average_latency:.2f} seconds.")
+        stop_proxy()
     except KeyboardInterrupt:
         logging.info("Client shutting down.")
 

@@ -27,6 +27,52 @@ from GIN import GIN
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 logging.getLogger('uvicorn.access').setLevel(logging.WARNING)
 
+
+import subprocess
+def get_process_swap_memory(pid):
+    """
+    Get swap memory usage for a given process using /proc/<pid>/smaps.
+    """
+    swap_memory = 0
+    try:
+        with open(f'/proc/{pid}/smaps', 'r') as smaps:
+            for line in smaps:
+                if line.startswith("Swap:"):
+                    swap_memory += int(line.split()[1])  # Swap memory is in KB
+    except Exception as e:
+        print(f"Error reading swap memory for PID {pid}: {e}")
+    return swap_memory
+
+
+def monitor_postgres_memory(interval, metrics, key_prefix, stop_event):
+    """
+    Monitor memory usage of all PostgreSQL processes, including swap memory.
+    """
+    while not stop_event.is_set():
+        total_swap_memory = 0
+        total_memory = 0
+        try:
+            for proc in psutil.process_iter(['name']):
+                if 'postgres' in proc.info['name']:
+                    try:
+                        mem_info = proc.memory_info()
+                        rss = mem_info.rss // 1024  # Resident memory in KB
+                        swap = get_process_swap_memory(proc.pid)  # Swap memory in KB
+                        total_swap_memory += swap
+                        total_memory += rss
+                    except psutil.NoSuchProcess:
+                        continue
+                    except Exception as e:
+                        print(f"Error monitoring process {proc.pid}: {e}")
+            # Record the metrics
+            metrics[key_prefix]['time'].append(time.time())
+            metrics[key_prefix]['swap_mem'].append(total_swap_memory)  # In KB
+            metrics[key_prefix]['total_mem'].append(total_memory)  # In KB
+        except Exception as e:
+            print(f"Error monitoring PostgreSQL processes: {e}")
+            break
+        time.sleep(interval)
+
 # ----------------------------
 # Function to Retrieve PostgreSQL Memory Settings using SQLAlchemy
 # ----------------------------
@@ -391,7 +437,7 @@ if adjusted_max_connections <= 0:
 
 logging.info(f"Adjusted max_connections for connection pool: {adjusted_max_connections}")
 
-total_query_memory_limit_kb = 1 * 1024**2  # 3 GB for example
+total_query_memory_limit_kb = 1 * 1024**2  # 1 GB for example
 
 
 
@@ -472,6 +518,20 @@ def query_status(query_id: str):
     #     logging.info(f"######################## Query {query_id} status: {result['success']} #######################")
     return { "query_id": query_id, "result": result }
 
+
+interval = 0.2
+metrics = {
+    'naive': {'time': [], 'swap_mem': [], 'total_mem': []},
+    'memory_based': {'time': [], 'swap_mem': [], 'total_mem': []}
+}
+
+# Stop events for monitoring threads
+memory_based_stop_event = threading.Event()
+
+# Threads for monitoring
+memory_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'memory_based', memory_based_stop_event))
+
+
 @app.post("/restart")
 def restart_strategy():
     """
@@ -483,8 +543,26 @@ def restart_strategy():
     memory_strategy.success_count = 0  # Reset the success count
     
     logging.info("Memory-Based Strategy results have been reset.")
+    memory_based_thread.start()
     return JSONResponse(status_code=200, content={"message": "Memory strategy results have been reset."})
 
+@app.post("/stop")
+def stop_strategy():
+    """
+    Endpoint to stop the memory-based strategy.
+    """
+    memory_based_stop_event.set()
+    memory_based_thread.join()
+    logging.info("Memory-Based Strategy monitoring stopped.")
+    logging.info("Memory-Based Strategy stopped.")
+    # save metrics
+    import pickle
+    import datetime
+    with open(f'mem_based_metrics_{memory_strategy.success_count}.pkl', 'wb') as f:
+        pickle.dump(metrics, f)
+    logging.info("saved metrics.")
+
+    return JSONResponse(status_code=200, content={"message": "Memory-based strategy stopped."})
 # ----------------------------
 # Run the FastAPI App
 # ----------------------------
@@ -496,3 +574,5 @@ import uvicorn
 
 if __name__ == "__main__":
     uvicorn.run("proxy:app", host="0.0.0.0", port=8000, reload=True)
+    
+    

@@ -220,7 +220,7 @@ def train_model(logger, args, statistics):
     total_size = 0
     for param in model.parameters():
         total_size += param.numel() * param.element_size()  # numel() 是元素总数, element_size() 是每个元素的字节数
-
+    exit()
     # 转换为 KB, MB
     logger.info(f"Model total size: {total_size / 1024:.2f} KB")
     logger.info(f"Model total size: {total_size / (1024 ** 2):.2f} MB")

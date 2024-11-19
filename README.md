@@ -97,6 +97,11 @@ run python src/preprocessing/import_data.py --port 5422
 
 run python src/preprocessing/execute_all_workloads.py --port 5422 --docker_name my_postgres_2
 
+
+## sequential execution
+remember to unset https_proxy and http_proxy.
+
+
 ## Code Structure
 
 `src` contains the code for GIN, GAT, GraphTransformer, TreeTransformer, `zsce` contains the code for zero-shot cost estimation method, `xgboost` contains the code for XGBoost method, `treelstm` contains the code for TreeLSTM method, `heterogeneous_graph` contains the code for heterogeneous graph method.
