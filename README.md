@@ -150,4 +150,14 @@ Unset proxy settings if using sequential execution:
 unset https_proxy
 unset http_proxy
 ```
+Run memory-based strategy:
+```
+python proxy.py
+python client.py --num_queries 100
+```
+
+Run naive strategy:
+```
+python proxy_FCFS.py
+python client.py --num_queries 100
 ```

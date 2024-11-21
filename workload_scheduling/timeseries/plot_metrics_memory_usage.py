@@ -9,7 +9,7 @@ def plot_performance(ax):
     y_naive = [57.94, 155.84, 219.97, 489.03, 590.13]
     y_mem_based = [51.31, 131.25, 215.12, 259.35, 427.9]
 
-    ax.plot(x, y_naive, label='Naive', color='orange', linewidth=2)
+    ax.plot(x, y_naive, label='Default', color='orange', linewidth=2)
     ax.plot(x, y_mem_based, label='Mem-Based', color='red', linewidth=2)
     ax.set_xlabel('Number of Queries', fontsize=14)
     ax.set_ylabel('Time (seconds)', fontsize=14)
@@ -28,8 +28,8 @@ def plot_memory_metrics(ax, metrics, num_queries):
     memory_based_time = [t - mem_based_start_time for t in metrics['memory_based']['time']]
 
     # Plot naive
-    ax.plot(naive_time, metrics['naive']['swap_mem'], label="Naive Swap Memory (KB)", linestyle='--')
-    ax.plot(naive_time, metrics['naive']['total_mem'], label="Naive Total Memory (KB)")
+    ax.plot(naive_time, metrics['naive']['swap_mem'], label="Default Swap Memory (KB)", linestyle='--')
+    ax.plot(naive_time, metrics['naive']['total_mem'], label="Default Total Memory (KB)")
 
     # Plot memory-based
     ax.plot(memory_based_time, metrics['memory_based']['swap_mem'], label="Memory-Based Swap Memory (KB)", linestyle='--')
@@ -71,8 +71,8 @@ plot_performance(ax1)
 plot_memory_metrics(ax2, metrics, num_queries)
 
 # Add titles below subfigures
-fig.text(0.25, 0.02, '(a) Sequential Queries Execution Time: Naive vs. Mem-Based', ha='center', fontsize=14)
-fig.text(0.75, 0.02, '(b) Memory Usage: Naive vs. Mem-Based', ha='center', fontsize=14)
+fig.text(0.25, 0.02, '(a) Sequential Queries Execution Time: Default vs. Mem-Based', ha='center', fontsize=14)
+fig.text(0.75, 0.02, '(b) Memory Usage: Default vs. Mem-Based', ha='center', fontsize=14)
 
 # Save the combined figure
 combined_fig_path = os.path.join(result_dir, 'combined_performance_memory.png')

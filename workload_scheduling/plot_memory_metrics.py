@@ -14,8 +14,8 @@ def plot_memory_metrics(metrics, result_dir, num_queries):
     
     # Plot naive
     if naive_time:
-        plt.plot(naive_time, metrics['naive']['swap_mem'], label="Naive Swap Memory (KB)", linestyle='--')
-        plt.plot(naive_time, metrics['naive']['total_mem'], label="Naive Total Memory (KB)")
+        plt.plot(naive_time, metrics['naive']['swap_mem'], label="Default Swap Memory (KB)", linestyle='--')
+        plt.plot(naive_time, metrics['naive']['total_mem'], label="Default Total Memory (KB)")
 
     # Plot memory-based
     if memory_based_time:
