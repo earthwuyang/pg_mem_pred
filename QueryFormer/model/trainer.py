@@ -87,7 +87,7 @@ def train(model, train_ds, val_ds, test_ds, crit, \
 
     best_prev = 999999
 
-    skip_train = True
+    skip_train = False
     if not skip_train:
         for epoch in range(epochs):
             losses = 0
@@ -149,6 +149,7 @@ def train(model, train_ds, val_ds, test_ds, crit, \
 
             if epoch % 1 == 0:
                 print('Epoch: {}  Avg Loss: {}, Time: {}'.format(epoch,losses/len(train_ds), time.time()-t0))
+                print(f"epochs_no_improve: {epochs_no_improve}")
                 cost_unnorm = mem_scaler.inverse_transform(np.array(cost_predss).reshape(-1,1)).flatten()
                 label_unnorm = mem_scaler.inverse_transform(np.array(cost_labelss).reshape(-1,1)).flatten()
                 res = compute_metrics(label_unnorm, cost_unnorm)
@@ -158,7 +159,7 @@ def train(model, train_ds, val_ds, test_ds, crit, \
 
     print(f"test on test set:")
     best_model_path = '-4677096019385286629.pt'
-    model.load_state_dict(torch.load(os.path.join(args.newpath, best_model_path))['model'])
+    # model.load_state_dict(torch.load(os.path.join(args.newpath, best_model_path))['model'])
     test_scores, corrs = evaluate(model, test_ds, bs, mem_scaler, device, True)
     return model, best_model_path
 

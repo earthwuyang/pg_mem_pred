@@ -198,6 +198,16 @@ def train_XGBoost(logger, args, combined_stats):
     if not args.skip_train:
         # Train the model
         xgb_reg.fit(X_train, y_train)
+        # Serialize the model into an in-memory string
+        memory_dump = xgb_reg.get_booster().save_raw()
+        import sys
+        # Compute model size in bytes
+        total_size_bytes = sys.getsizeof(memory_dump)
+
+        # Convert bytes to kilobytes
+        total_size_kb = total_size_bytes / 1024
+
+        logger.info(f"Estimated model size: {total_size_kb:.2f} KB")
         
         if not os.path.exists(best_model_dir):
             os.makedirs(best_model_dir)

@@ -30,10 +30,13 @@ for dataset in dataset_names:
             aligned_qerror_50[model].append(0)  # Fill missing values with 0
 
 # Define bar chart positions with closer spacing between clusters
-x = np.arange(len(dataset_names)) * 1.5  # Adjust spacing between clusters
-width = 0.15  # Bar width
+x = np.arange(len(dataset_names)) * 3  # Adjust spacing between clusters
+width = 0.3  # Bar width
 
-# Plot clustered bar chart
+# Adjust x-ticks to align with the center of each cluster
+xtick_positions = x + width * (len(models) - 1) / 2  # Center of each cluster
+
+# Customize chart
 plt.figure(figsize=(12, 8))
 for i, model in enumerate(models):
     plt.bar(
@@ -43,14 +46,12 @@ for i, model in enumerate(models):
         label=model
     )
 
-# Customize chart
 plt.xlabel('Datasets', fontsize=18)
 plt.ylabel('qerror_50', fontsize=18)
 plt.ylim(1.0, 1.16)  # Set y-axis range
 plt.yticks(fontsize=14)
-plt.title('Median QError Comparison between 8 Models on 4 Datasets', fontweight='bold', fontsize=20)
-plt.xticks(x + width * (len(models) - 1) / 2, [dn.split('_')[0] for dn in dataset_names], rotation=0, ha='right', fontsize=18)
-# plt.legend(title='Models', bbox_to_anchor=(1.05, 1), loc='upper left')
+# plt.title('Median QError Comparison between 8 Models on 4 Datasets', fontweight='bold', fontsize=20)
+plt.xticks(xtick_positions, [dn.split('_')[0] for dn in dataset_names], rotation=0, ha='center', fontsize=18)  # Align x-ticks
 plt.legend(title='Models', bbox_to_anchor=(0.02, 0.98), loc='upper left', fontsize=14, title_fontsize=16)
 plt.tight_layout()
 plt.savefig('qerror_50_comparison_single_datasets_more_models.png')
