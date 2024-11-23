@@ -59,6 +59,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--num_layers', type=int, default=6, help='number of layers')
     parser.add_argument('--dropout', type=float, default=0.5, help='dropout rate')
     parser.add_argument('--num_workers', type=int, default=10, help='number of workers for data loading')
+    parser.add_argument('--scaling_factor', type=float, default=1.0, help='scaling factor for heuristic cost')
     parser.add_argument('--device', type=str, default='cuda:0', help='device to use for training')
     parser.add_argument('--mem_pred', action='store_true', default=True, help='predict memory')
     parser.add_argument('--no_mem_pred', action='store_false', dest='mem_pred', help='do not predict memory')

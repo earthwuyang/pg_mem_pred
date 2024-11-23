@@ -38,9 +38,11 @@ def parse_plan(plan, statistics, parent=None, nodes=None, edges=None, node_id=0)
     # Recursively parse children
     for child in children:
         node_id += 1
-        node_id = parse_plan(child, statistics, parent=current_id, nodes=nodes, edges=edges, node_id=node_id)
+        node_id, _, _ = parse_plan(child, statistics, parent=current_id, nodes=nodes, edges=edges, node_id=node_id)
     
-    return node_id
+    estimated_rows = plan_node.get('Plan Rows', 1)
+    row_width = plan_node.get('Plan Width', 1)
+    return node_id, estimated_rows, row_width
 
 def one_hot_encode(n, num_classes):
     """

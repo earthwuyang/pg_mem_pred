@@ -117,13 +117,13 @@ class QueryPlanDataset(Dataset):
             else:   # homogeneous graph
                 nodes = []
                 edges = []
-                parse_plan(plan, self.statistics, nodes=nodes, edges=edges)
+                _, plan_rows, plan_width = parse_plan(plan, self.statistics, nodes=nodes, edges=edges)
         
                 # Convert lists to tensors
                 x = torch.tensor(nodes, dtype=torch.float)
                 edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
                 y = torch.tensor(np.array([peakmem, time]), dtype=torch.float)
-                data = Data(x=x, edge_index=edge_index, y=y)
+                data = Data(x=x, edge_index=edge_index, y=y, plan_rows=plan_rows, plan_width=plan_width)
                 graph_list.append(data)
 
         # Close the database connection

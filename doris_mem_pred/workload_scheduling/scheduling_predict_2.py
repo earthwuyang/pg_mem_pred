@@ -123,9 +123,9 @@ def get_available_memory():
         if metrics_data:
             # print(f"metrics_data: {metrics_data}")
             current_mem = parse_profile(metrics_data)
-            cur_mem_total += current_mem
+            cur_mem_total = max(cur_mem_total, current_mem)
 
-    return 7 * 1024 - cur_mem_total
+    return 1024 * 1024 - cur_mem_total
 
 def parse_memory_setting(setting: str) -> int:
     """

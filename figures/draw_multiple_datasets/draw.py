@@ -13,6 +13,9 @@ def plot_all_combined_figures(data_dict, clip_value_list):
 
     for idx, (sheet_name, data) in enumerate(data_dict.items()):
         settings = data.columns[1:]  # Assume first column is labels, the rest are settings
+        settings = list(settings)
+        settings[2] = settings[2] + ' (ours)'
+        settings[3] = settings[3] + ' (ours)'
         models = data.iloc[:, 0]  # First column as model names
         n_clusters = len(settings)  # Number of clusters
         n_models = len(models)  # Number of models
@@ -40,7 +43,7 @@ def plot_all_combined_figures(data_dict, clip_value_list):
         ax.set_xlabel("Models", fontsize=18)
         ax.set_ylabel(f"{sheet_name} value", fontsize=18)
         ax.set_xticks([x + bar_width * 1.5 for x in x_positions])
-        ax.set_xticklabels(settings, rotation=0, fontsize=14)
+        ax.set_xticklabels(settings, rotation=15, fontsize=14)
         ax.tick_params(axis='y', labelsize=16)
 
         # Set y-axis scale to logarithmic if needed

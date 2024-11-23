@@ -42,6 +42,21 @@ MODELS = {
     # 'zsce': PostgresZeroShotModel
 }
 
+def heuristic_peak_memory(estimated_rows, row_width, scaling_factor=1.0):
+    """
+    Estimate peak memory using a heuristic based on estimated rows and row width.
+
+    Args:
+        estimated_rows (torch.Tensor or np.ndarray): Estimated number of rows.
+        row_width (torch.Tensor or np.ndarray): Width of each row in bytes.
+        scaling_factor (float): Scaling factor to adjust the heuristic.
+
+    Returns:
+        torch.Tensor or np.ndarray: Estimated peak memory.
+    """
+    return estimated_rows * row_width * scaling_factor
+
+
 # Define the early stopping class (redefined for clarity)
 class EarlyStopping:
     def __init__(self, logger, patience, best_model_path, verbose=False):
@@ -68,12 +83,13 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
 
-def validate_model(model_name, model, val_loader, criterion, statistics, device, mem_pred, time_pred):
+def validate_model(model_name, model, val_loader, criterion, statistics, device, mem_pred, time_pred, scaling_factor=1.0):
     # Validation
     model.eval()
     val_loss = 0
     mem_preds = []
     time_preds = []
+    heuristic_mem_preds = []
     memories = []
     times = []
     torch.cuda.synchronize()
@@ -81,6 +97,9 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
     with torch.no_grad():
         for batch in tqdm(val_loader, desc="Val:"):
             batch = batch.to(device)
+            heuristic_mem = heuristic_peak_memory(batch.plan_rows, batch.plan_width, scaling_factor=scaling_factor)
+            heuristic_mem_preds.extend(heuristic_mem.cpu())
+
             if model_name.startswith('Hetero'):
                 # Ensure that 'operator' node type exists in the batch
                 if 'operator' not in batch.x_dict:
@@ -114,9 +133,16 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
     metrics={}
     metrics['peakmem'] = compute_metrics(memories, mem_preds)
     metrics['time'] = compute_metrics(times, time_preds)
+
+    # Compute metrics for heuristic
+    heuristic_metrics = {}
+    heuristic_metrics['peakmem'] = compute_metrics(memories, heuristic_mem_preds)
+    metrics['heuristic_peakmem'] = heuristic_metrics['peakmem']
+    
+
     return avg_val_loss, metrics
 
-def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs, device, statistics, mem_pred, time_pred):
+def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, val_loader, early_stopping, epochs, device, statistics, mem_pred, time_pred, scaling_factor=1.0):
     logger.info("Training begins")
     for epoch in range(epochs):
         model.train()
@@ -145,7 +171,7 @@ def train_epoch(logger, model_name, model, optimizer, criterion, train_loader, v
             total_loss += loss.item()
         avg_train_loss = total_loss / len(train_loader) if len(train_loader) > 0 else 0.0
 
-        avg_val_loss, metrics = validate_model(model_name, model, val_loader, criterion, statistics, device, mem_pred, time_pred)
+        avg_val_loss, metrics = validate_model(model_name, model, val_loader, criterion, statistics, device, mem_pred, time_pred, scaling_factor)
         
         logger.info(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}")
         if mem_pred:
@@ -169,6 +195,7 @@ def train_model(logger, args, statistics):
     test_dataset = args.test_dataset
     batch_size = args.batch_size
     num_workers = args.num_workers
+    scaling_factor = args.scaling_factor
 
     with open(args.db_config) as f:
         conn_info = json.load(f)
@@ -200,7 +227,7 @@ def train_model(logger, args, statistics):
         # Initialize the model
         # Determine the number of unique data types for one-hot encoding
         # Assuming all graphs have the same data_type_mapping
-        sample_graph = train_loader.dataset[1]
+        # sample_graph = train_loader.dataset[1]
         num_operator_features = 23 # sample_graph.x_dict['operator'].shape[1]
         num_table_features = 2 #sample_graph.x_dict['table'].shape[1] if 'table' in sample_graph.x_dict else None
         num_column_features = 11 #sample_graph.x_dict['column'].shape[1] if 'column' in sample_graph.x_dict else None
@@ -239,14 +266,16 @@ def train_model(logger, args, statistics):
     if not args.skip_train:
         begin = time()
         train_epoch(logger, args.model, model, optimizer, criterion, train_loader, val_loader, early_stopping, args.epochs, args.device, statistics, 
-                    args.mem_pred, args.time_pred)
+                    args.mem_pred, args.time_pred, scaling_factor=scaling_factor)
         time_elapse = time()-begin
         print(f"training takes {time_elapse} seconds, equivalent to {time_elapse/3600:.4f} hours")
 
     model.load_state_dict(torch.load(best_model_path))
-    avg_test_loss, metrics = validate_model(args.model, model, test_loader, criterion, statistics, args.device, args.mem_pred, args.time_pred)
+    avg_test_loss, metrics = validate_model(args.model, model, test_loader, criterion, statistics, args.device, args.mem_pred, args.time_pred, scaling_factor)
     logger.info(f"Test Loss={avg_test_loss:.4f}")
     if args.mem_pred:
         logger.info(f"peakmem metrics={metrics['peakmem']}")
     if args.time_pred:
         logger.info(f"time metrics={metrics['time']}")
+
+    logging.info(f"heuristic metrics={metrics['heuristic_peakmem']}")

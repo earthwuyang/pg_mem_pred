@@ -97,17 +97,17 @@ python zsce/generate_zsce_queries.py
 
 #### Cross-Dataset Training
 Train models across datasets:
-```bash
-sh train_cross_datasets.sh
+```
+python train.py --model GIN --train_dataset tpch_sf1 tpcds_sf1 airline --val_dataset credit --test_dataset geneea
 ```
 
-#### Heterogeneous Graph
+<!-- #### Heterogeneous Graph
 Run:
 ```bash
 python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'
-```
+``` -->
 
----
+<!-- ---
 
 ### Testing Across Machines
 1. **Start Docker for PostgreSQL**:
@@ -122,15 +122,16 @@ python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'
    python src/preprocessing/execute_all_workloads.py --port 5422 --docker_name my_postgres_2
    ```
 
----
+--- -->
 
 ## Code Structure
 
 - `src`: Contains implementation for GIN, GAT, GraphTransformer, and TreeTransformer models.
 - `zsce`: Code for Zero-Shot Cost Estimation (ZSCE) method.
-- `xgboost`: Code for XGBoost-based predictions.
-- `treelstm`: Code for TreeLSTM model.
-- `heterogeneous_graph`: Code for the heterogeneous graph-based method.
+- `workload_scheduling`: Code for workload scheduling.
+<!-- - `xgboost`: Code for XGBoost-based predictions. -->
+<!-- - `treelstm`: Code for TreeLSTM model. -->
+<!-- - `heterogeneous_graph`: Code for the heterogeneous graph-based method. -->
 
 ---
 
@@ -143,6 +144,12 @@ python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'
    ```bash
    python train.py
    ```
+
+### pg bastch execution
+```bash
+cd workload_scheduling
+python scheduling_docker.py --num_queries 100
+```
 
 ### Sequential Execution
 Unset proxy settings if using sequential execution:
