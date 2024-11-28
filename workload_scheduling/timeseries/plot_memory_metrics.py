@@ -21,8 +21,8 @@ def plot_memory_metrics(metrics, result_dir, num_queries):
 
     # Plot memory-based
     if memory_based_time:
-        plt.plot(memory_based_time, metrics['memory_based']['swap_mem'], label="Memory-Based Swap Memory (KB)", linestyle='--')
-        plt.plot(memory_based_time, metrics['memory_based']['total_mem'], label="Memory-Based Total Memory (KB)")
+        plt.plot(memory_based_time, metrics['memory_based']['swap_mem'], label="FFD Swap Memory (KB)", linestyle='--')
+        plt.plot(memory_based_time, metrics['memory_based']['total_mem'], label="FFD Total Memory (KB)")
     
     plt.xlabel("Time (seconds)", fontsize=14)
     plt.ylabel("Memory (KB)", fontsize=14)

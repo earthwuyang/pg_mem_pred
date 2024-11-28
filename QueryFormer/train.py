@@ -223,6 +223,20 @@ model = QueryFormer(emb_size = args.embed_size ,ffn_dim = args.ffn_dim, head_siz
                  use_sample = True, use_hist = True, 
                  pred_hid = args.pred_hid, joins = len(encoding.join2idx), tables = len(encoding.table2idx), types = len(encoding.type2idx), columns = len(encoding.col2idx), 
                 )
+
+
+total_params = sum(p.numel() for p in model.parameters())
+print(f"Total parameters: {total_params}")
+# 计算模型的总大小
+total_size = 0
+for param in model.parameters():
+    total_size += param.numel() * param.element_size()  # numel() 是元素总数, element_size() 是每个元素的字节数
+
+# 转换为 KB, MB
+print(f"Model total size: {total_size / 1024:.2f} KB")
+print(f"Model total size: {total_size / (1024 ** 2):.2f} MB")
+exit()
+    
 _ = model.to(args.device)
 
 crit = nn.MSELoss()

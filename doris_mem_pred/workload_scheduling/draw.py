@@ -6,10 +6,10 @@ y1 = [94.28, 99.17, 563.97, 946, 1021.83]               # First curve: sine func
 y2 = [93.61, 96.76, 547.38, 851.32, 867.51]             # Second curve: cosine function
 
 plt.plot(x, y1, label='Default', color='orange', linestyle='-')  # Plot first curve
-plt.plot(x, y2, label='Mem-Based', color='red', linestyle='-')  # Plot second curve
+plt.plot(x, y2, label='FFD', color='red', linestyle='-')  # Plot second curve
 
 plt.xlabel('number of queries')
 plt.ylabel('makespan (seconds)')
-plt.title('Doris Scheduling Result')
+# plt.title('Doris Scheduling Result')
 plt.legend()
 plt.savefig('doris_scheduling_result.png')

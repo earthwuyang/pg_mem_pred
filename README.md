@@ -34,6 +34,11 @@ Example:
 }
 ```
 
+#### Fast Forward
+Directly Download our precessed datasets from https://cloud.tsinghua.edu.cn/d/9ad34a4caafe405ebcc7/, otherwise follow below steps.
+
+
+
 #### Create Databases
 Use the following command to create and populate the databases:
 ```bash
