@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional, Tuple
 import json
 import logging
 import heapq  # For priority queue implementation
+from collections import deque
 from datetime import datetime
 import subprocess
 import torch
@@ -21,22 +22,6 @@ import matplotlib.pyplot as plt
 from GIN import GIN
 from parse_plan import parse_plan
 
-
-# # Function to monitor memory usage of Docker PostgreSQL
-# def monitor_memory(pid, interval, metrics, key_prefix, stop_event):
-#     while not stop_event.is_set():
-#         try:
-#             process = psutil.Process(pid)
-#             mem_info = process.memory_info()
-#             swap_memory = mem_info.vms - mem_info.rss  # Virtual memory minus resident memory (approx swap)
-#             total_memory = mem_info.rss  # Resident memory
-#             metrics[key_prefix]['time'].append(time.time())
-#             metrics[key_prefix]['swap_mem'].append(swap_memory / 1024)  # Convert to KB
-#             metrics[key_prefix]['total_mem'].append(total_memory / 1024)  # Convert to KB
-#         except Exception as e:
-#             print(f"Error monitoring process {pid}: {e}")
-#             break
-#         time.sleep(interval)
 
 import subprocess
 def get_process_swap_memory(pid):
@@ -98,6 +83,42 @@ class Query:
     id: int
     sql: str
     explain_json_plan: Dict[str, Any]
+    pred_peakmem: int
+    pred_duration: float
+
+
+class DequeQueue:
+    def __init__(self):
+        self.deque = deque()
+        self.lock = threading.Lock()
+    
+    def push_back(self, prioritized_query: PrioritizedQuery):
+        with self.lock:
+            self.deque.append(prioritized_query)
+
+    def push_front(self, prioritized_query: PrioritizedQuery):
+        with self.lock:
+            self.deque.appendleft(prioritized_query)
+    
+    def pop_front(self) -> Optional[PrioritizedQuery]:
+        with self.lock:
+            return self.deque.popleft() if self.deque else None
+    
+    def pop_back(self) -> Optional[PrioritizedQuery]:
+        with self.lock:
+            return self.deque.pop() if self.deque else None
+    
+    def is_empty(self) -> bool:
+        with self.lock:
+            return len(self.deque) == 0
+    
+    def peek_front(self) -> Optional[PrioritizedQuery]:
+        with self.lock:
+            return self.deque[0] if self.deque else None
+    
+    def peek_back(self) -> Optional[PrioritizedQuery]:
+        with self.lock:
+            return self.deque[-1] if self.deque else None
 
 # ----------------------------
 # Priority Queue Implementation
@@ -194,69 +215,6 @@ def parse_memory_setting(setting: str) -> int:
     multiplier = units.get(unit, 1)  # Default to kB if unit is unrecognized
     return int(number * multiplier)
 
-
-
-# ### ----------------------------
-# ### Function to Get PostgreSQL Process Memory Usage
-# ### ----------------------------
-# def get_postgres_memory_usage(shared_buffers_kb) -> int:
-#     """
-#     Returns the total memory usage of all PostgreSQL processes in KB by leveraging
-#     a system call with 'pgrep' and 'ps'.
-#     """
-#     try:
-#         # Use subprocess to execute the shell command
-#         result = subprocess.run(
-#             "pgrep postgres | xargs ps -o rss= -p | awk '{s+=$1} END {print s}'",
-#             shell=True,
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             text=True,
-#         )
-        
-#         # Check for any errors during the command execution
-#         if result.returncode != 0:  
-#             raise Exception(f"Error in fetching memory usage: {result.stderr.strip()}")
-        
-#         # Convert the result to an integer (result is in KB already)
-#         total_memory_kb = int(result.stdout.strip())  # Strip to remove any extra spaces or newlines
-#         return total_memory_kb
-    
-#     except Exception as e:
-#         # Handle any exception and return 0 in case of failure
-#         logging.error(f"Failed to get PostgreSQL memory usage: {e}")
-#         return 0
-
-# def get_postgres_memory_usage(shared_buffers_kb):
-#     process_specific_memory_kb = 0
-
-#     try:
-#         # Execute the shell command to get total RSS of PostgreSQL processes
-#         result = subprocess.run(
-#             "pgrep postgres | xargs ps -o rss= -p | awk '{s+=$1} END {print s}'",
-#             shell=True,
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             text=True,
-#         )
-
-#         if result.returncode != 0:
-#             raise Exception(f"Error in fetching memory usage: {result.stderr.strip()}")
-
-#         # Convert the result to an integer (result is in KB already)
-#         total_rss_kb = int(result.stdout.strip())
-
-#         # Subtract shared_buffers_kb to avoid double counting
-#         process_specific_memory_kb = max(total_rss_kb - shared_buffers_kb, 0)
-
-#         # Total memory is the shared_buffers plus the unique memory usage of each process
-#         total_memory_kb = shared_buffers_kb + process_specific_memory_kb
-#         return total_memory_kb
-
-#     except Exception as e:
-#         print(f"Error: {e}")
-#         return None
-
 def get_postgres_background_memory_usage():
     process_specific_memory_kb = 0
     try:
@@ -293,8 +251,6 @@ def get_postgres_memory_usage(shared_buffers_kb):
         print(f"Error: {e}")
         return None
     
-
-
 
 
 # ----------------------------
@@ -448,6 +404,7 @@ class NaiveStrategy:
         logging.info(f"Naive Strategy Total Execution Time: {total_exec_time:.2f} seconds.")
         return total_exec_time
 
+        
 # ----------------------------
 # Memory-Based Strategy Implementation
 # ----------------------------
@@ -498,13 +455,25 @@ class MemoryBasedStrategy:
         self.exp = exp
         self.exp_num = exp_num
         self.device = device
+        self.mode = 'large' # there are two modes: 'large' and 'small', 'large' at first
+        self.switch_time = float('inf')
         
         # Initialize the priority queue
         self.ready_queue = PriorityQueue()
         self.success_count = 0
         
         for query in queries:
-            peak_memory = self.predict_peak_memory(query.explain_json_plan)
+            paek_memory = self.predict_peak_memory(query.explain_json_plan)
+            query.pred_peakmem = paek_memory
+            # query.pred_duration = self.predict_duration(query.explain_json_plan)
+            query.pred_duration = query.explain_json_plan.get('time', 0)  # temporarily use execution time as duration instead of predicted duration
+
+        sorted_queries = sorted(queries, key=lambda q: q.pred_peakmem, reverse=True)
+
+        self.ready_queue = DequeQueue()
+
+        for query in sorted_queries:
+            peak_memory = query.pred_peakmem
             if peak_memory > self.total_memory_kb:
                 logging.warning(
                     f"Memory-Based Strategy: Query {query.id} requires more memory "
@@ -520,7 +489,6 @@ class MemoryBasedStrategy:
                 continue
             
             # Calculate initial priority (example: higher time + peakmem)
-            execution_time = query.explain_json_plan.get('time', 0)  # Default to 0 if not present
             peakmem = peak_memory
             # Define weights for time and memory; adjust as needed
             alpha = 1.0  # Weight for execution time
@@ -533,7 +501,7 @@ class MemoryBasedStrategy:
                 query=query,
                 enqueue_time=time.time()
             )
-            self.ready_queue.push(self.prioritized_query)
+            self.ready_queue.push_back(self.prioritized_query)
 
         # Condition variable to synchronize scheduler and executor
         self.condition = threading.Condition()
@@ -570,6 +538,7 @@ class MemoryBasedStrategy:
         Scheduler thread that continuously monitors the priority queue and submits queries
         to the executor when sufficient memory is available.
         """
+        
         while True:
             with self.condition:
                 while self.ready_queue.is_empty() and self.active_queries > 0:
@@ -582,15 +551,15 @@ class MemoryBasedStrategy:
                     break
 
                 current_time = time.time()
-                ready_queries = self.ready_queue.pop_ready_queries(current_time)
 
-            if ready_queries: 
-                for prioritized_query in ready_queries:
-                    # Submit the query to the executor
-                    
-                    rt = self.wait_for_available_memory(prioritized_query, self.total_memory_kb)
+                if self.mode == 'large':
+                    query_to_schedule = self.get_next_large_query(current_time)
+                else:
+                    query_to_schedule = self.get_next_small_query(current_time)
 
-                    if rt:
+                if query_to_schedule:
+                    prioritized_query = query_to_schedule
+                    if self.wait_for_available_memory(prioritized_query, self.total_memory_kb):
                         with self.condition:
                             self.active_queries += 1
                         future = self.executor.submit(
@@ -607,28 +576,90 @@ class MemoryBasedStrategy:
                             self.exp,
                             self.exp_num
                         )
-                        # Attach a callback to handle query completion
                         future.add_done_callback(self.query_complete_callback)
-                        # release_lock
                     else:
-                        prioritized_query.retry_count += 1
-                        prioritized_query.priority = prioritized_query.priority - 1
-                        self.ready_queue.push(prioritized_query)
-                        logging.debug(f"Scheduler: Query {prioritized_query.query.id} failed to get available memory. Re-enqueuing with higher priority...")
-            else: 
-                with self.condition:
-                    # No ready queries, determine the next wait time
+                        if self.mode == 'large':
+                            self.ready_queue.push_front(prioritized_query)
+                        else:
+                            self.ready_queue.push_back(prioritized_query)
+                else:
+                    # If no query can be scheduled, check when the next one is available
                     next_time = self.ready_queue.peek_next_available_time()
                     if next_time:
                         wait_time = max(next_time - current_time, 0)
                         self.condition.wait(timeout=wait_time)
                     else:
-                        # No queries left
                         if self.active_queries == 0:
                             self.finished = True
                             self.condition.notify_all()
                             break
+                
+            #     ready_queries = self.ready_queue.pop_ready_queries(current_time)
 
+            # if ready_queries: 
+            #     for prioritized_query in ready_queries:
+            #         # Submit the query to the executor
+                    
+            #         rt = self.wait_for_available_memory(prioritized_query, self.total_memory_kb)
+
+            #         if rt:
+            #             with self.condition:
+            #                 self.active_queries += 1
+            #             future = self.executor.submit(
+            #                 self.execute_query,
+            #                 self.executor,
+            #                 self.engine,
+            #                 self.ready_queue,
+            #                 prioritized_query,
+            #                 self.lock,
+            #                 'memory_based',
+            #                 self.max_retries,
+            #                 self.base_wait_time,
+            #                 self.total_memory_kb,
+            #                 self.exp,
+            #                 self.exp_num
+            #             )
+            #             # Attach a callback to handle query completion
+            #             future.add_done_callback(self.query_complete_callback)
+            #             # release_lock
+            #         else:
+            #             prioritized_query.retry_count += 1
+            #             prioritized_query.priority = prioritized_query.priority - 1
+            #             self.ready_queue.push(prioritized_query)
+            #             logging.debug(f"Scheduler: Query {prioritized_query.query.id} failed to get available memory. Re-enqueuing with higher priority...")
+            # else: 
+            #     with self.condition:
+            #         # No ready queries, determine the next wait time
+            #         next_time = self.ready_queue.peek_next_available_time()
+            #         if next_time:
+            #             wait_time = max(next_time - current_time, 0)
+            #             self.condition.wait(timeout=wait_time)
+            #         else:
+            #             # No queries left
+            #             if self.active_queries == 0:
+            #                 self.finished = True
+            #                 self.condition.notify_all()
+            #                 break
+
+    def get_next_large_query(self, current_time):
+        query = self.ready_queue.pop_front()
+        if query and self.check_whether_memory_is_available(query, self.total_memory_kb):
+            self.switch_time = max(self.switch_time, current_time + query.query.pred_duration)
+            return query
+        else:
+            mode = 'small'
+            return None
+
+    def get_next_small_query(self, current_time):
+        if current_time >= self.switch_time:
+            self.mode = 'large'
+            return self.get_next_large_query(current_time)
+        else:
+            query = self.ready_queue.pop_back()
+            if query and self.check_whether_memory_is_available(query, self.total_memory_kb):
+                return query
+        return None
+        
 
     def query_complete_callback(self, future: concurrent.futures.Future):
         """
@@ -698,7 +729,7 @@ class MemoryBasedStrategy:
             available_memory = total_memory_kb - current_memory_usage
             available_memory = max(available_memory, 0)
             logging.debug(f"Query {prioritized_query.query.id}: Total memory: {total_memory_kb}, Current memory usage: {current_memory_usage}KB, Available memory: {available_memory}KB, peak memory: {prioritized_query.query.explain_json_plan['pred_peakmem']}KB")
-            if prioritized_query.query.explain_json_plan['pred_peakmem'] <= available_memory:
+            if prioritized_query.query.pred_peakmem <= available_memory:
                 return 1
             else:
                 wait_count -= 1
@@ -712,6 +743,14 @@ class MemoryBasedStrategy:
                 time.sleep(wait_time)  # Wait for available memory to increase
 
         
+    def check_whether_memory_is_available(self, prioritized_query: PrioritizedQuery, total_memory_kb: float):
+        current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
+        available_memory = total_memory_kb - current_memory_usage
+        if prioritized_query.query.pred_peakmem <= available_memory:
+            return True
+        else:
+            return False
+
     # ----------------------------
     # Function to Execute a Single Query using SQLAlchemy
     # ----------------------------
@@ -834,7 +873,9 @@ def load_queries(plan_file: str, total_query_memory_limit_kb: int) -> List[Query
         Q = Query(
             id=idx + 1,
             sql=plan['sql'],
-            explain_json_plan=plan  # Directly assign the plan dict
+            explain_json_plan=plan,  # Directly assign the plan dict
+            pred_peakmem=plan.get('peakmem', 0),
+            pred_duration=plan.get('time', 0)
         )
         queries.append(Q)
     print(f"Total queries loaded: {len(queries)}")
@@ -914,6 +955,7 @@ def main():
     argparser.add_argument('--maintenance_work_mem_mb_in_peakmem', type=int, default=64, help='Maintenance_work_mem in peakmem in MB.')
     argparser.add_argument('--device', type=str, default='cpu', help='Device to use for model training and inference.')
     argparser.add_argument('--debug', action='store_true', help='Enable debug logging.')
+    argparser.add_argument('--disable_ffd', action='store_true', help='Disable FFD.')
     args = argparser.parse_args()
 
     # if args.debug:
@@ -1053,23 +1095,6 @@ def main():
     model = model.to(args.device)
     model.eval()
     logging.info(f"Model loaded")
-
-    # import docker
-    # client = docker.from_env()
-    # container_name = 'my_postgres'
-    # try:
-    #     container = client.containers.get(container_name)
-    #     container_id = container.id
-    #     logging.info(f"Connected to Docker container '{container_name}' with id {container_id}.")
-    # except docker.errors.NotFound:
-    #     logging.error(f"Docker container '{container_name}' not found.")
-    #     raise
-    # except Exception as e:
-    #     logging.error(f"Error connecting to Docker container '{container_name}': {e}")
-    #     raise
-    
-    # docker_postgres_pid = container.attrs['State']['Pid']
-    # logging.info(f"Docker container '{container_name}' has PID {docker_postgres_pid}.")
 
     interval = 0.2
     metrics = {
