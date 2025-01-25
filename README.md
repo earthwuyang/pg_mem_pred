@@ -173,3 +173,19 @@ Run naive strategy:
 python proxy_FCFS.py
 python client.py --num_queries 100
 ```
+
+## revision related
+### generate queries with more predicates and joins
+First, we modify `zsce/generate_zsce_queries.py` to generate queries with more predicates and joins.
+Then, `cd zsce/cross_db_benchmark/datasets && cp -r tpcds_sf1 tpcds_sf100` 
+Then, run `python zsce/generate_column_stats.py --dataset tpcds_sf100` to regenerate column statistics for tpcds_sf100
+Then, run `python zsce/generate_string_stats.py --dataset tpcds_sf100` to regenerate string statistics for tpcds_sf100
+Then, run `python zsce/generate_zsce_queries.py --dataset tpcds_sf100` to generate queries for tpcds_sf100 with more predicates and joins.
+
+
+
+### training and test on tpch_sf10
+`python execute_workload.py --dataset tpch_sf10` to execute workloads on tpch_sf10.
+First cp pg logs to pg_mem_data/pg_log/tpch_sf10, and chmod +r for these files
+Then, run  `python src/preprocessing/extract_mem_time_info.py --dataset tpch_sf10` to extract memory usage from logs.
+Then, run `python train.py --model GIN --train_dataset airline carcinogenesis employee hepatitis financial geneea tpch_sf1 tpcds_sf1 --val_dataset credit --test_dataset tpch_sf10` to train models across datasets and test on tpch_sf10.

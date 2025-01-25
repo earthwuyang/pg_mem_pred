@@ -11,7 +11,11 @@ if __name__ == '__main__':
     # dataset = 'tpcds_sf1'
     # dir = '/home/wuy/DB/tpcds-data-1'
     # generate_string_stats(dir, dataset)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, default='tpcds_sf1100')
+    args = parser.parse_args()
 
-    dataset = 'accidents'
+    dataset = args.dataset
     dir = f'/home/wuy/DB/pg_mem_data/datasets/{dataset}'
     generate_string_stats(dir, dataset)

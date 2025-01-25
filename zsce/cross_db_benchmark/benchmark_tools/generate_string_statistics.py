@@ -47,14 +47,26 @@ def generate_string_stats(data_dir, dataset, force=True, max_sample_vals=100000,
     for table, cols in vars(column_stats).items():
 
         string_stats[table] = dict()
-        table_dir = os.path.join(data_dir, f'{table}.csv')
-        assert os.path.exists(data_dir), f"Could not find table csv {table_dir}"
-        if verbose:
-            print(f"Generating string statistics for {table}")
         # Get the dtype mapping for the current table
         dtype_mapping = get_dtypes_for_table(table, column_type)
-        df_table = pd.read_csv(table_dir, nrows=max_sample_vals, **vars(schema.csv_kwargs), names=tables[table], dtype=dtype_mapping)
+        df_table_list = []
+        if verbose:
+            print(f"Generating string statistics for {table}")
+        all_files = os.listdir(data_dir)
+        table_files = [f for f in all_files if f.startswith(table) and f.endswith('.csv')]
+        for f in table_files:
+            table_dir = os.path.join(data_dir, f)
+            print(f"Processing file {f}")
+            try:
+                df_table = pd.read_csv(table_dir, nrows=max_sample_vals, **vars(schema.csv_kwargs), names=tables[table], dtype=dtype_mapping)
+                df_table_list.append(df_table)
+            except Exception as e:
+                print(f"Error reading file {f}: {e}")
+                continue
 
+        # Concatenate all dataframes for the current table
+        df_table = pd.concat(df_table_list, ignore_index=True)
+        
         # Function to check if a column has mixed types
         def has_mixed_types(series):
             # Check if the column has more than one unique dtype (excluding NaNs)

@@ -105,14 +105,28 @@ def generate_stats(data_dir, dataset, force=True):
 
     # read individual table csvs and derive statistics
     joint_column_stats = dict()
+    all_files = os.listdir(data_dir)
+    all_files = [f for f in all_files if f.endswith('.csv')]
     for t in schema.tables:
-        column_stats_table = dict()
-        table_dir = os.path.join(data_dir, f'{t}.csv')
-        assert os.path.exists(data_dir), f"Could not find table csv {table_dir}"
         print(f"Generating statistics for {t}")
+        column_stats_table = dict()
         # Get the dtype mapping for the current table
         dtype_mapping = get_dtypes_for_table(t, column_type)
-        df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t], dtype=dtype_mapping)
+        df_table_list = []
+        for f in all_files:
+            
+            if f.startswith(t):
+                print(f"Processing file {f}")
+                try:
+                    table_dir = os.path.join(data_dir, f)
+                    df_table = pd.read_csv(table_dir, **vars(schema.csv_kwargs), names=tables[t], dtype=dtype_mapping)
+                    df_table_list.append(df_table)
+                except Exception as e:
+                    print(f"Error processing file {f}: {e}")
+                    continue
+
+        # Concatenate all tables into one dataframe
+        df_table = pd.concat(df_table_list, ignore_index=True)
 
         # # Function to check if a column has mixed types
         # def has_mixed_types(series):

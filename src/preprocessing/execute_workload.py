@@ -5,7 +5,7 @@ from tqdm import tqdm
 import argparse
 import json
 
-def execute_workload(data_dir, save_dir, dataset, cap_queries, port):
+def execute_workload(data_dir, save_dir, dataset, cap_queries, workload_file_name, port):
     with open(os.path.join(os.path.dirname(__file__), '../../conn.json')) as f:
         conn_params = json.load(f)
     conn_params = {
@@ -16,7 +16,7 @@ def execute_workload(data_dir, save_dir, dataset, cap_queries, port):
         "port": port
     }
     
-    workload_file = os.path.join(data_dir, 'workloads', dataset, 'workload_100k_s1_group_order_by_complex.sql')
+    workload_file = os.path.join(data_dir, 'workloads', dataset, workload_file_name)
     query_dir = os.path.join(save_dir, dataset, 'raw_data','query_dir')
     verbose_plan_dir = os.path.join(save_dir, dataset, 'raw_data','verbose_plan_dir')
     analyzed_plan_dir = os.path.join(save_dir, dataset, 'raw_data','analyzed_plan_dir')
@@ -37,7 +37,7 @@ def execute_workload(data_dir, save_dir, dataset, cap_queries, port):
                     conn = psycopg2.connect(**conn_params)
                     cur = conn.cursor()
                     cur.execute("SET log_statement_stats = on")
-                    cur.execute("SET statement_timeout = 30000")
+                    cur.execute("SET statement_timeout = 300000")
                     analyze_query = f"/*{dataset} No.{queryid}*/ explain analyze " + query
                     cur.execute(analyze_query)
                     rows = cur.fetchall()
@@ -72,10 +72,13 @@ def main():
     argparser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data')    
 
     argparser.add_argument('--dataset', type=str, required=True)
+    argparser.add_argument('--workload_file_name', type=str, default='workload_100k_s1_group_order_by_more_complex.sql')
     argparser.add_argument('--cap_queries', type=int, default=50000)
+    argparser.add_argument('--port', type=int, default=5432)
 
     args = argparser.parse_args()
-    execute_workload(args.data_dir, args.dataset, args.cap_queries)
+    save_dir = args.data_dir
+    execute_workload(args.data_dir, save_dir, args.dataset, args.cap_queries, args.workload_file_name, args.port)
 
 if __name__ == '__main__':
     main()

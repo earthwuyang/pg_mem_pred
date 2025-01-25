@@ -10,6 +10,7 @@ from cross_db_benchmark.benchmark_tools.generate_workload import generate_worklo
 workload_defs = {
     'workload_100k_s1_group_order_by': dict(num_queries=100000,
                              max_no_predicates=5,
+                             max_no_joins=5,
                              max_no_aggregates=3,
                              max_no_group_by=3,
                              max_cols_per_agg=2,
@@ -18,6 +19,17 @@ workload_defs = {
                              seed=1),
     'workload_100k_s1_group_order_by_complex': dict(num_queries=100000,
                              max_no_predicates=5,
+                             max_no_joins=5,
+                             max_no_aggregates=3,
+                             max_no_group_by=3,
+                             max_cols_per_agg=2,
+                             groupby_limit_prob=0.2,
+                             groupby_having_prob=0.2,
+                             complex_predicates = True,
+                             seed=1),
+    'workload_100k_s1_group_order_by_more_complex': dict(num_queries=100000,
+                             max_no_predicates=20,
+                             max_no_joins=10,
                              max_no_aggregates=3,
                              max_no_group_by=3,
                              max_cols_per_agg=2,
@@ -28,8 +40,8 @@ workload_defs = {
 }
 
 def workload_gen(input):
-    source_dataset, workload_path, max_no_joins, workload_args, overwrite = input
-    generate_workload(source_dataset, workload_path, max_no_joins=max_no_joins, force=overwrite, **workload_args)
+    source_dataset, workload_path, workload_args, overwrite = input
+    generate_workload(source_dataset, workload_path, force=overwrite, **workload_args)
     return 0
 
 if __name__ == '__main__':
@@ -56,8 +68,8 @@ if __name__ == '__main__':
             start_t = time.perf_counter()
             workload_path = os.path.join(args.workload_dir, dataset, f'{workload_name}.sql')
             # not using multiprocessing, use main process to generate workloads
-            workload_gen((dataset, workload_path, 5, workload_args, args.overwrite))
-            print(f"Generated workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5, in {time.perf_counter() - start_t:.2f} secs")
+            workload_gen((dataset, workload_path, workload_args, args.overwrite))
+            print(f"Generated workload {workload_name} for {dataset} to {workload_path} with {workload_args}, in {time.perf_counter() - start_t:.2f} secs")
             # print(f"Generated workloads in {time.perf_counter() - start_t:.2f} secs")
             # workload_gen_setups.append((dataset, workload_path, 5, workload_args, args.overwrite))
             # print(f"Generating workload {workload_name} for {dataset} to {workload_path} with {workload_args}, max_no_joins=5")

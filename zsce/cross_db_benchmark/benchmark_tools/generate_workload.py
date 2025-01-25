@@ -531,6 +531,7 @@ class PredicateChain(Enum):
 def sample_complex_predicates(column_stats, string_stats, int_neq_predicate_threshold, no_predicates, possible_columns,
                               possible_string_columns, table_predicates, string_table_predicates, randstate,
                               p_or=0.05, p_or_or=0.05, p_or_and=0.05, p_second_column=0.5):
+    # print(f"##### Sampling {no_predicates} complex predicates ######")
     # weight the prob of being sampled by number of columns in table
     # make sure we do not just have conditions on one table with many columns
     weights = [1 / table_predicates[t] for t, col_name in possible_columns]
@@ -607,8 +608,10 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
         str_stats = vars(vars(string_stats)[t]).get(col_name)
 
     # LIKE / NOT LIKE should only be applied to CATEGORICAL or MISC columns
-    if complex_predicate:
-        if col_stats is not None and col_stats.datatype in {Datatype.CATEGORICAL, Datatype.MISC}:
+    if complex_predicate and str_stats is not None:
+        # if col_stats is not None and col_stats.datatype in {Datatype.INT, Datatype.FLOAT} and col_stats.nan_ratio == 0:
+        #     print(f"col_stats.datatype: {col_stats.datatype}, nan_ratio: {col_stats.nan_ratio}, randstate.uniform {randstate.uniform()}")
+        if col_stats is not None and col_stats.datatype in {str(Datatype.CATEGORICAL), str(Datatype.MISC)}:
             if randstate.uniform() < p_like:
                 freq_words = [w for w in str_stats.freq_str_words if len(w) > 1]
                 if len(freq_words) > 0:
@@ -630,8 +633,10 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
             op = Operator.IS_NOT_NULL if randstate.uniform() < 0.8 else Operator.IS_NULL
             return ColumnPredicate(t, col_name, op, None)
 
+        # print(f"reach here after NULL predicate")
+
         # IN operator for CATEGORICAL or MISC columns
-        if col_stats.datatype in {Datatype.CATEGORICAL, Datatype.MISC} and randstate.uniform() < p_in:
+        if col_stats.datatype in {str(Datatype.CATEGORICAL), str(Datatype.MISC)} and randstate.uniform() < p_in and hasattr(col_stats, 'unique_vals'):
             literals = col_stats.unique_vals
             literals = [v for v in literals if v is not None]  # Exclude None values
             if len(literals) > 1:
@@ -640,33 +645,39 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
                 literals_str = ', '.join([f"'{l}'" for l in selected_literals])
                 literals_str = f'({literals_str})'
                 return ColumnPredicate(t, col_name, Operator.IN, literals_str)
+        # print(f"reach here after IN predicate")
 
         # BETWEEN operator for INT or FLOAT columns
-        if col_stats.datatype in {Datatype.INT, Datatype.FLOAT} and randstate.uniform() < p_between:
-            l1 = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=col_stats.datatype == Datatype.INT)
-            l2 = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=col_stats.datatype == Datatype.INT)
+        if col_stats.datatype in {str(Datatype.INT), str(Datatype.FLOAT)} and randstate.uniform() < p_between:
+            l1 = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=col_stats.datatype == str(Datatype.INT))
+            l2 = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=col_stats.datatype == str(Datatype.INT))
             if l1 == l2:
                 l2 += 1
             literal = f'{min(l1, l2)} AND {max(l1, l2)}'
             return ColumnPredicate(t, col_name, Operator.BETWEEN, literal)
+        # print(f"reach here after BETWEEN predicate")
 
+    # print(f"reach here before SIMPLE predicate, col_stats is None: {col_stats is None}")
     # Simple predicates
     if col_stats is None:
         return None  # Cannot create a predicate without column stats
 
-    if col_stats.datatype == Datatype.INT:
+    if col_stats.datatype == str(Datatype.INT):
+        # print(f"INT reach here, col_stats.datatype: {col_stats.datatype}")
         reasonable_ops = [Operator.LEQ, Operator.GEQ]
         if col_stats.num_unique < int_neq_predicate_threshold:
             reasonable_ops += [Operator.EQ, Operator.NEQ]
         literal = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=True)
 
-    elif col_stats.datatype == Datatype.FLOAT:
+    elif col_stats.datatype == str(Datatype.FLOAT):
+        # print(f"FLOAT reach here, col_stats.datatype: {col_stats.datatype}")
         reasonable_ops = [Operator.LEQ, Operator.GEQ]
         literal = sample_literal_from_percentiles(col_stats.percentiles, randstate, round=False)
         if np.isnan(literal):
             return None  # Skip if literal is NaN
 
-    elif col_stats.datatype in {Datatype.CATEGORICAL, Datatype.MISC}:
+    elif col_stats.datatype in {str(Datatype.CATEGORICAL), str(Datatype.MISC)} and hasattr(col_stats, 'unique_vals'):
+        # print(f"CATEGORICAL or MISC reach here, col_stats.datatype: {col_stats.datatype}")
         reasonable_ops = [Operator.EQ, Operator.NEQ]
         possible_literals = [v for v in col_stats.unique_vals if v is not None]
         if len(possible_literals) == 0:
@@ -675,6 +686,7 @@ def sample_predicate(string_stats, column_stats, t, col_name, int_neq_predicate_
         literal = f"'{literal}'"
 
     else:
+        # print(f"else case: reach here, col_stats.datatype: {col_stats.datatype}")
         return None  # Unsupported datatype
 
     operator = rand_choice(randstate, reasonable_ops)
