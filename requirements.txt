@@ -9,3 +9,6 @@ xgboost==2.1.1
 dgl-cu110==0.6.1
 mysql-connector
 numba
+sqlalchemy
+psutil
+matplotlib

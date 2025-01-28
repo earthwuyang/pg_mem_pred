@@ -189,3 +189,11 @@ Then, run `python zsce/generate_zsce_queries.py --dataset tpcds_sf100` to genera
 First cp pg logs to pg_mem_data/pg_log/tpch_sf10, and chmod +r for these files
 Then, run  `python src/preprocessing/extract_mem_time_info.py --dataset tpch_sf10` to extract memory usage from logs.
 Then, run `python train.py --model GIN --train_dataset airline carcinogenesis employee hepatitis financial geneea tpch_sf1 tpcds_sf1 --val_dataset credit --test_dataset tpch_sf10` to train models across datasets and test on tpch_sf10.
+
+### restrict postgresql's memory usage by cgroup
+#### create a cgroup
+`sudo cgcreate -g memory:postgresql`
+#### set memory limit for the cgroup
+echo 2G | sudo tee /sys/fs/cgroup/memory/postgresql/memory.limit_in_bytes
+#### start postgresql within the cgroup
+sudo cgexec -g memory:postgresql systemctl start postgresql
