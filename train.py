@@ -46,7 +46,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--data_dir', type=str, default='/home/wuy/DB/pg_mem_data', help='dataset directory')
     parser.add_argument('--train_dataset', nargs='+', type=str, default=['tpch_sf1'], help='dataset name. train and validation will use the same dataset')
     parser.add_argument('--val_dataset', type=str, default=None, help='dataset name. validation will use the same dataset')
-    parser.add_argument('--test_dataset', type=str, default=None, help='dataset name. test will use the same dataset')
+    parser.add_argument('--test_dataset', nargs='+', type=str, default=None, help='dataset name. test will use the same dataset')
     parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
     parser.add_argument('--encode_table_column', action='store_true', default=False, help='encode table and column nodes')
     parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
@@ -91,9 +91,9 @@ if __name__ == "__main__":# Set random seed for reproducibility
     logger.info(f"Args: {args}")
 
     if args.skip_train:
-        dataset_list = [args.test_dataset]
+        dataset_list = args.test_dataset
     else:
-        dataset_list = args.train_dataset + [args.val_dataset, args.test_dataset]
+        dataset_list = args.train_dataset + [args.val_dataset] +  args.test_dataset
     for dataset in dataset_list:
         if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'total_plans.json')):
             get_explain_json_plans(args.data_dir, dataset)
