@@ -15,8 +15,8 @@
 !conn.json
 !zsce/**/*.json 
 !zsce/*.json
-!requirements.txt
 *.txt
+!requirements.txt
 *.log
 *.gz
 *.tar
