@@ -197,3 +197,59 @@ Then, run `python train.py --model GIN --train_dataset airline carcinogenesis em
 echo 2G | sudo tee /sys/fs/cgroup/memory/postgresql/memory.limit_in_bytes
 #### start postgresql within the cgroup
 sudo cgexec -g memory:postgresql systemctl start postgresql
+
+### grant read permission on /proc
+sudo sysctl -w kernel.yama.ptrace_scope=0
+echo "kernel.yama.ptrace_scope=0" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+sudo setcap cap_sys_ptrace+ep $(which python3)
+
+
+### set swap memmory
+sudo swapoff /www/swapfile
+sudo rm /www/swapfile
+sudo fallocate -l 1G /www/swapfile
+sudo chmod 600 /www/swapfile
+sudo mkswap /www/swapfile
+sudo swapon /www/swapfile
+echo "/www/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab
+
+#### grant `mlock` permission to python
+sudo setcap cap_ipc_lock+ep $(which python)
+
+#### grant read /proc permission to python
+sudo setcap cap_sys_ptrace+ep $(realpath $(which python))
+
+#### edit postgresql's systemd service
+sudo systemctl edit postgresql
+add these lines:
+```
+[Service]
+MemoryMax=2G
+MemorySwapMax=1G
+```
+sudo systemctl daemon-reexec
+sudo systemctl restart postgresql
+systemctl show postgresql | grep Memory
+
+alternative:
+`sudo systemctl set-property postgresql.service MemoryMax=2G MemorySwapMax=1G`
+
+unset using:
+sudo systemctl set-property postgresql.service MemoryMax=infinity MemorySwapMax=infinity
+
+
+#### another way to lock memory
+sudo mount -o remount,size=12G /dev/shm
+sudo mkdir -p /dev/shm/mem_holder  # Use shared memory for fast access
+sudo dd if=/dev/zero of=/dev/shm/mem_holder/ramfile bs=1M count=11264     # 11GB
+sudo prlimit --memlock=unlimited -- sudo python3 lock_shm.py
+
+##### clean up
+sudo munlock /dev/shm/mem_holder/ramfile
+rm -f /dev/shm/mem_holder/ramfile
+sudo sync
+echo 3 | sudo tee /proc/sys/vm/drop_caches
+
+

@@ -22,8 +22,33 @@ import matplotlib.pyplot as plt
 from GIN import GIN
 from parse_plan import parse_plan
 
+def get_postgres_memory_limit_kb():
+    try:
+        # Run systemctl command to get MemoryMax for PostgreSQL
+        result = subprocess.run(
+            ["systemctl", "show", "postgresql", "--property=MemoryMax"],
+            capture_output=True, text=True, check=True
+        )
 
-import subprocess
+        # Parse the output
+        output = result.stdout.strip()
+        if "=" in output:
+            _, value = output.split("=")
+            value = value.strip()
+
+            # Convert bytes to KB
+            if value.isdigit():  # If the value is a number (in bytes)
+                memory_kb = int(value) // 1024  # Convert to KB
+                return memory_kb
+            elif value == "infinity":  # No limit set
+                return -1  # Use -1 to indicate "infinity"
+
+        return None  # MemoryMax not found
+    
+    except subprocess.CalledProcessError as e:
+        return None
+    
+    
 def get_process_swap_memory(pid):
     """
     Get swap memory usage for a given process using /proc/<pid>/smaps.
@@ -129,6 +154,10 @@ class DequeQueue:
                 elif mode =='small':
                     return self.deque[-1].next_available_time
             return None
+        
+    def size(self) -> int:
+        with self.lock:
+            return len(self.deque)
 
 # ----------------------------
 # Priority Queue Implementation
@@ -252,9 +281,11 @@ def get_postgres_memory_usage(shared_buffers_kb):
                 # Subtract shared_buffers_kb from each process to avoid double counting
                 rss_kb = proc.info['memory_info'].rss // 1024
                 process_specific_memory_kb += max(rss_kb - shared_buffers_kb, 0)
+                # process_specific_memory_kb += rss_kb
 
         # Total memory is the shared_buffers plus the unique memory usage of each process
         total_memory_kb = shared_buffers_kb + process_specific_memory_kb
+        # total_memory_kb = process_specific_memory_kb
         return total_memory_kb
 
     except Exception as e:
@@ -466,7 +497,6 @@ class BFStrategy:
         self.exp_num = exp_num
         self.device = device
         self.mode = 'large' # there are two modes: 'large' and 'small', 'large' at first
-        self.switch_time = float('inf')
         
         # Initialize the priority queue
         self.ready_queue = PriorityQueue()
@@ -485,7 +515,7 @@ class BFStrategy:
         for query in sorted_queries:
             peak_memory = query.pred_peakmem
             if peak_memory > self.total_memory_kb:
-                logging.warning(
+                logging.info(
                     f"Memory-Based Strategy: Query {query.id} requires more memory "
                     f"({peak_memory} KB) than available ({self.total_memory_kb} KB). Skipping."
                 )
@@ -559,7 +589,7 @@ class BFStrategy:
                     self.condition.notify_all()
                     logging.debug(f"Scheduler: All queries completed. Notified all.")
                     break
-
+                logging.debug(f"Scheduler: Active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}, self.mode: {self.mode}.")
                 current_time = time.time()
 
                 if self.mode == 'large':
@@ -611,20 +641,22 @@ class BFStrategy:
     def get_next_large_query(self, current_time):
         query = self.ready_queue.pop_front()
         if query and self.check_whether_memory_is_available(query, self.total_memory_kb):
-            self.switch_time = max(self.switch_time, current_time + query.query.pred_duration)
             return query
         else:
-            mode = 'small'
+            if query:
+                self.ready_queue.push_front(query)
+            logging.debug(f"#########################  BF Strategy: No large query available. Switching to small mode. ##########################")
+            self.mode = 'small'
             return None
 
     def get_next_small_query(self, current_time):
-        if current_time >= self.switch_time:
-            self.mode = 'large'
-            return self.get_next_large_query(current_time)
-        else:
-            query = self.ready_queue.pop_back()
-            if query and self.check_whether_memory_is_available(query, self.total_memory_kb):
+
+        query = self.ready_queue.pop_back()
+        if query:
+            if self.check_whether_memory_is_available(query, self.total_memory_kb):
                 return query
+            else:
+                self.ready_queue.push_back(query)
         return None
         
 
@@ -646,7 +678,8 @@ class BFStrategy:
                     wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
                     prioritized_query.next_available_time = time.time() + wait_time
                     # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority and sleep {wait_time} seconds...")
-                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority...success count: {self.success_count}.")
+                    # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority...success count: {self.success_count}.")
+                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing...success count: {self.success_count}.")
                     # time.sleep(wait_time)
                     if self.mode == 'large':
                         self.ready_queue.push_front(prioritized_query)
@@ -717,9 +750,11 @@ class BFStrategy:
     def check_whether_memory_is_available(self, prioritized_query: PrioritizedQuery, total_memory_kb: float):
         current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
         available_memory = total_memory_kb - current_memory_usage
+
         if prioritized_query.query.pred_peakmem <= available_memory:
             return True
         else:
+            logging.debug(f"BF Strategy: small query {prioritized_query.query.id} cannot execute. total_memory_kb: {total_memory_kb} KB, current_memory_usage: {current_memory_usage} KB, available_memory: {available_memory} KB, pred_peakmem: {prioritized_query.query.explain_json_plan['pred_peakmem']}KB.")
             return False
 
     # ----------------------------
@@ -1281,7 +1316,7 @@ def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--no_naive', action='store_true', help='Do not execute Naive Strategy.')
     argparser.add_argument('--num_queries', type=int, default=100, help='Number of queries to execute.')
-    argparser.add_argument('--dataset', type=str, default='tpcds_sf100', help='Dataset to use.')
+    argparser.add_argument('--dataset', type=str, default='tpcds_sf1', help='Dataset to use.')
     argparser.add_argument('--exp_num', type=int, default=1, help='Number of experimental runs for each strategy.')
     argparser.add_argument('--shared_buffers_mb_in_peakmem', type=int, default=128, help='Shared_buffers in peakmem in MB.')
     argparser.add_argument('--maintenance_work_mem_mb_in_peakmem', type=int, default=64, help='Maintenance_work_mem in peakmem in MB.')
@@ -1362,9 +1397,11 @@ def main():
     # ----------------------------
     # Total system memory in KB
     available_memory_kb = psutil.virtual_memory().available // 1024
+    # available_memory_kb = int(get_postgres_memory_limit_kb())
 
-    # postgres_background_memory_kb = get_postgres_background_memory_usage()
-    # available_memory_kb += postgres_background_memory_kb
+    postgres_background_memory_kb = get_postgres_background_memory_usage()
+    logging.info(f"PostgreSQL background memory usage: {postgres_background_memory_kb} KB, total available memory: {available_memory_kb} KB")
+    available_memory_kb += postgres_background_memory_kb
     # available_memory_kb = 56 * 1024**2
 
     # # ----------------------------
@@ -1423,7 +1460,7 @@ def main():
 
     model = GIN(hidden_channels=32, out_channels=1, num_layers=6, num_node_features=23, dropout=0.5)
     logging.info(f"Loading checkpoint")
-    model.load_state_dict(torch.load('GIN_airline_carcinogenesis_hepatitis_financial_geneea_tpch_sf1_tpcds_sf1_mem__best.pth'))
+    model.load_state_dict(torch.load('GIN_airline_carcinogenesis_hepatitis_financial_geneea_tpch_sf1_tpcds_sf1_mem__best.pth', map_location=args.device))
     model = model.to(args.device)
     model.eval()
     logging.info(f"Model loaded")
@@ -1445,53 +1482,47 @@ def main():
     bf_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'bf', bf_stop_event))
     ffd_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'ffd', ffd_stop_event))
 
-    # ----------------------------
-    # Execute Bidirectional Fit Strategy Multiple Times
-    # ----------------------------
-    bf_total_time_list = []
-    bf_waiting_sum_list = []
-    for i in range(args.exp_num):
-        logging.info(f"\nExecuting Bidirectional Fit Strategy - Run {i+1}/{args.exp_num}:")
-        # Initialize a new MemoryBasedStrategy instance for each run
-        bf_strategy = BFStrategy(
-            model,
-            statistics,
-            engine=engine,
-            queries=queries,
-            total_memory_kb=total_query_memory_limit_kb,
-            work_mem_kb=work_mem_kb,
-            shared_buffers_kb=shared_buffers_kb,
-            executor=executor,
-            max_retries=max_retries,  # Enable retries similar to Naive Strategy
-            base_wait_time=1.1,  # Set as needed
-            exp = i,
-            exp_num = args.exp_num,
-            device = args.device
-        )
-        try:
-            bf_based_thread.start()
-            memory_based_total_time = bf_strategy.execute()
-            bf_stop_event.set()
-            bf_based_thread.join()
-        except Exception as e:
-            logging.error(f"BF Strategy failed: {e}")
-            memory_based_total_time = float('inf')
-        bf_total_time_list.append(memory_based_total_time)
-
-        # Log memory spill after strategy execution
-        log_memory_spill(engine, 'BF')
-
-        # Calculate sum of waiting times
-        memory_based_waiting_sum = sum(
-            info['total_time'] for info in bf_strategy.results.values() if 'total_time' in info
-        )
-        bf_waiting_sum_list.append(memory_based_waiting_sum)
-
     
+
+    # ----------------------------
+    # Execute Naive Strategy Multiple Times
+    # ----------------------------
+    if not args.no_naive:
+        
+        naive_total_time_list = []
+        naive_waiting_sum_list = []
+        for i in range(args.exp_num):
+            logging.info(f"\nExecuting Naive Strategy - Run {i+1}/{args.exp_num}:")
+            # Initialize a new NaiveStrategy instance for each run
+            naive_strategy = NaiveStrategy(
+                engine=engine,
+                queries=queries,
+                executor=executor,
+                max_retries=max_retries,  # Set as needed
+                base_wait_time=1.1,
+                exp = i,
+                exp_num = args.exp_num
+            )
+            naive_thread.start()
+            naive_total_time = naive_strategy.execute()
+            naive_stop_event.set()
+            naive_thread.join()
+
+            naive_total_time_list.append(naive_total_time)
+
+            # Log memory spill after strategy execution
+            log_memory_spill(engine, 'naive')
+
+            # Calculate sum of waiting times
+            naive_waiting_sum = sum(
+                info['total_time'] for info in naive_strategy.results.values() if 'total_time' in info
+            )
+            naive_waiting_sum_list.append(naive_waiting_sum)
+
     # ----------------------------
     # Execute First Fit Decreasing Strategy Multiple Times
     # ----------------------------
-    wait_time = 5
+    wait_time = 30
     logging.info(f"Waiting for {wait_time} seconds before starting FFD strategy.")
     time.sleep(wait_time)
     ffd_total_time_list = []
@@ -1535,41 +1566,53 @@ def main():
 
     
     # ----------------------------
-    # Execute Naive Strategy Multiple Times
+    # Execute Bidirectional Fit Strategy Multiple Times
     # ----------------------------
-    if not args.no_naive:
-        wait_time = 5
-        logging.info(f"Waiting for {wait_time} seconds before starting naive strategy.")
-        time.sleep(wait_time)
-        naive_total_time_list = []
-        naive_waiting_sum_list = []
-        for i in range(args.exp_num):
-            logging.info(f"\nExecuting Naive Strategy - Run {i+1}/{args.exp_num}:")
-            # Initialize a new NaiveStrategy instance for each run
-            naive_strategy = NaiveStrategy(
-                engine=engine,
-                queries=queries,
-                executor=executor,
-                max_retries=max_retries,  # Set as needed
-                base_wait_time=1.1,
-                exp = i,
-                exp_num = args.exp_num
-            )
-            naive_thread.start()
-            naive_total_time = naive_strategy.execute()
-            naive_stop_event.set()
-            naive_thread.join()
+    wait_time = 30
+    logging.info(f"Waiting for {wait_time} seconds before starting BF strategy.")
+    time.sleep(wait_time)
 
-            naive_total_time_list.append(naive_total_time)
+    bf_total_time_list = []
+    bf_waiting_sum_list = []
+    for i in range(args.exp_num):
+        logging.info(f"\nExecuting Bidirectional Fit Strategy - Run {i+1}/{args.exp_num}:")
+        # Initialize a new MemoryBasedStrategy instance for each run
+        bf_strategy = BFStrategy(
+            model,
+            statistics,
+            engine=engine,
+            queries=queries,
+            total_memory_kb=total_query_memory_limit_kb,
+            work_mem_kb=work_mem_kb,
+            shared_buffers_kb=shared_buffers_kb,
+            executor=executor,
+            max_retries=max_retries,  # Enable retries similar to Naive Strategy
+            base_wait_time=1.1,  # Set as needed
+            exp = i,
+            exp_num = args.exp_num,
+            device = args.device
+        )
+        try:
+            bf_based_thread.start()
+            memory_based_total_time = bf_strategy.execute()
+            bf_stop_event.set()
+            bf_based_thread.join()
+        except Exception as e:
+            logging.error(f"BF Strategy failed: {e}")
+            memory_based_total_time = float('inf')
+        bf_total_time_list.append(memory_based_total_time)
 
-            # Log memory spill after strategy execution
-            log_memory_spill(engine, 'naive')
+        # Log memory spill after strategy execution
+        log_memory_spill(engine, 'BF')
 
-            # Calculate sum of waiting times
-            naive_waiting_sum = sum(
-                info['total_time'] for info in naive_strategy.results.values() if 'total_time' in info
-            )
-            naive_waiting_sum_list.append(naive_waiting_sum)
+        # Calculate sum of waiting times
+        memory_based_waiting_sum = sum(
+            info['total_time'] for info in bf_strategy.results.values() if 'total_time' in info
+        )
+        bf_waiting_sum_list.append(memory_based_waiting_sum)
+
+
+    
     
     result_path = f'./results/{args.num_queries}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
     if not os.path.exists(result_path):

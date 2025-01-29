@@ -7,20 +7,27 @@ def plot_memory_metrics(metrics, result_dir, num_queries):
     # Convert time to relative
     start_time = min(
         metrics['naive']['time'][0] if metrics['naive']['time'] else float('inf'),
-        metrics['memory_based']['time'][0] if metrics['memory_based']['time'] else float('inf')
+        metrics['ffd']['time'][0] if metrics['ffd']['time'] else float('inf'),
+        metrics['bf']['time'][0] if metrics['bf']['time'] else float('inf')
     )
     naive_time = [t - start_time for t in metrics['naive']['time']]
-    memory_based_time = [t - start_time for t in metrics['memory_based']['time']]
+    ffd_time = [t - start_time for t in metrics['ffd']['time']]
+    bf_time = [t - start_time for t in metrics['bf']['time']]
     
     # Plot naive
     if naive_time:
         plt.plot(naive_time, metrics['naive']['swap_mem'], label="Default Swap Memory (KB)", linestyle='--')
         plt.plot(naive_time, metrics['naive']['total_mem'], label="Default Total Memory (KB)")
 
-    # Plot memory-based
-    if memory_based_time:
-        plt.plot(memory_based_time, metrics['memory_based']['swap_mem'], label="FFD Swap Memory (KB)", linestyle='--')
-        plt.plot(memory_based_time, metrics['memory_based']['total_mem'], label="FFD Total Memory (KB)")
+    # Plot ffd
+    if ffd_time:
+        plt.plot(ffd_time, metrics['ffd']['swap_mem'], label="FFD Swap Memory (KB)", linestyle='--')
+        plt.plot(ffd_time, metrics['ffd']['total_mem'], label="FFD Total Memory (KB)")
+
+    # Plot bf
+    if bf_time:
+        plt.plot(bf_time, metrics['bf']['swap_mem'], label="BF Swap Memory (KB)", linestyle='--')
+        plt.plot(bf_time, metrics['bf']['total_mem'], label="BF Total Memory (KB)")
     
     plt.xlabel("Time (seconds)", fontsize=16)
     plt.ylabel("Memory (KB)", fontsize=16)
