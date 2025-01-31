@@ -47,7 +47,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
     parser.add_argument('--train_dataset', nargs='+', type=str, default=['tpch_sf1'], help='dataset name. train and validation will use the same dataset')
     parser.add_argument('--val_dataset', type=str, default=None, help='dataset name. validation will use the same dataset')
     parser.add_argument('--test_dataset', nargs='+', type=str, default=None, help='dataset name. test will use the same dataset')
-    parser.add_argument('--model', type=str, default='HeteroGraphConv', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
+    parser.add_argument('--model', type=str, default='GIN', help='model name') # XGBoost, GIN, HeteroGraphConv, HeteroGraphRGCN
     parser.add_argument('--encode_table_column', action='store_true', default=False, help='encode table and column nodes')
     parser.add_argument('--skip_train', action='store_true', default=False, help='skip training')
     parser.add_argument('--epochs', type=int, default=10000, help='number of epochs')
@@ -71,7 +71,7 @@ if __name__ == "__main__":# Set random seed for reproducibility
 
     if args.test_dataset is None:
         assert len(args.train_dataset) == 1, "if test dataset not specified, --dataset must only have one item"
-        args.test_dataset = args.train_dataset[0]
+        args.test_dataset = [args.train_dataset[0]]
         args.val_dataset = args.train_dataset[0]
     # args.train_dataset = args.dataset
 

@@ -22,6 +22,8 @@ import matplotlib.pyplot as plt
 from GIN import GIN
 from parse_plan import parse_plan
 
+
+
 def get_postgres_memory_limit_kb():
     try:
         # Run systemctl command to get MemoryMax for PostgreSQL
@@ -333,7 +335,13 @@ def get_postgres_memory_usage(shared_buffers_kb):
 #         return 0
 
     
-
+def get_postgres_available_memory(total_memory_kb, shared_buffers_kb, work_mem_kb):
+    current_memory_usage = get_postgres_memory_usage(shared_buffers_kb)
+    total_memory_kb = psutil.virtual_memory().available // 1024  - 1 * 1024**2 # reserve GB for system
+    available_memory = total_memory_kb
+    # available_memory = total_memory_kb - current_memory_usage
+    available_memory = max(available_memory, 0)
+    return total_memory_kb, current_memory_usage, available_memory
 
 # ----------------------------
 # Naive Strategy Implementation
@@ -488,7 +496,7 @@ class NaiveStrategy:
 
         
 # ----------------------------
-# Memory-Based Strategy Implementation
+# BF Strategy Implementation
 # ----------------------------
 class BFStrategy:
     def __init__(
@@ -753,10 +761,10 @@ class BFStrategy:
                 self.active_queries -= 1
                 # actual_active_queries = self.get_actual_active_queries()
                 # logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. Actual active queries: {actual_active_queries}.")
-                if success:
-                    logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
-                else:
-                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
+                # if success:
+                #     logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
+                # else:
+                #     logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
                 
                 if self.active_queries ==0 and self.ready_queue.is_empty():
                     self.finished=True
@@ -775,9 +783,10 @@ class BFStrategy:
         wait_count = 5
         while True:
             # logging.info(f"Query {prioritized_query.query.id}: getting postgres memory usage")
-            current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
-            available_memory = total_memory_kb - current_memory_usage
-            available_memory = max(available_memory, 0)
+            # current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
+            # available_memory = total_memory_kb - current_memory_usage
+            # available_memory = max(available_memory, 0)
+            total_memory_kb, current_memory_usage, available_memory = get_postgres_available_memory(total_memory_kb, self.shared_buffers_kb, self.work_mem_kb)
             logging.debug(f"Query {prioritized_query.query.id}: Total memory: {total_memory_kb}, Current memory usage: {current_memory_usage}KB, Available memory: {available_memory}KB, peak memory: {prioritized_query.query.explain_json_plan['pred_peakmem']}KB")
             if prioritized_query.query.pred_peakmem <= available_memory:
                 return 1
@@ -794,8 +803,419 @@ class BFStrategy:
 
         
     def check_whether_memory_is_available(self, prioritized_query: PrioritizedQuery, total_memory_kb: float):
-        current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
-        available_memory = total_memory_kb - current_memory_usage
+        # current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
+        # available_memory = total_memory_kb - current_memory_usage
+        total_memory_kb, current_memory_usage, available_memory = get_postgres_available_memory(total_memory_kb, self.shared_buffers_kb, self.work_mem_kb)
+        logging.debug(f"In check, total memory usage: {total_memory_kb}, current memory usage: {current_memory_usage}, available memory: {available_memory}, peak memory: {prioritized_query.query.explain_json_plan['pred_peakmem']}")
+
+        if prioritized_query.query.pred_peakmem <= available_memory:
+            return True
+        else:
+            return False
+
+    # ----------------------------
+    # Function to Execute a Single Query using SQLAlchemy
+    # ----------------------------
+    def execute_query(
+        self,
+        executor: concurrent.futures.ThreadPoolExecutor,
+        engine: Engine,
+        memory_based_priority_queue: PriorityQueue,
+        prioritized_query: PrioritizedQuery,
+        lock: threading.Lock,
+        strategy: str,
+        max_retries: int = 10,
+        base_wait_time: float = 2.0,
+        total_memory_kb: float = 0,
+        exp: int = 0,
+        exp_num: int = 0
+    ):
+        """
+        Executes a single query and records execution and waiting times.
+        Adjusts priority based on retry attempts.
+
+        :return: Tuple containing (query_id, success, error_message)
+        """
+        query = prioritized_query.query
+        query_id = query.id
+
+        # Record the start time of execution
+        start_exec_time = time.time()
+        prioritized_query.start_time = start_exec_time  # Set start_time to avoid None
+
+        try:
+            with engine.connect() as conn:
+                # wait_for_available_memory(prioritized_query, total_memory_kb)
+                logging.debug(f"{strategy}: Executing Query {query_id} whose retry is {prioritized_query.retry_count}...")
+                # Execute the query
+                result = conn.execute(text(query.sql))
+                result.fetchall()
+            
+            end_exec_time = time.time()
+            exec_time = end_exec_time - start_exec_time
+            total_time = end_exec_time - prioritized_query.enqueue_time
+
+            # Update result_dict with execution time and waiting time
+            with self.lock:
+                self.results[query_id] = {
+                    'execution_time': exec_time,
+                    'total_time': total_time,
+                    'success': True,
+                    'retry_count': prioritized_query.retry_count
+                }
+                self.success_count += 1
+            logging.info(f"{strategy}({exp+1}/{exp_num}): Query {query_id} executed in {exec_time:.2f} seconds. Total time: {total_time:.2f} seconds. its retry is {prioritized_query.retry_count}. success_count: {self.success_count}")
+            
+            return (prioritized_query, True, None)  # Success
+
+        except Exception as e:
+            error_message = str(e)
+            
+            prioritized_query.retry_count += 1
+            prioritized_query.priority = prioritized_query.priority - 1
+
+            return (prioritized_query, False, error_message)
+
+    # ----------------------------
+    # Function to Predict Peak Memory
+    # ----------------------------
+    def predict_peak_memory(self, explain_json_plan: Dict[str, Any]) -> int:
+        """
+        Predicts the peak memory usage of a query based on its explain plan.
+        Replace this mock function with actual logic based on your explain plans.
+
+        :param explain_json_plan: Dictionary containing the explain plan of the query.
+        :return: Estimated peak memory usage in KB.
+        """
+        # return explain_json_plan.get('peakmem', 0)
+        # Example: Extract 'peakmem' from the explain plan if available
+        nodes = []
+        edges = []
+        parse_plan(explain_json_plan, self.statistics, nodes=nodes, edges=edges)
+
+        # Convert lists to tensors
+        x = torch.tensor(nodes, dtype=torch.float)
+        if len(edges) == 0:
+            edge_index = torch.zeros((2, 0), dtype=torch.long)
+        else:
+            edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+        data = Data(x=x, edge_index=edge_index)
+        # move data to device
+        data = data.to(self.device)
+        pred_mem, _ = self.model(data)
+        # logging.debug(f"pred_mem: {pred_mem.item()}, self.mem_scale: {self.mem_scale}, self.mem_center: {self.mem_center}")
+        pred_mem = pred_mem.item() * self.mem_scale + self.mem_center
+        explain_json_plan['pred_peakmem'] = pred_mem
+        return pred_mem
+
+
+
+class FFDStrategy:
+    def __init__(
+        self,
+        model,
+        statistics,
+        engine: Engine,
+        queries: List[Query],
+        total_memory_kb: int,
+        work_mem_kb: int,
+        shared_buffers_kb: int,
+        executor: concurrent.futures.ThreadPoolExecutor,
+        max_retries: int = 5,
+        base_wait_time: float = 2.0,
+        exp: int = 0,
+        exp_num: int = 0,
+        device: str = 'cpu'
+    ):
+        """
+        :param engine: The SQLAlchemy Engine instance.
+        :param queries: List of Query objects.
+        :param total_memory_kb: Total memory allocated to PostgreSQL for query operations in KB.
+        :param work_mem_kb: work_mem setting in KB.
+        :param executor: ThreadPoolExecutor to manage concurrency.
+        :param max_retries: Maximum number of retries for each query.
+        :param base_wait_time: Base wait time for retries in seconds.
+        """
+        # Assign initial priority based on execution time and peak memory
+        # Higher execution time and higher peak memory get higher priority
+        # For heapq, lower priority value means higher priority, so invert the priority
+        self.model = model
+        self.statistics = statistics
+        self.mem_scale = statistics['peakmem']['scale']
+        self.mem_center = statistics['peakmem']['center']
+        self.engine = engine
+        self.total_memory_kb = total_memory_kb
+        self.work_mem_kb = work_mem_kb
+        self.shared_buffers_kb = shared_buffers_kb
+        self.results = {}
+        self.lock = threading.Lock()
+        self.executor = executor
+        self.max_retries = max_retries
+        self.base_wait_time = base_wait_time
+        self.available_memory = total_memory_kb
+        self.queries = queries
+        self.exp = exp
+        self.exp_num = exp_num
+        self.device = device
+        self.mode = 'large' # there are two modes: 'large' and 'small', 'large' at first
+        
+        # Initialize the priority queue
+        self.ready_queue = PriorityQueue()
+        self.success_count = 0
+        
+        for query in queries:
+            paek_memory = self.predict_peak_memory(query.explain_json_plan)
+            query.pred_peakmem = paek_memory
+            # query.pred_duration = self.predict_duration(query.explain_json_plan)
+            query.pred_duration = query.explain_json_plan.get('time', 0)  # temporarily use execution time as duration instead of predicted duration
+
+        sorted_queries = sorted(queries, key=lambda q: q.pred_peakmem, reverse=True)
+
+        self.ready_queue = DequeQueue()
+
+        for query in sorted_queries:
+            peak_memory = query.pred_peakmem
+            if peak_memory > self.total_memory_kb:
+                logging.info(
+                    f"Memory-Based Strategy: Query {query.id} requires more memory "
+                    f"({peak_memory} KB) than available ({self.total_memory_kb} KB). Skipping."
+                )
+                self.results[query.id] = {
+                    'execution_time': float('inf'),
+                    'total_time': float('inf'),
+                    'success': False,
+                    'error_message': 'Exceeds memory limit.',
+                    'retry_count': 0
+                }
+                continue
+            
+            # Calculate initial priority (example: higher time + peakmem)
+            peakmem = peak_memory
+            # Define weights for time and memory; adjust as needed
+            alpha = 1.0  # Weight for execution time
+            beta = 0.5   # Weight for peak memory
+            # priority_value = -alpha * execution_time * 1e2   # + beta * peakmem 
+            priority_value =  - beta * peakmem
+            # For heapq, lower priority value has higher priority 
+            self.prioritized_query = PrioritizedQuery(
+                priority=priority_value,
+                query=query,
+                enqueue_time=time.time()
+            )
+            self.ready_queue.push_back(self.prioritized_query)
+
+        # Condition variable to synchronize scheduler and executor
+        self.condition = threading.Condition()
+        self.active_queries = 0
+        self.finished = False
+
+    def execute(self) -> float:
+        """
+        Executes queries based on available memory and prioritizes longer, more memory-intensive queries.
+        Relies on execute_query to handle retries.
+
+        :return: Total execution time in seconds.
+        """
+        start_time = time.time()
+        
+        # Start the scheduler thread
+        scheduler = threading.Thread(target=self.scheduler_thread, daemon=True)
+        scheduler.start()
+
+        # Wait for the scheduler to finish processing all queries
+        with self.condition:
+            while not self.finished:
+                self.condition.wait()
+
+        scheduler.join()
+
+        end_time = time.time()
+        total_exec_time = end_time - start_time
+        logging.info(f"FFD Strategy Total Execution Time: {total_exec_time:.2f} seconds.")
+        return total_exec_time
+    
+    def scheduler_thread(self):
+        """
+        Scheduler thread that continuously monitors the priority queue and submits queries
+        to the executor when sufficient memory is available.
+        """
+        
+        while True:
+            with self.condition:
+                while self.ready_queue.is_empty() and self.active_queries > 0:
+                    self.condition.wait()
+
+                if self.ready_queue.is_empty() and self.active_queries == 0:
+                    self.finished = True
+                    self.condition.notify_all()
+                    logging.debug(f"Scheduler: All queries completed. Notified all.")
+                    break
+                if self.active_queries == 0:
+                    with self.lock:
+                        self.mode = 'large'
+                logging.debug(f"Scheduler: Active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}, self.mode: {self.mode}.")
+                current_time = time.time()
+
+                if self.mode == 'large':
+                    query_to_schedule = self.get_next_large_query(current_time)
+                    if query_to_schedule:
+                        query_to_schedule.type = 'large'
+                else:
+                    query_to_schedule = self.get_next_small_query(current_time)
+                    if query_to_schedule:
+                        query_to_schedule.type = 'small'
+
+                if query_to_schedule:
+                    prioritized_query = query_to_schedule
+                    if self.wait_for_available_memory(prioritized_query, self.total_memory_kb):
+                        with self.condition:
+                            self.active_queries += 1
+                        future = self.executor.submit(
+                            self.execute_query,
+                            self.executor,
+                            self.engine,
+                            self.ready_queue,
+                            prioritized_query,
+                            self.lock,
+                            'FFD',
+                            self.max_retries,
+                            self.base_wait_time,
+                            self.total_memory_kb,
+                            self.exp,
+                            self.exp_num
+                        )
+                        future.add_done_callback(self.query_complete_callback)
+                    else:
+                        if self.mode == 'large':
+                            self.ready_queue.push_front(prioritized_query)
+                        else:
+                            self.ready_queue.push_back(prioritized_query)
+                else:
+                    # If no query can be scheduled, check when the next one is available
+                    next_time = self.ready_queue.peek_next_available_time(self.mode)
+                    if next_time:
+                        wait_time = max(next_time - current_time, 0)
+                        self.condition.wait(timeout=wait_time)
+                    else:
+                        if self.active_queries == 0:
+                            self.finished = True
+                            self.condition.notify_all()
+                            break
+
+    def get_next_large_query(self, current_time):
+        query = self.ready_queue.pop_front()
+        if query and self.check_whether_memory_is_available(query, self.total_memory_kb):
+            return query
+        else:
+            if query:
+                self.ready_queue.push_front(query)
+            # logging.debug(f"#########################  BF Strategy: No large query available. Switching to small mode. ##########################")
+            # with self.lock:
+            #     self.mode = 'small'
+            return None
+
+    def get_next_small_query(self, current_time):
+
+        query = self.ready_queue.pop_back()
+        if query:
+            if self.check_whether_memory_is_available(query, self.total_memory_kb):
+                return query
+            else:
+                self.ready_queue.push_back(query)
+        return None
+        
+
+    def query_complete_callback(self, future: concurrent.futures.Future):
+        """
+        Callback function that is called when a query execution is complete.
+        It handles the results and re-enqueues the query if necessary.
+
+        :param future: The Future object representing the executed query.
+        """
+        try:
+            prioritized_query, success, error_message = future.result()
+            query_id = prioritized_query.query.id
+            if not success:
+                
+                if prioritized_query.retry_count < self.max_retries:
+                    # Re-enqueue the query with higher priority
+                    base_wait_time = 1.1
+                    wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
+                    prioritized_query.next_available_time = time.time() + wait_time
+                    # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority and sleep {wait_time} seconds...")
+                    # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority...success count: {self.success_count}.")
+                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing...success count: {self.success_count}.")
+                    # time.sleep(wait_time)
+                    if self.mode == 'large':
+                        self.ready_queue.push_front(prioritized_query)
+                    else:
+                        self.ready_queue.push_back(prioritized_query)
+                else:
+                    # Update result_dict with failure and total time
+                    with self.lock:
+                        self.results[query_id] = {
+                            'execution_time': float('inf'),
+                            'success': False,
+                            'error_message': error_message,
+                            'retry_count': prioritized_query.retry_count
+                        }
+                    logging.error(f"Scheduler: Query {query_id} failed after {self.max_retries} retries. success count: {self.success_count}.")
+            else: # success
+                # logging.debug(f"success_count: {self.success_count} in query_complete_callback.")
+                if prioritized_query.type == 'large':
+                    with self.lock:
+                        self.mode = 'large'
+
+        except Exception as e:
+            logging.error(f"Scheduler: Error in query execution callback: {e}")
+        finally:
+            with self.condition:
+                self.active_queries -= 1
+                # actual_active_queries = self.get_actual_active_queries()
+                # logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. Actual active queries: {actual_active_queries}.")
+                # if success:
+                #     logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
+                # else:
+                #     logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
+                
+                if self.active_queries ==0 and self.ready_queue.is_empty():
+                    self.finished=True
+                    logging.debug(f"Scheduler: All queries completed. Notified all (from complete_callback).")
+                    self.condition.notify_all()
+                else:
+                    self.condition.notify()
+    
+    def get_actual_active_queries(self):
+        with self.engine.connect() as conn:
+            result = conn.execute(text("SELECT COUNT(*) FROM pg_stat_activity WHERE state = 'active';"))
+            return result.scalar()
+        
+    def wait_for_available_memory(self, prioritized_query: PrioritizedQuery, total_memory_kb: float):
+        base_wait_time = 2
+        wait_count = 5
+        while True:
+            # logging.info(f"Query {prioritized_query.query.id}: getting postgres memory usage")
+            
+            total_memory_kb, current_memory_usage, available_memory = get_postgres_available_memory(total_memory_kb, self.shared_buffers_kb, self.work_mem_kb)
+            logging.debug(f"Query {prioritized_query.query.id}: Total memory: {total_memory_kb}, Current memory usage: {current_memory_usage}KB, Available memory: {available_memory}KB, peak memory: {prioritized_query.query.explain_json_plan['pred_peakmem']}KB")
+            if prioritized_query.query.pred_peakmem <= available_memory:
+                return 1
+            else:
+                wait_count -= 1
+                if wait_count == 0:
+                    logging.error(f"Query {prioritized_query.query.id} failed to get available memory after {wait_count} retries.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                    return 0
+                # current_actual_active_queires = self.get_actual_active_queries()
+                # logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count} with wait_count {wait_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. current actual active queries: {current_actual_active_queires}.")
+                logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count} with wait_count {wait_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
+                wait_time = min(base_wait_time ** prioritized_query.retry_count, 32)
+                time.sleep(wait_time)  # Wait for available memory to increase
+
+        
+    def check_whether_memory_is_available(self, prioritized_query: PrioritizedQuery, total_memory_kb: float):
+        # current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
+        # available_memory = total_memory_kb - current_memory_usage
+        total_memory_kb, current_memory_usage, available_memory = get_postgres_available_memory(total_memory_kb, self.shared_buffers_kb, self.work_mem_kb)
         logging.debug(f"In check, total memory usage: {total_memory_kb}, current memory usage: {current_memory_usage}, available memory: {available_memory}, peak memory: {prioritized_query.query.explain_json_plan['pred_peakmem']}")
 
         if prioritized_query.query.pred_peakmem <= available_memory:
@@ -896,366 +1316,7 @@ class BFStrategy:
         pred_mem = pred_mem.item() * self.mem_scale + self.mem_center
         explain_json_plan['pred_peakmem'] = pred_mem
         return pred_mem
-
-
-class FFDStrategy:
-    def __init__(
-        self,
-        model,
-        statistics,
-        engine: Engine,
-        queries: List[Query],
-        total_memory_kb: int,
-        work_mem_kb: int,
-        shared_buffers_kb: int,
-        executor: concurrent.futures.ThreadPoolExecutor,
-        max_retries: int = 5,
-        base_wait_time: float = 2.0,
-        exp: int = 0,
-        exp_num: int = 0,
-        device: str = 'cpu'
-    ):
-        """
-        :param engine: The SQLAlchemy Engine instance.
-        :param queries: List of Query objects.
-        :param total_memory_kb: Total memory allocated to PostgreSQL for query operations in KB.
-        :param work_mem_kb: work_mem setting in KB.
-        :param executor: ThreadPoolExecutor to manage concurrency.
-        :param max_retries: Maximum number of retries for each query.
-        :param base_wait_time: Base wait time for retries in seconds.
-        """
-        # Assign initial priority based on execution time and peak memory
-        # Higher execution time and higher peak memory get higher priority
-        # For heapq, lower priority value means higher priority, so invert the priority
-        self.model = model
-        self.statistics = statistics
-        self.mem_scale = statistics['peakmem']['scale']
-        self.mem_center = statistics['peakmem']['center']
-        self.engine = engine
-        self.total_memory_kb = total_memory_kb
-        self.work_mem_kb = work_mem_kb
-        self.shared_buffers_kb = shared_buffers_kb
-        self.results = {}
-        self.lock = threading.Lock()
-        self.executor = executor
-        self.max_retries = max_retries
-        self.base_wait_time = base_wait_time
-        self.available_memory = total_memory_kb
-        self.queries = queries
-        self.exp = exp
-        self.exp_num = exp_num
-        self.device = device
-        
-        # Initialize the priority queue
-        self.ready_queue = PriorityQueue()
-        self.success_count = 0
-        
-        for query in queries:
-            peak_memory = self.predict_peak_memory(query.explain_json_plan)
-            if peak_memory > self.total_memory_kb:
-                logging.warning(
-                    f"FFD Strategy: Query {query.id} requires more memory "
-                    f"({peak_memory} KB) than available ({self.total_memory_kb} KB). Skipping."
-                )
-                self.results[query.id] = {
-                    'execution_time': float('inf'),
-                    'total_time': float('inf'),
-                    'success': False,
-                    'error_message': 'Exceeds memory limit.',
-                    'retry_count': 0
-                }
-                continue
-            
-            # Calculate initial priority (example: higher time + peakmem)
-            execution_time = query.explain_json_plan.get('time', 0)  # Default to 0 if not present
-            peakmem = peak_memory
-            # Define weights for time and memory; adjust as needed
-            alpha = 1.0  # Weight for execution time
-            beta = 0.5   # Weight for peak memory
-            # priority_value = -alpha * execution_time * 1e2   # + beta * peakmem 
-            priority_value =  - beta * peakmem
-            # For heapq, lower priority value has higher priority 
-            self.prioritized_query = PrioritizedQuery(
-                priority=priority_value,
-                query=query,
-                enqueue_time=time.time()
-            )
-            self.ready_queue.push(self.prioritized_query)
-
-        # Condition variable to synchronize scheduler and executor
-        self.condition = threading.Condition()
-        self.active_queries = 0
-        self.finished = False
-
-    def execute(self) -> float:
-        """
-        Executes queries based on available memory and prioritizes longer, more memory-intensive queries.
-        Relies on execute_query to handle retries.
-
-        :return: Total execution time in seconds.
-        """
-        start_time = time.time()
-        
-        # Start the scheduler thread
-        scheduler = threading.Thread(target=self.scheduler_thread, daemon=True)
-        scheduler.start()
-
-        # Wait for the scheduler to finish processing all queries
-        with self.condition:
-            while not self.finished:
-                self.condition.wait()
-
-        scheduler.join()
-
-        end_time = time.time()
-        total_exec_time = end_time - start_time
-        logging.info(f"FFD Strategy Total Execution Time: {total_exec_time:.2f} seconds.")
-        return total_exec_time
     
-    def scheduler_thread(self):
-        """
-        Scheduler thread that continuously monitors the priority queue and submits queries
-        to the executor when sufficient memory is available.
-        """
-        while True:
-            with self.condition:
-                while self.ready_queue.is_empty() and self.active_queries > 0:
-                    self.condition.wait()
-
-                if self.ready_queue.is_empty() and self.active_queries == 0:
-                    self.finished = True
-                    self.condition.notify_all()
-                    logging.debug(f"Scheduler: All queries completed. Notified all.")
-                    break
-
-                current_time = time.time()
-                ready_queries = self.ready_queue.pop_ready_queries(current_time)
-
-            if ready_queries: 
-                for prioritized_query in ready_queries:
-                    # Submit the query to the executor
-                    
-                    rt = self.wait_for_available_memory(prioritized_query, self.total_memory_kb)
-
-                    if rt:
-                        with self.condition:
-                            self.active_queries += 1
-                        future = self.executor.submit(
-                            self.execute_query,
-                            self.executor,
-                            self.engine,
-                            self.ready_queue,
-                            prioritized_query,
-                            self.lock,
-                            'FFD',
-                            self.max_retries,
-                            self.base_wait_time,
-                            self.total_memory_kb,
-                            self.exp,
-                            self.exp_num
-                        )
-                        # Attach a callback to handle query completion
-                        future.add_done_callback(self.query_complete_callback)
-                        # release_lock
-                    else:
-                        prioritized_query.retry_count += 1
-                        prioritized_query.priority = prioritized_query.priority - 1
-                        self.ready_queue.push(prioritized_query)
-                        logging.debug(f"Scheduler: Query {prioritized_query.query.id} failed to get available memory. Re-enqueuing with higher priority...")
-            else: 
-                with self.condition:
-                    # No ready queries, determine the next wait time
-                    next_time = self.ready_queue.peek_next_available_time()
-                    if next_time:
-                        wait_time = max(next_time - current_time, 0)
-                        self.condition.wait(timeout=wait_time)
-                    else:
-                        # No queries left
-                        if self.active_queries == 0:
-                            self.finished = True
-                            self.condition.notify_all()
-                            break
-
-
-    def query_complete_callback(self, future: concurrent.futures.Future):
-        """
-        Callback function that is called when a query execution is complete.
-        It handles the results and re-enqueues the query if necessary.
-
-        :param future: The Future object representing the executed query.
-        """
-        try:
-            prioritized_query, success, error_message = future.result()
-            query_id = prioritized_query.query.id
-            if not success:
-                
-                if prioritized_query.retry_count < self.max_retries:
-                    # Re-enqueue the query with higher priority
-                    base_wait_time = 1.1
-                    wait_time = min(base_wait_time ** prioritized_query.retry_count, 2)
-                    prioritized_query.next_available_time = time.time() + wait_time
-                    # logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority and sleep {wait_time} seconds...")
-                    logging.debug(f"Scheduler: Query {query_id} failed with error {error_message}. Re-enqueuing with higher priority...success count: {self.success_count}.")
-                    # time.sleep(wait_time)
-                    self.ready_queue.push(prioritized_query)
-                else:
-                    # Update result_dict with failure and total time
-                    with self.lock:
-                        self.results[query_id] = {
-                            'execution_time': float('inf'),
-                            'success': False,
-                            'error_message': error_message,
-                            'retry_count': prioritized_query.retry_count
-                        }
-                    logging.error(f"Scheduler: Query {query_id} failed after {self.max_retries} retries. success count: {self.success_count}.")
-            else: # success
-                # logging.debug(f"success_count: {self.success_count} in query_complete_callback.")
-                pass
-
-        except Exception as e:
-            logging.error(f"Scheduler: Error in query execution callback: {e}")
-        finally:
-            with self.condition:
-                self.active_queries -= 1
-                # actual_active_queries = self.get_actual_active_queries()
-                # logging.debug(f"Scheduler: Query {query_id} success. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. Actual active queries: {actual_active_queries}.")
-                if success:
-                    logging.debug(f"Scheduler: Query {query_id} success with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
-                else:
-                    logging.debug(f"Scheduler: Query {query_id} failed with retry {prioritized_query.retry_count}. Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. success_count: {self.success_count}.")
-                
-                if self.active_queries ==0 and self.ready_queue.is_empty():
-                    self.finished=True
-                    logging.debug(f"Scheduler: All queries completed. Notified all (from complete_callback).")
-                    self.condition.notify_all()
-                else:
-                    self.condition.notify()
-    
-    def get_actual_active_queries(self):
-        with self.engine.connect() as conn:
-            result = conn.execute(text("SELECT COUNT(*) FROM pg_stat_activity WHERE state = 'active';"))
-            return result.scalar()
-        
-    def wait_for_available_memory(self, prioritized_query: PrioritizedQuery, total_memory_kb: float):
-        base_wait_time = 2
-        wait_count = 5
-        while True:
-            # logging.info(f"Query {prioritized_query.query.id}: getting postgres memory usage")
-            current_memory_usage = get_postgres_memory_usage(self.shared_buffers_kb)
-            available_memory = total_memory_kb - current_memory_usage
-            available_memory = max(available_memory, 0)
-            logging.debug(f"Query {prioritized_query.query.id}: Total memory: {total_memory_kb}, Current memory usage: {current_memory_usage}KB, Available memory: {available_memory}KB, peak memory: {prioritized_query.query.explain_json_plan['pred_peakmem']}KB")
-            if prioritized_query.query.explain_json_plan['pred_peakmem'] <= available_memory:
-                return 1
-            else:
-                wait_count -= 1
-                if wait_count == 0:
-                    logging.error(f"Query {prioritized_query.query.id} failed to get available memory after {wait_count} retries.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
-                    return 0
-                # current_actual_active_queires = self.get_actual_active_queries()
-                # logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count} with wait_count {wait_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}. current actual active queries: {current_actual_active_queires}.")
-                logging.debug(f"Query {prioritized_query.query.id} is waiting for available memory with retry {prioritized_query.retry_count} with wait_count {wait_count}.  Currently active queries: {self.active_queries}, self.ready_queue.is_empty(): {self.ready_queue.is_empty()}.")
-                wait_time = min(base_wait_time ** prioritized_query.retry_count, 32)
-                time.sleep(wait_time)  # Wait for available memory to increase
-
-        
-    # ----------------------------
-    # Function to Execute a Single Query using SQLAlchemy
-    # ----------------------------
-    def execute_query(
-        self,
-        executor: concurrent.futures.ThreadPoolExecutor,
-        engine: Engine,
-        memory_based_priority_queue: PriorityQueue,
-        prioritized_query: PrioritizedQuery,
-        lock: threading.Lock,
-        strategy: str,
-        max_retries: int = 10,
-        base_wait_time: float = 2.0,
-        total_memory_kb: float = 0,
-        exp: int = 0,
-        exp_num: int = 0
-    ):
-        """
-        Executes a single query and records execution and waiting times.
-        Adjusts priority based on retry attempts.
-
-        :return: Tuple containing (query_id, success, error_message)
-        """
-        query = prioritized_query.query
-        query_id = query.id
-
-        # Record the start time of execution
-        start_exec_time = time.time()
-        prioritized_query.start_time = start_exec_time  # Set start_time to avoid None
-
-        try:
-            with engine.connect() as conn:
-                # wait_for_available_memory(prioritized_query, total_memory_kb)
-                logging.debug(f"{strategy}: Executing Query {query_id} whose retry is {prioritized_query.retry_count}...")
-                # Execute the query
-                result = conn.execute(text(query.sql))
-                result.fetchall()
-            
-            end_exec_time = time.time()
-            exec_time = end_exec_time - start_exec_time
-            total_time = end_exec_time - prioritized_query.enqueue_time
-
-            # Update result_dict with execution time and waiting time
-            with self.lock:
-                self.results[query_id] = {
-                    'execution_time': exec_time,
-                    'total_time': total_time,
-                    'success': True,
-                    'retry_count': prioritized_query.retry_count
-                }
-                self.success_count += 1
-            logging.info(f"{strategy}({exp+1}/{exp_num}): Query {query_id} executed in {exec_time:.2f} seconds. Total time: {total_time:.2f} seconds. its retry is {prioritized_query.retry_count}. success_count: {self.success_count}")
-            
-            return (prioritized_query, True, None)  # Success
-
-        except Exception as e:
-            error_message = str(e)
-            
-            prioritized_query.retry_count += 1
-            prioritized_query.priority = prioritized_query.priority - 1
-
-            return (prioritized_query, False, error_message)
-
-    # ----------------------------
-    # Function to Predict Peak Memory
-    # ----------------------------
-    def predict_peak_memory(self, explain_json_plan: Dict[str, Any]) -> int:
-        """
-        Predicts the peak memory usage of a query based on its explain plan.
-        Replace this mock function with actual logic based on your explain plans.
-
-        :param explain_json_plan: Dictionary containing the explain plan of the query.
-        :return: Estimated peak memory usage in KB.
-        """
-        # return explain_json_plan.get('peakmem', 0)
-        # Example: Extract 'peakmem' from the explain plan if available
-        nodes = []
-        edges = []
-        parse_plan(explain_json_plan, self.statistics, nodes=nodes, edges=edges)
-
-        # Convert lists to tensors
-        x = torch.tensor(nodes, dtype=torch.float)
-        if len(edges) ==0:
-            edge_index = torch.zeros((2,0), dtype=torch.long)
-        else:
-            edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-        # logging.debug(f"edge_index.shape {edge_index.shape}")
-        data = Data(x=x, edge_index=edge_index)
-        # move data to device
-        data = data.to(self.device)
-        pred_mem, _ = self.model(data)
-        pred_mem = pred_mem.item() * self.mem_scale + self.mem_center
-        explain_json_plan['pred_peakmem'] = pred_mem
-        return pred_mem
-    
-
-
 # ----------------------------
 # Function to Load Queries from JSON File
 # ----------------------------
@@ -1493,7 +1554,17 @@ def main():
     # Load queries from JSON file
     plan_file = f'/home/wuy/DB/pg_mem_data/{args.dataset}/total_plans.json'
     queries = load_queries(plan_file, total_query_memory_limit_kb)
-    queries = queries[:args.num_queries]  # Limit to 100 queries for testing
+    queries = sorted(queries, key=lambda x: x.pred_peakmem, reverse=True)
+
+    final_queries = []
+    large_num = args.num_queries // 2
+    small_num = args.num_queries - large_num
+    final_queries.extend(queries[:large_num])
+    final_queries.extend(queries[-small_num:])
+    queries = final_queries
+    # for q in queries:
+    #     logging.debug(f"Query {q.id}: {q.pred_peakmem}")
+    # queries = queries[:args.num_queries]  # Limit to 100 queries for testing
     if not queries:
         logging.error("No queries to execute. Exiting.")
         engine.dispose()
@@ -1513,7 +1584,8 @@ def main():
 
     model = GIN(hidden_channels=32, out_channels=1, num_layers=6, num_node_features=23, dropout=0.5)
     logging.info(f"Loading checkpoint")
-    model.load_state_dict(torch.load('GIN_airline_carcinogenesis_hepatitis_financial_geneea_tpch_sf1_tpcds_sf1_mem__best.pth', map_location=args.device))
+    # model.load_state_dict(torch.load('GIN_airline_carcinogenesis_hepatitis_financial_geneea_tpch_sf1_tpcds_sf1_mem__best.pth', map_location=args.device))
+    model.load_state_dict(torch.load('GIN_tpcds_sf1_mem__best.pth', map_location=args.device))
     model = model.to(args.device)
     model.eval()
     logging.info(f"Model loaded")

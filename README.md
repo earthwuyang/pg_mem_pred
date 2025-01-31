@@ -221,7 +221,7 @@ sudo setcap cap_ipc_lock+ep $(which python)
 #### grant read /proc permission to python
 sudo setcap cap_sys_ptrace+ep $(realpath $(which python))
 
-#### edit postgresql's systemd service
+<!-- #### edit postgresql's systemd service
 sudo systemctl edit postgresql
 add these lines:
 ```
@@ -237,19 +237,22 @@ alternative:
 `sudo systemctl set-property postgresql.service MemoryMax=2G MemorySwapMax=1G`
 
 unset using:
-sudo systemctl set-property postgresql.service MemoryMax=infinity MemorySwapMax=infinity
+sudo systemctl set-property postgresql.service MemoryMax=infinity MemorySwapMax=infinity -->
 
 
 #### another way to lock memory
-sudo mount -o remount,size=12G /dev/shm
+sudo mount -o remount,size=13G /dev/shm
+(sudo mount -t tmpfs -o size=1G tmpfs /dev/shm)
 sudo mkdir -p /dev/shm/mem_holder  # Use shared memory for fast access
-sudo dd if=/dev/zero of=/dev/shm/mem_holder/ramfile bs=1M count=11264     # 11GB
+sudo dd if=/dev/zero of=/dev/shm/mem_holder/ramfile bs=1M count=11264     # 11GB   ,12288MB=12GB
 sudo prlimit --memlock=unlimited -- sudo python3 lock_shm.py
 
 ##### clean up
-sudo munlock /dev/shm/mem_holder/ramfile
+<!-- sudo munlock /dev/shm/mem_holder/ramfile -->
 rm -f /dev/shm/mem_holder/ramfile
 sudo sync
 echo 3 | sudo tee /proc/sys/vm/drop_caches
 
-
+#### prevent Linux from overcaching PostgreSQL data
+sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
+echo 50 | sudo tee /proc/sys/vm/vfs_cache_pressure

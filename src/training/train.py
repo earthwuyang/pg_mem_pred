@@ -92,7 +92,7 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
     heuristic_mem_preds = []
     memories = []
     times = []
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize()
     start_time = time()
     with torch.no_grad():
         for batch in tqdm(val_loader, desc="Val:"):
