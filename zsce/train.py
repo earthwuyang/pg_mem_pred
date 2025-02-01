@@ -266,10 +266,10 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
     
 
     target_test_csv_paths = []
-    p=test_workload_runs
+    for p in test_workload_runs:
 
-    test_workload = os.path.basename(p).replace('.json', '')
-    target_test_csv_paths.append(os.path.join(target_dir, f'test_{filename_model}_{test_workload}.csv'))
+        test_workload = os.path.basename(p).replace('.json', '')
+        target_test_csv_paths.append(os.path.join(target_dir, f'test_{filename_model}_{test_workload}.csv'))
 
     if len(target_test_csv_paths) > 0 and all([os.path.exists(p) for p in target_test_csv_paths]):
         logger.info(f"Model was already trained and tested ({target_test_csv_paths} exists)")
@@ -380,18 +380,20 @@ def train_model(logger, data_dir, train_workload_runs, val_workload_runs, test_w
     # if we are not doing hyperparameter search, evaluate test set
     if trial is None and test_loaders is not None:
         if not (target_dir is None or filename_model is None):
-            assert len(target_test_csv_paths) == len(test_loaders), f"target_test_csv_paths length {len(target_test_csv_paths)} != test_loaders length {len(test_loaders)}"
-            for test_path, test_loader in zip(target_test_csv_paths, test_loaders):
-                logger.info(f"Starting validation for {test_path}")
-                test_stats = copy(param_dict)
-
-                early_stop_m = find_early_stopping_metric(metrics)
-                logger.info("Reloading best model")
-                # model.load_state_dict(early_stop_m.best_model)
-                validate_model(logger, test_loader, model, epoch=epoch, epoch_stats=test_stats, metrics=metrics,
+            validate_model(logger, test_loaders[0], model, epoch=epoch, epoch_stats=param_dict, metrics=metrics,
                                log_all_queries=True)
+            # assert len(target_test_csv_paths) == len(test_loaders), f"target_test_csv_paths length {len(target_test_csv_paths)} != test_loaders length {len(test_loaders)}"
+            # for test_path, test_loader in zip(target_test_csv_paths, test_loaders):
+            #     logger.info(f"Starting validation for {test_path}")
+            #     test_stats = copy(param_dict)
 
-                save_csv([test_stats], test_path)
+            #     early_stop_m = find_early_stopping_metric(metrics)
+            #     logger.info("Reloading best model")
+            #     # model.load_state_dict(early_stop_m.best_model)
+            #     validate_model(logger, test_loader, model, epoch=epoch, epoch_stats=test_stats, metrics=metrics,
+            #                    log_all_queries=True)
+
+            #     save_csv([test_stats], test_path)
 
         else:
             logger.info("Skipping saving the test stats")
@@ -412,9 +414,9 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, help="Directory where the data is stored", default='/home/wuy/DB/pg_mem_data/')
-    parser.add_argument("--dataset", type=str, nargs='+', help="Datasets to use for training", default=['tpch_sf1'])
+    parser.add_argument("--train_dataset", type=str, nargs='+', help="Datasets to use for training", default=['tpch_sf1'])
     parser.add_argument("--val_dataset", type=str, help="Dataset to use for validation", default=None)
-    parser.add_argument("--test_dataset", type=str, help="Dataset to use for test", default=None)
+    parser.add_argument("--test_dataset", nargs='+', type=str, help="Dataset to use for test", default=None)
     parser.add_argument("--skip_train", action='store_true', help="Skip training and only evaluate test set")
     parser.add_argument("--force", action='store_true', help="Force overwrite of existing files")
     parser.add_argument('--mem_pred', action='store_true', default=True, help='predict memory')
@@ -425,10 +427,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.test_dataset is None:
-        assert len(args.dataset) == 1, "If test_dataset is not specified, only one dataset can be used for training and validation"
-        args.val_dataset = args.dataset[0]
-        args.test_dataset = args.dataset[0]
-    args.train_dataset = args.dataset
+        assert len(args.train_dataset) == 1, "If test_dataset is not specified, only one dataset can be used for training and validation"
+        args.val_dataset = args.train_dataset[0]
+        args.test_dataset = args.train_dataset[0]
+    # args.train_dataset = args.dataset
 
     hyperparameter_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'setup/tuned_hyperparameters/tune_est_best_config.json')
     # hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
@@ -484,7 +486,7 @@ if __name__ == '__main__':
                         hidden_dim=hyperparams.pop('hidden_dim'),
                         output_dim=2,
                         epochs=200 if max_no_epochs is None else max_no_epochs,
-                        early_stopping_patience=20,
+                        early_stopping_patience=10,
                         max_epoch_tuples=max_epoch_tuples,
                         batch_size=hyperparams.pop('batch_size'),
                         device=device,
@@ -521,7 +523,7 @@ if __name__ == '__main__':
     # val_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
     # test_workload_runs = '/home/wuy/DB/pg_mem_pred/tpch_data/val_plans.json'
 
-    logfilepath = os.path.join('logs', f'train_{"".join(args.train_dataset)}_test_{args.test_dataset}_{"mem" if args.mem_pred else ""}_{"time" if args.time_pred else ""}.log')
+    logfilepath = os.path.join('logs', f'train_{"".join(args.train_dataset)}_test_{"".join(args.test_dataset)}_{"mem" if args.mem_pred else ""}_{"time" if args.time_pred else ""}.log')
     if not os.path.exists(logfilepath):
         os.system(f"mkdir -p {logfilepath}")
     logfile = os.path.join(logfilepath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log")
@@ -533,7 +535,7 @@ if __name__ == '__main__':
     # else:
     #     logger.info(f"mem_info.csv already exists, skipping extraction")
 
-    for dataset in args.dataset + [args.val_dataset, args.test_dataset]:
+    for dataset in args.train_dataset + [args.val_dataset] + args.test_dataset:
         logger.info(f"get raw plans for {dataset}...")
         if args.force or not os.path.exists(os.path.join(args.data_dir, dataset, 'zsce', 'raw_plan.json')):
             get_raw_plans(args.data_dir, dataset)
