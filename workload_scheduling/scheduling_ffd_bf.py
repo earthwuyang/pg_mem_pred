@@ -338,7 +338,7 @@ def get_postgres_memory_usage(shared_buffers_kb):
 def get_postgres_available_memory(total_memory_kb, shared_buffers_kb, work_mem_kb):
     current_memory_usage = get_postgres_memory_usage(shared_buffers_kb)
     # total_memory_kb = psutil.virtual_memory().available // 1024 # - 2 * 1024**2 # reserve GB for system
-    total_memory_kb = (psutil.virtual_memory().available + psutil.swap_memory().free) // 1024  - 2 * 1024**2 # reserve GB for system
+    total_memory_kb = (psutil.virtual_memory().available + psutil.swap_memory().free) // 1024  - 3 * 1024**2 # reserve GB for system
     available_memory = total_memory_kb
     # available_memory = total_memory_kb - current_memory_usage
     available_memory = max(available_memory, 0)
