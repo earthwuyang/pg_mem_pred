@@ -90,7 +90,7 @@ python zsce/generate_zsce_queries.py
 ### Training
 
 #### Zero-Shot Cost Estimation (ZSCE)
-1. Generate raw plans:
+1. Generate statistics:
    ```bash
    python zsce/combine_stats.py
    ```

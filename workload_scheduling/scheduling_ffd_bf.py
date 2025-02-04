@@ -191,6 +191,24 @@ class PriorityQueue:
         with self.lock:
             return len(self.heap) == 0
 
+class LargeQueryCompletionTracker:
+    def __init__(self):
+        self.completion_heap=[]
+
+    def add_large_query(self, start_time, duration):
+        expeceted_end_time = start_time + duration
+        heapq.heappush(self.completion_heap, expeceted_end_time)
+
+    def remove_completed_large_queries(self, current_time):
+        while self.completion_heap and self.completion_heap[0] <= current_time:
+            heapq.heappop(self.completion_heap)
+
+    def can_schedule_small_query(self, current_time, small_query_duration):
+        if not self.completion_heap:
+            return True
+        return current_time + small_query_duration <= self.completion_heap[0]
+
+
 # ----------------------------
 # Function to Retrieve PostgreSQL Memory Settings using SQLAlchemy
 # ----------------------------
@@ -338,7 +356,7 @@ def get_postgres_memory_usage(shared_buffers_kb):
 def get_postgres_available_memory(total_memory_kb, shared_buffers_kb, work_mem_kb):
     current_memory_usage = get_postgres_memory_usage(shared_buffers_kb)
     # total_memory_kb = psutil.virtual_memory().available // 1024 # - 2 * 1024**2 # reserve GB for system
-    total_memory_kb = (psutil.virtual_memory().available + psutil.swap_memory().free) // 1024  - 3 * 1024**2 # reserve GB for system
+    total_memory_kb = (psutil.virtual_memory().available + psutil.swap_memory().free) // 1024  - 4 * 1024**2 # reserve GB for system
     available_memory = total_memory_kb
     # available_memory = total_memory_kb - current_memory_usage
     available_memory = max(available_memory, 0)
@@ -547,6 +565,8 @@ class BFStrategy:
         self.exp_num = exp_num
         self.device = device
         self.mode = 'large' # there are two modes: 'large' and 'small', 'large' at first
+        self.large_query_completion_tracker = LargeQueryCompletionTracker()
+
         
         # Initialize the priority queue
         self.ready_queue = PriorityQueue()
@@ -694,6 +714,8 @@ class BFStrategy:
     def get_next_large_query(self, current_time):
         query = self.ready_queue.pop_front()
         if query and self.check_whether_memory_is_available(query, self.total_memory_kb):
+            with self.lock:
+                self.large_query_completion_tracker.add_large_query(current_time, query.query.pred_duration)
             return query
         else:
             if query:
@@ -707,10 +729,13 @@ class BFStrategy:
 
         query = self.ready_queue.pop_back()
         if query:
-            if self.check_whether_memory_is_available(query, self.total_memory_kb):
+            if self.check_whether_memory_is_available(query, self.total_memory_kb) and \
+                self.large_query_completion_tracker.can_schedule_small_query(current_time, small_query_duration=query.query.pred_duration):
                 return query
             else:
                 self.ready_queue.push_back(query)
+                wait_time = 0.5
+                time.sleep(wait_time)
         return None
         
 
@@ -752,6 +777,7 @@ class BFStrategy:
             else: # success
                 # logging.debug(f"success_count: {self.success_count} in query_complete_callback.")
                 # if prioritized_query.type == 'large':
+                self.large_query_completion_tracker.remove_completed_large_queries(time.time())
                 with self.lock:
                     self.mode = 'large'
 
@@ -1598,16 +1624,6 @@ def main():
         'ffd': {'time': [], 'swap_mem': [], 'total_mem': []}
     }
 
-    # Stop events for monitoring threads
-    naive_stop_event = threading.Event()
-    bf_stop_event = threading.Event()
-    ffd_stop_event = threading.Event()
-
-    # Threads for monitoring
-    naive_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'naive', naive_stop_event))
-    bf_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'bf', bf_stop_event))
-    ffd_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'ffd', ffd_stop_event))
-
     
 
     # ----------------------------
@@ -1618,6 +1634,10 @@ def main():
         naive_total_time_list = []
         naive_waiting_sum_list = []
         for i in range(args.exp_num):
+            # Threads for monitoring
+            naive_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'naive', naive_stop_event))
+            # Stop events for monitoring threads
+            naive_stop_event = threading.Event()
             logging.info(f"\nExecuting Naive Strategy - Run {i+1}/{args.exp_num}:")
             # Initialize a new NaiveStrategy instance for each run
             naive_strategy = NaiveStrategy(
@@ -1659,6 +1679,10 @@ def main():
             time.sleep(wait_time)
         
         for i in range(args.exp_num):
+            # Stop events for monitoring threads
+            ffd_stop_event = threading.Event()
+            # Threads for monitoring
+            ffd_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'ffd', ffd_stop_event))
             logging.info(f"\nExecuting First Fit Decreasing Strategy - Run {i+1}/{args.exp_num}:")
             # Initialize a new MemoryBasedStrategy instance for each run
             ffd_strategy = FFDStrategy(
@@ -1706,6 +1730,10 @@ def main():
     bf_total_time_list = []
     bf_waiting_sum_list = []
     for i in range(args.exp_num):
+        # Stop events for monitoring threads
+        bf_stop_event = threading.Event()
+        # Threads for monitoring
+        bf_based_thread = threading.Thread(target=monitor_postgres_memory, args=(interval, metrics, 'bf', bf_stop_event))
         logging.info(f"\nExecuting Bidirectional Fit Strategy - Run {i+1}/{args.exp_num}:")
         # Initialize a new MemoryBasedStrategy instance for each run
         bf_strategy = BFStrategy(

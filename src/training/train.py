@@ -97,8 +97,9 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
     with torch.no_grad():
         for batch in tqdm(val_loader, desc="Val:"):
             batch = batch.to(device)
-            heuristic_mem = heuristic_peak_memory(batch.plan_rows, batch.plan_width, scaling_factor=scaling_factor)
-            heuristic_mem_preds.extend(heuristic_mem.cpu())
+            # heuristic_mem = heuristic_peak_memory(batch.plan_rows, batch.plan_width, scaling_factor=scaling_factor).cpu()
+            heuristic_mem = 0
+            heuristic_mem_preds.append(heuristic_mem)
 
             if model_name.startswith('Hetero'):
                 # Ensure that 'operator' node type exists in the batch
@@ -134,10 +135,10 @@ def validate_model(model_name, model, val_loader, criterion, statistics, device,
     metrics['peakmem'] = compute_metrics(memories, mem_preds)
     metrics['time'] = compute_metrics(times, time_preds)
 
-    # Compute metrics for heuristic
-    heuristic_metrics = {}
-    heuristic_metrics['peakmem'] = compute_metrics(memories, heuristic_mem_preds)
-    metrics['heuristic_peakmem'] = heuristic_metrics['peakmem']
+    # # Compute metrics for heuristic
+    # heuristic_metrics = {}
+    # heuristic_metrics['peakmem'] = compute_metrics(memories, heuristic_mem_preds)
+    # metrics['heuristic_peakmem'] = heuristic_metrics['peakmem']
     
 
     return avg_val_loss, metrics
@@ -278,4 +279,4 @@ def train_model(logger, args, statistics):
     if args.time_pred:
         logger.info(f"time metrics={metrics['time']}")
 
-    logging.info(f"heuristic metrics={metrics['heuristic_peakmem']}")
+    # logging.info(f"heuristic metrics={metrics['heuristic_peakmem']}")
