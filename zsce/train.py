@@ -217,10 +217,10 @@ def validate_model(logger, val_loader, model, epoch=0, epoch_stats=None, metrics
                 if best_seen and metric.early_stopping_metric:
                     any_best_metric = True
                     logger.info(f"New best model for {metric.metric_name}")
-            logging.info(f"\nevaluating time prediction")
-            for metric in metrics:
-                metric.evaluate(metrics_dict=epoch_stats, model=model, labels=time_labels, preds=time_preds,
-                                            probs=probs)
+            # logging.info(f"\nevaluating time prediction")
+            # for metric in metrics:
+            #     metric.evaluate(metrics_dict=epoch_stats, model=model, labels=time_labels, preds=time_preds,
+            #                                 probs=probs)
 
     return any_best_metric
 
