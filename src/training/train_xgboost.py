@@ -194,7 +194,7 @@ def train_XGBoost(logger, args, combined_stats):
 
     logger.info(f"Training XGBoost model...")
 
-    model_path = os.path.join(best_model_dir, f'xgb_reg_{"".join(args.dataset)}.pkl')
+    model_path = os.path.join(best_model_dir, f'xgb_reg_{"".join(args.train_dataset)}.pkl')
     if not args.skip_train:
         # Train the model
         xgb_reg.fit(X_train, y_train)
