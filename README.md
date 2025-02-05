@@ -90,15 +90,16 @@ python zsce/generate_zsce_queries.py
 ### Training
 
 #### Zero-Shot Cost Estimation (ZSCE)
-1. Generate statistics:
+`python zsce/train.py --train_dataset airline --val_dataset financial --test_dataset tpch_sf1`
+<!-- 1. Generate statistics:
    ```bash
    python zsce/combine_stats.py
-   ```
+   ``` -->
 
-2. Train the ZSCE method:
+<!-- 2. Train the ZSCE method:
    ```bash
    python zsce/train.py
-   ```
+   ``` -->
 
 #### Cross-Dataset Training
 Train models across datasets:

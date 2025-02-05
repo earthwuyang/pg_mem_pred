@@ -429,7 +429,7 @@ if __name__ == '__main__':
     if args.test_dataset is None:
         assert len(args.train_dataset) == 1, "If test_dataset is not specified, only one dataset can be used for training and validation"
         args.val_dataset = args.train_dataset[0]
-        args.test_dataset = args.train_dataset[0]
+        args.test_dataset = args.train_dataset
     # args.train_dataset = args.dataset
 
     hyperparameter_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'setup/tuned_hyperparameters/tune_est_best_config.json')
