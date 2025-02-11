@@ -209,7 +209,7 @@ sudo setcap cap_sys_ptrace+ep $(which python3)
 ### set swap memmory
 sudo swapoff /www/swapfile
 sudo rm /www/swapfile
-sudo fallocate -l 1G /www/swapfile
+sudo fallocate -l 4G /www/swapfile
 sudo chmod 600 /www/swapfile
 sudo mkswap /www/swapfile
 sudo swapon /www/swapfile
@@ -241,9 +241,9 @@ sudo systemctl set-property postgresql.service MemoryMax=infinity MemorySwapMax=
 
 
 #### another way to lock memory
-sudo mount -o remount,size=13G /dev/shm
+sudo mount -o remount,size=16G /dev/shm
 (sudo mount -t tmpfs -o size=1G tmpfs /dev/shm)
-sudo mkdir -p /dev/shm/mem_holder  # Use shared memory for fast access
+sudo mkdir -p /dev/shm/mem_holder  
 sudo dd if=/dev/zero of=/dev/shm/mem_holder/ramfile bs=1M count=11264     # 11GB   ,12288MB=12GB
 sudo prlimit --memlock=unlimited -- sudo python3 lock_shm.py
 
@@ -256,3 +256,12 @@ echo 3 | sudo tee /proc/sys/vm/drop_caches
 #### prevent Linux from overcaching PostgreSQL data
 sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
 echo 50 | sudo tee /proc/sys/vm/vfs_cache_pressure
+
+
+#### set oom_score_adj for a process
+echo -1000 | sudo tee /proc/12345/oom_score_adj
+
+
+#### overcommit_memory
+sudo sysctl -w vm.overcommit_memory=2
+cat /proc/sys/vm/overcommit_memory
