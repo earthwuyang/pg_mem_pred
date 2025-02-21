@@ -92,8 +92,10 @@ def train_epoch(logger, epoch_stats, train_loader, model, optimizer, max_epoch_t
             alpha = 1
             loss = mem_loss + alpha * time_loss
         if torch.isnan(loss):
-            raise ValueError('Loss was NaN')
+            continue
+            # raise ValueError('Loss was NaN')
         loss.backward()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # clip gradients to prevent exploding gradients
         optimizer.step()
 
         loss = loss.detach().cpu().numpy()
@@ -436,11 +438,11 @@ if __name__ == '__main__':
     # hyperparameter_path = 'setup/tuned_hyperparameters/tune_est_best_config.json'
     hyperparams = load_json(hyperparameter_path, namespace=False)
 
-    # loss_class_name='QLoss'
-    loss_class_name='MSELoss'
+    loss_class_name='QLoss'
+    # loss_class_name='MSELoss'
     max_epoch_tuples=100000
     seed = 0
-    device = 'cuda:0'
+    device = 'cuda:1'
     num_workers = args.num_workers
     limit_queries=None
     limit_queries_affected_wl=None
@@ -486,7 +488,7 @@ if __name__ == '__main__':
                         hidden_dim=hyperparams.pop('hidden_dim'),
                         output_dim=2,
                         epochs=200 if max_no_epochs is None else max_no_epochs,
-                        early_stopping_patience=10,
+                        early_stopping_patience=20,
                         max_epoch_tuples=max_epoch_tuples,
                         batch_size=hyperparams.pop('batch_size'),
                         device=device,

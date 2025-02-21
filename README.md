@@ -130,6 +130,17 @@ python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'
 
 --- -->
 
+## Theoretically simulate scheduling and code for the case study
+### Brute Force search, ffd strategy, and bf strategy:
+```bash
+python workload_scheduling/case_study.py
+```
+
+### ILP calculation:
+```bash
+python workload_scheduling/ILP.py
+```
+
 ## Code Structure
 
 - `src`: Contains implementation for GIN, GAT, GraphTransformer, and TreeTransformer models.
@@ -155,6 +166,13 @@ python train.py --train_dataset 'tpch_sf1' --test_dataset 'tpcds_sf1'
 ```bash
 cd workload_scheduling
 python scheduling_docker.py --num_queries 100
+```
+
+On bara-metal machine:
+```bash
+cd workload_scheduling
+python scheduling_defaut_only.py --num_queries 100
+python scheduling_ffd_bf.py --num_queries 100
 ```
 
 ### Sequential Execution
@@ -253,4 +271,9 @@ rm -f /dev/shm/mem_holder/ramfile
 sudo sync
 echo 3 | sudo tee /proc/sys/vm/drop_caches
 
+
+#### create a large dummy numpy array to occupy memory to mimick a memory-shortage environment
+```bash
+python occupy_RAM.py --gb 11   # create a 11GB numpy array
+```
 

@@ -9,16 +9,16 @@ data = pd.read_excel(file_path, sheet_name='Sheet1')
 # Extract dataset names and models
 datasets = ['train_dataset', 'val_dataset', 'test_dataset']
 models = data['model'].unique()[:-1]
-new_model_order = []
-new_model_order.append(models[0])
-new_model_order.append(models[1])
-new_model_order.append(models[2])
-new_model_order.append(models[4])
-new_model_order.append(models[6])
-new_model_order.append(models[7])
-new_model_order.append(models[5] + ' (ours)')
-new_model_order.append(models[3] + ' (ours)')
-models = new_model_order
+# new_model_order = []
+# new_model_order.append(models[0])
+# new_model_order.append(models[1])
+# new_model_order.append(models[2])
+# new_model_order.append(models[4])
+# new_model_order.append(models[6])
+# new_model_order.append(models[7])
+# new_model_order.append(models[5])
+# new_model_order.append(models[3])
+# models = new_model_order
 
 dataset_names = data[datasets[2]].unique()
 
@@ -58,10 +58,10 @@ for i, model in enumerate(models):
 
 plt.xlabel('Datasets', fontsize=18)
 plt.ylabel('qerror_50', fontsize=18)
-plt.ylim(1.0, 1.16)  # Set y-axis range
+plt.ylim(1.0, 1.7)  # Set y-axis range
 plt.yticks(fontsize=14)
 # plt.title('Median QError Comparison between 8 Models on 4 Datasets', fontweight='bold', fontsize=20)
 plt.xticks(xtick_positions, [dn.split('_')[0] for dn in dataset_names], rotation=0, ha='center', fontsize=18)  # Align x-ticks
-plt.legend(title='Models', bbox_to_anchor=(0.02, 0.98), loc='upper left', fontsize=12, title_fontsize=14)
+plt.legend(title='Models', bbox_to_anchor=(0.98, 0.98), loc='upper right', fontsize=12, title_fontsize=14)
 plt.tight_layout()
 plt.savefig('qerror_50_comparison_single_datasets_more_models.png')

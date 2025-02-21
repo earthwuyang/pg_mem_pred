@@ -14,7 +14,8 @@ import argparse
 
 
 def extract_mem_info(data_dir, dataset):
-    log_dir = os.path.join(data_dir, 'pg_log', dataset)
+    # log_dir = os.path.join(data_dir, 'pg_log', dataset)
+    log_dir = '/home/wuy/software/postgresql/postgresql-14.1/data/log/'
     mem_csv = os.path.join(data_dir, dataset, 'raw_data', 'mem_info.csv')
     plan_dir = os.path.join(data_dir, dataset, 'raw_data','plan_dir')
     os.makedirs(plan_dir, exist_ok=True)

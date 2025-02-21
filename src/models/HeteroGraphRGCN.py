@@ -82,6 +82,7 @@ class HeteroGraphRGCN(torch.nn.Module):
         device = next(self.parameters()).device
 
         # Project node features
+        # print(f"x_dict['operator'].shape {x_dict['operator'].shape}")``
         operator = self.lin_operator(x_dict['operator'])
         if self.encode_table_column:
             table = self.lin_table(x_dict['table'])

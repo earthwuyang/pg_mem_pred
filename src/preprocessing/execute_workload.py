@@ -29,10 +29,11 @@ def execute_workload(data_dir, save_dir, dataset, cap_queries, workload_file_nam
 
     with open(workload_file, 'r') as f:
         AP_queries = f.read().split('\n')
-    with open(TP_workload_file, 'r') as f:
-        TP_queries = f.read().split('\n')
-    queries = AP_queries + TP_queries
-    queries = random.sample(queries, cap_queries)
+    # with open(TP_workload_file, 'r') as f:
+    #     TP_queries = f.read().split('\n')
+    # queries = AP_queries + TP_queries
+    # queries = random.sample(queries, cap_queries)
+    queries = AP_queries   # only execute AP queries
 
     count = 0
     for queryid, query in tqdm(enumerate(queries), total=len(queries)):

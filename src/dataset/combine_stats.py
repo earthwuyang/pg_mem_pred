@@ -39,4 +39,5 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    dataset_list = ['airline', 'carcinogenesis', 'employee', 'hepatitis', 'financial']
     combined_stats = combine_stats(logger, args, dataset_list)

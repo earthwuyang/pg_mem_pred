@@ -67,6 +67,7 @@ def extract_features(plan_node, statistics):
         elif statistics[key]['type'] == 'categorical':
             value = plan_node.get(key, 'unknown')
             one_hot_features = one_hot_encode(statistics[key]['value_dict'].get(value, statistics[key]['no_vals']), statistics[key]['no_vals']+1)  # unknown will map to an extra number in the directory
+            # print(f"one_hot_features.shape {len(one_hot_features)}")
             feature_vector.extend(one_hot_features)
    
     return feature_vector

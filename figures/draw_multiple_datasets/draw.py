@@ -14,7 +14,7 @@ def plot_all_combined_figures(data_dict, clip_value_list):
     for idx, (sheet_name, data) in enumerate(data_dict.items()):
         settings = data.columns[1:]  # Assume first column is labels, the rest are settings
         settings = list(settings)
-        settings[2] = settings[2] + ' (ours)'
+        settings[2] = settings[2] + '\n(ours)'
         settings[3] = settings[3] + ' (ours)'
         models = data.iloc[:, 0]  # First column as model names
         n_clusters = len(settings)  # Number of clusters
